@@ -98,6 +98,16 @@ impl Session {
         if let Some(texture) = &self.texture {
             return texture.id();
         }
+        let max_side = ctx.input(|input| input.max_texture_side).max(1);
+        if self.image.size[0] > max_side || self.image.size[1] > max_side {
+            tracing::warn!(
+                width = self.image.size[0],
+                height = self.image.size[1],
+                max_side,
+                "overlay: frame exceeds the maximum texture size; downscaling"
+            );
+            self.image = Arc::new(downscale_to_fit(&self.image, max_side));
+        }
         tracing::info!(
             width = self.image.size[0],
             height = self.image.size[1],
@@ -112,6 +122,23 @@ impl Session {
         self.texture = Some(texture);
         id
     }
+}
+
+fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorImage {
+    let [width, height] = image.size;
+    let scale = max_side as f32 / width.max(height) as f32;
+    let new_width = ((width as f32 * scale).floor() as usize).clamp(1, max_side);
+    let new_height = ((height as f32 * scale).floor() as usize).clamp(1, max_side);
+
+    let mut pixels = Vec::with_capacity(new_width * new_height);
+    for y in 0..new_height {
+        let source_y = y * height / new_height;
+        for x in 0..new_width {
+            let source_x = x * width / new_width;
+            pixels.push(image.pixels[source_y * width + source_x]);
+        }
+    }
+    egui::ColorImage::new([new_width, new_height], pixels)
 }
 
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
@@ -186,8 +213,6 @@ impl eframe::App for StandalonePicker {
 }
 
 fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
-    ctx.request_repaint();
-
     let texture_id = session.texture_id(ctx);
     let screen = ctx.input(|input| input.viewport_rect());
     let painter = ctx.layer_painter(egui::LayerId::new(
