@@ -1,0 +1,27 @@
+[package]
+name = "colorpickle"
+version = "0.1.0"
+edition = "2024"
+description = "Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."
+readme = "README.md"
+repository = "https://github.com/dcog989/ColorPickle"
+license = "GPL-3.0-only"
+
+[dependencies]
+anyhow = "1.0.104"
+arboard = { version = "3.6.1", features = ["wl-clipboard-rs"] }
+ashpd = { version = "0.13.13", features = ["screenshot"] }
+clap = { version = "4.6.7", features = ["derive"] }
+directories = "6.0.0"
+eframe = "0.36.2"
+egui = "0.36.2"
+image = "0.25.10"
+palette = "0.7.7"
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", default-features = false, features = ["net", "rt", "time"] }
+toml = "1.1.6"
+tracing = "0.1.44"
+winit = "0.30.13"
+wl-clipboard-rs = "0.9.3"
+xcap = { version = "0.9.8", features = ["image"] }
