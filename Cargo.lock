@@ -970,7 +970,6 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
- "winit",
  "wl-clipboard-rs",
  "xcap",
  "zbus",
