@@ -63,11 +63,11 @@ wayland-protocols = { version = "0.32", features = ["client", "staging", "unstab
 x11rb = { version = "0.14", features = ["image"] }
 zbus = "5.19"
 
+[profile.dev.package."*"]
+opt-level = 2  # the per-pixel loops in overlay.rs and ext_image.rs are painful at opt-level 0
+
 [profile.release]
+strip = true
 lto = "thin"
 codegen-units = 1
-strip = true
 # not panic = "abort": picker.rs detects a dead capture thread via unwinding
-
-[profile.dev.package."*"]
-opt-level = 2   # the per-pixel loops in overlay.rs and ext_image.rs are painful at opt-level 0
