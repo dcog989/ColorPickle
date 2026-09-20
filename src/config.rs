@@ -42,29 +42,49 @@ impl Config {
             .map(|dirs| dirs.config_dir().join(CONFIG_FILE))
     }
 
-    pub fn load() -> Result<Self> {
+    pub fn load() -> Self {
         let Some(path) = Self::path() else {
-            return Ok(Self::default());
+            tracing::warn!("no config directory available; using defaults");
+            return Self::default();
         };
         if !path.exists() {
-            return Ok(Self::default());
+            return Self::default();
         }
-        let text = std::fs::read_to_string(&path)
-            .with_context(|| format!("failed to read config at {}", path.display()))?;
-        toml::from_str(&text)
-            .with_context(|| format!("failed to parse config at {}", path.display()))
+        let text = match std::fs::read_to_string(&path) {
+            Ok(text) => text,
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    path = %path.display(),
+                    "failed to read config; using defaults"
+                );
+                return Self::default();
+            }
+        };
+        match toml::from_str(&text) {
+            Ok(config) => config,
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    path = %path.display(),
+                    "failed to parse config; using defaults"
+                );
+                Self::default()
+            }
+        }
     }
 
     pub fn save(&self) -> Result<()> {
-        let Some(path) = Self::path() else {
-            return Ok(());
-        };
+        let path = Self::path().context("no config directory available")?;
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create {}", parent.display()))?;
         }
         let text = toml::to_string_pretty(self).context("failed to serialize config")?;
-        std::fs::write(&path, text)
-            .with_context(|| format!("failed to write config at {}", path.display()))
+        let temporary = path.with_file_name(format!("{CONFIG_FILE}.tmp"));
+        std::fs::write(&temporary, text)
+            .with_context(|| format!("failed to write {}", temporary.display()))?;
+        std::fs::rename(&temporary, &path)
+            .with_context(|| format!("failed to replace config at {}", path.display()))
     }
 }
