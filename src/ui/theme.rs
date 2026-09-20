@@ -68,7 +68,7 @@ fn visuals(ctx: &egui::Context, theme: Theme, color: Okhsl) -> egui::Visuals {
     visuals.widgets.inactive.bg_fill = fill(foreground, INACTIVE_FILL_ALPHA);
     visuals.widgets.hovered.bg_fill = fill(foreground, HOVERED_FILL_ALPHA);
     visuals.widgets.active.bg_fill = fill(foreground, ACTIVE_FILL_ALPHA);
-    visuals.widgets.noninteractive.bg_stroke = border;
+    visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(BORDER_WIDTH, foreground);
     visuals.widgets.inactive.bg_stroke = border;
     set_surfaces(&mut visuals, surface, border, foreground);
     visuals.selection.bg_fill = fill(foreground, SELECTION_FILL_ALPHA);

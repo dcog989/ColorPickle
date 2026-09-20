@@ -4,8 +4,10 @@ const GRADIENT_STEPS: usize = 48;
 const HANDLE_WIDTH: f32 = 2.0;
 const HANDLE_INSET: f32 = 3.0;
 const BORDER_WIDTH: f32 = 1.0;
-const LABEL_GAP: f32 = 6.0;
-const BORDER_COLOR: egui::Color32 = egui::Color32::from_gray(60);
+const LABEL_GAP: f32 = 2.0;
+const LABEL_HEIGHT: f32 = 16.0;
+const LABEL_FONT_SIZE: f32 = 14.0;
+const MIN_HEIGHT: f32 = 80.0;
 const LUMINANCE_RED: f32 = 0.299;
 const LUMINANCE_GREEN: f32 = 0.587;
 const LUMINANCE_BLUE: f32 = 0.114;
@@ -16,13 +18,22 @@ pub fn column(
     label: &str,
     label_color: egui::Color32,
     value: &mut f32,
-    size: egui::Vec2,
+    width: f32,
     gradient: impl Fn(f32) -> egui::Color32,
 ) -> egui::Response {
     ui.vertical(|ui| {
-        ui.colored_label(label_color, label);
-        ui.add_space(LABEL_GAP);
-        vertical(ui, size, value, gradient)
+        ui.spacing_mut().item_spacing.y = LABEL_GAP;
+        let (label_rect, _) =
+            ui.allocate_exact_size(egui::vec2(width, LABEL_HEIGHT), egui::Sense::hover());
+        ui.painter().text(
+            label_rect.center(),
+            egui::Align2::CENTER_CENTER,
+            label,
+            egui::FontId::proportional(LABEL_FONT_SIZE),
+            label_color,
+        );
+        let height = ui.available_height().max(MIN_HEIGHT);
+        vertical(ui, egui::vec2(width, height), value, label_color, gradient)
     })
     .inner
 }
@@ -31,6 +42,7 @@ pub fn vertical(
     ui: &mut egui::Ui,
     size: egui::Vec2,
     value: &mut f32,
+    border_color: egui::Color32,
     gradient: impl Fn(f32) -> egui::Color32,
 ) -> egui::Response {
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click_and_drag());
@@ -41,12 +53,13 @@ pub fn vertical(
         ui.ctx().request_repaint();
     }
 
-    paint_gradient(ui.painter(), rect, &gradient);
-    paint_handle(ui.painter(), rect, *value, &gradient);
+    let painter = ui.painter().with_clip_rect(rect);
+    paint_gradient(&painter, rect, &gradient);
+    paint_handle(&painter, rect, *value, &gradient);
     ui.painter().rect_stroke(
         rect,
         egui::CornerRadius::ZERO,
-        egui::Stroke::new(BORDER_WIDTH, BORDER_COLOR),
+        egui::Stroke::new(BORDER_WIDTH, border_color),
         egui::StrokeKind::Inside,
     );
 

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use eframe::egui;
 
 use crate::cli::LaunchMode;
@@ -12,10 +14,11 @@ use crate::ui::theme::{self, color32, contrast_color32};
 use crate::ui::widgets;
 
 const SLIDER_WIDTH: f32 = 30.0;
-const SLIDER_MIN_HEIGHT: f32 = 80.0;
-const LABEL_ROW_HEIGHT: f32 = 26.0;
 const SLIDER_PANEL_MARGIN: f32 = 12.0;
 const SLIDER_PANEL_ID: &str = "colorpickle-sliders";
+const SETTINGS_PANEL_ID: &str = "colorpickle-settings";
+const SETTINGS_PANEL_MARGIN_X: i8 = 16;
+const SETTINGS_PANEL_MARGIN_Y: i8 = 10;
 const PANEL_MARGIN: f32 = 16.0;
 const ROW_SPACING: f32 = 18.0;
 const ITEM_SPACING: f32 = 10.0;
@@ -28,6 +31,12 @@ const DEFAULT_HUE_DEGREES: f32 = 180.0;
 const DEFAULT_SATURATION: f32 = 0.5;
 const DEFAULT_LIGHTNESS: f32 = 0.5;
 const HISTORY_LIMIT: usize = 8;
+const TOAST_DURATION: f64 = 2.5;
+const TOAST_BOTTOM_MARGIN: f32 = 84.0;
+const TOAST_FONT_SIZE: f32 = 16.0;
+const TOAST_MARGIN_X: i8 = 16;
+const TOAST_MARGIN_Y: i8 = 10;
+const TOAST_ID: &str = "colorpickle-toast";
 const SATURATION_TOOLTIP: &str = "Saturation is perceptual (Okhsl-normalised), so its visual effect varies slightly with lightness.";
 const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num1,
@@ -40,13 +49,19 @@ const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num8,
 ];
 
+struct Toast {
+    message: String,
+    expires_at: f64,
+}
+
 pub struct MainWindow {
     config: Config,
     color: Okhsl,
     input: String,
     input_editing: bool,
     history: Vec<Okhsl>,
-    status: Option<String>,
+    toast: Option<Toast>,
+    now: f64,
     picker: PickerController,
 }
 
@@ -58,9 +73,17 @@ impl MainWindow {
             input: String::new(),
             input_editing: false,
             history: Vec::new(),
-            status: None,
+            toast: None,
+            now: 0.0,
             picker: PickerController::new(),
         }
+    }
+
+    fn set_toast(&mut self, message: impl Into<String>) {
+        self.toast = Some(Toast {
+            message: message.into(),
+            expires_at: self.now + TOAST_DURATION,
+        });
     }
 
     fn push_history(&mut self, color: Okhsl) {
@@ -72,7 +95,7 @@ impl MainWindow {
 
     fn persist_config(&mut self) {
         if let Err(error) = self.config.save() {
-            self.status = Some(format!("could not save settings: {error}"));
+            self.set_toast(format!("Could not save settings: {error}"));
         }
     }
 
@@ -80,46 +103,42 @@ impl MainWindow {
         match parse::parse(&self.input) {
             Some(color) => {
                 self.color = color;
-                self.status = Some("parsed color".to_owned());
+                self.set_toast("Parsed color");
             }
-            None => self.status = Some("unrecognized color".to_owned()),
+            None => self.set_toast("Unrecognized color"),
         }
         self.input = self.config.default_format.format(self.color);
     }
 
     fn copy(&mut self, format: ColorFormat) {
         let value = format.format(self.color);
-        self.status = Some(match clipboard::set_text(value) {
-            Ok(()) => format!("copied {}", format.label()),
-            Err(error) => format!("copy failed: {error}"),
-        });
+        match clipboard::set_text(value.clone()) {
+            Ok(()) => self.set_toast(format!("Copied {value}")),
+            Err(error) => self.set_toast(format!("Copy failed: {error}")),
+        }
     }
 
     fn open_picker(&mut self) {
         if self.picker.request() {
-            self.status = Some("capturing screen...".to_owned());
+            self.set_toast("Capturing screen...");
         }
     }
 
     fn handle_event(&mut self, event: Event) {
         match event {
-            Event::Ready => self.status = Some("picking from screen...".to_owned()),
-            Event::CaptureFailed(error) => {
-                self.status = Some(format!("capture failed: {error}"));
-            }
-            Event::ThreadStopped => {
-                self.status = Some("capture thread stopped unexpectedly".to_owned());
-            }
+            Event::Ready => self.set_toast("Picking from screen..."),
+            Event::CaptureFailed(error) => self.set_toast(format!("Capture failed: {error}")),
+            Event::ThreadStopped => self.set_toast("Capture thread stopped unexpectedly"),
             Event::Picked(color) => {
                 self.color = color;
                 self.push_history(color);
                 let value = self.config.default_format.format(color);
-                self.status = Some(match clipboard::set_text(value) {
-                    Ok(()) => format!("picked {}", self.config.default_format.label()),
-                    Err(error) => format!("copy failed: {error}"),
-                });
+                match clipboard::set_text(value.clone()) {
+                    Ok(()) => self.set_toast(format!("Picked {value}")),
+                    Err(error) => self.set_toast(format!("Copy failed: {error}")),
+                }
             }
-            Event::Dismissed => self.status = Some("picking cancelled".to_owned()),
+            Event::Dismissed => self.set_toast("Picking cancelled"),
         }
     }
 }
@@ -129,12 +148,17 @@ impl eframe::App for MainWindow {
         let ctx = ui.ctx().clone();
         let mut open_picker = false;
 
+        self.now = ctx.input(|input| input.time);
         ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
         ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
         theme::apply(&ctx, self.config.theme, self.color);
 
         let background = color32(self.color);
         let foreground = contrast_color32(self.color);
+
+        let input_font = egui::FontId::proportional(INPUT_FONT_SIZE);
+        let input_height =
+            ctx.fonts_mut(|fonts| fonts.row_height(&input_font)) + 2.0 * f32::from(INPUT_MARGIN_Y);
 
         let mut hue = self.color.hue() / HUE_MAX_DEGREES;
         let mut saturation = self.color.saturation();
@@ -151,13 +175,10 @@ impl eframe::App for MainWindow {
                     .inner_margin(SLIDER_PANEL_MARGIN),
             )
             .show(ui, |ui| {
-                let slider_height =
-                    (ui.available_height() - LABEL_ROW_HEIGHT).max(SLIDER_MIN_HEIGHT);
-                let slider_size = egui::vec2(SLIDER_WIDTH, slider_height);
                 ui.horizontal_top(|ui| {
                     let hue_saturation = saturation;
                     let hue_lightness = lightness;
-                    slider::column(ui, "H", foreground, &mut hue, slider_size, move |value| {
+                    slider::column(ui, "H", foreground, &mut hue, SLIDER_WIDTH, move |value| {
                         color32(Okhsl::new(
                             value * HUE_MAX_DEGREES,
                             hue_saturation,
@@ -172,7 +193,7 @@ impl eframe::App for MainWindow {
                         "S",
                         foreground,
                         &mut saturation,
-                        slider_size,
+                        SLIDER_WIDTH,
                         move |value| {
                             color32(Okhsl::new(saturation_hue, value, saturation_lightness))
                         },
@@ -186,7 +207,7 @@ impl eframe::App for MainWindow {
                         "L",
                         foreground,
                         &mut lightness,
-                        slider_size,
+                        SLIDER_WIDTH,
                         move |value| {
                             color32(Okhsl::new(lightness_hue, lightness_saturation, value))
                         },
@@ -200,6 +221,66 @@ impl eframe::App for MainWindow {
             lightness,
         );
 
+        egui::Panel::bottom(SETTINGS_PANEL_ID)
+            .resizable(false)
+            .frame(
+                egui::Frame::NONE
+                    .fill(background)
+                    .inner_margin(egui::Margin::symmetric(
+                        SETTINGS_PANEL_MARGIN_X,
+                        SETTINGS_PANEL_MARGIN_Y,
+                    )),
+            )
+            .show(ui, |ui| {
+                let mut config_changed = false;
+                let row_height = widgets::row_height(ui);
+                ui.spacing_mut().interact_size.y = row_height;
+                ui.horizontal(|ui| {
+                    widgets::settings_icon(ui, foreground);
+                    egui::ComboBox::from_id_salt("launch-mode")
+                        .selected_text(launch_mode_label(self.config.launch_mode))
+                        .show_ui(ui, |ui| {
+                            for mode in [LaunchMode::UiFirst, LaunchMode::PickerFirst] {
+                                if ui
+                                    .selectable_value(
+                                        &mut self.config.launch_mode,
+                                        mode,
+                                        launch_mode_label(mode),
+                                    )
+                                    .changed()
+                                {
+                                    config_changed = true;
+                                }
+                            }
+                        })
+                        .response
+                        .on_hover_text("Launch mode: open the main window, or start in the picker");
+                    egui::ComboBox::from_id_salt("default-format")
+                        .selected_text(self.config.default_format.label())
+                        .show_ui(ui, |ui| {
+                            for format in ColorFormat::ALL {
+                                if ui
+                                    .selectable_value(
+                                        &mut self.config.default_format,
+                                        format,
+                                        format.label(),
+                                    )
+                                    .changed()
+                                {
+                                    config_changed = true;
+                                }
+                            }
+                        })
+                        .response
+                        .on_hover_text(
+                            "Default format: shown in the input field and copied on pick",
+                        );
+                });
+                if config_changed {
+                    self.persist_config();
+                }
+            });
+
         let panel_frame = egui::Frame::central_panel(ui.style())
             .inner_margin(PANEL_MARGIN)
             .fill(background);
@@ -207,10 +288,10 @@ impl eframe::App for MainWindow {
             .frame(panel_frame)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    open_picker |= widgets::picker_launcher(ui, self.color);
+                    open_picker |= widgets::picker_launcher(ui, input_height);
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.input)
-                            .font(egui::FontId::proportional(INPUT_FONT_SIZE))
+                            .font(input_font.clone())
                             .margin(egui::Margin::symmetric(INPUT_MARGIN_X, INPUT_MARGIN_Y))
                             .desired_width(ui.available_width())
                             .hint_text("color"),
@@ -233,7 +314,8 @@ impl eframe::App for MainWindow {
                     widgets::copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
                         let value = format.format(self.color);
-                        let response = ui.button(format.label()).on_hover_text(value.as_str());
+                        let tooltip = format!("Copy {value}");
+                        let response = ui.button(format.label()).on_hover_text(tooltip);
                         if response.clicked() {
                             self.copy(format);
                         }
@@ -243,7 +325,7 @@ impl eframe::App for MainWindow {
                 ui.add_space(ROW_SPACING);
 
                 ui.horizontal(|ui| {
-                    if widgets::clear_history(ui, foreground) {
+                    if widgets::clear_history(ui) {
                         self.history.clear();
                     }
                     let mut selected = None;
@@ -256,52 +338,6 @@ impl eframe::App for MainWindow {
                         self.color = color;
                     }
                 });
-
-                ui.add_space(ROW_SPACING);
-
-                let mut config_changed = false;
-                ui.horizontal(|ui| {
-                    egui::ComboBox::from_id_salt("launch-mode")
-                        .selected_text(launch_mode_label(self.config.launch_mode))
-                        .show_ui(ui, |ui| {
-                            for mode in [LaunchMode::UiFirst, LaunchMode::PickerFirst] {
-                                if ui
-                                    .selectable_value(
-                                        &mut self.config.launch_mode,
-                                        mode,
-                                        launch_mode_label(mode),
-                                    )
-                                    .changed()
-                                {
-                                    config_changed = true;
-                                }
-                            }
-                        });
-                    egui::ComboBox::from_id_salt("default-format")
-                        .selected_text(self.config.default_format.label())
-                        .show_ui(ui, |ui| {
-                            for format in ColorFormat::ALL {
-                                if ui
-                                    .selectable_value(
-                                        &mut self.config.default_format,
-                                        format,
-                                        format.label(),
-                                    )
-                                    .changed()
-                                {
-                                    config_changed = true;
-                                }
-                            }
-                        });
-                });
-                if config_changed {
-                    self.persist_config();
-                }
-
-                if let Some(status) = &self.status {
-                    ui.add_space(ROW_SPACING);
-                    ui.label(status.as_str());
-                }
             });
 
         if !ctx.egui_wants_keyboard_input() && !self.picker.is_busy() {
@@ -323,6 +359,42 @@ impl eframe::App for MainWindow {
         if let Some(event) = self.picker.update(&ctx, &self.config) {
             self.handle_event(event);
         }
+
+        self.show_toast(&ctx);
+    }
+}
+
+impl MainWindow {
+    fn show_toast(&mut self, ctx: &egui::Context) {
+        if self
+            .toast
+            .as_ref()
+            .is_some_and(|toast| self.now >= toast.expires_at)
+        {
+            self.toast = None;
+        }
+
+        let Some(toast) = self.toast.as_ref() else {
+            return;
+        };
+        let remaining = (toast.expires_at - self.now).max(0.0);
+        let message = toast.message.clone();
+        ctx.request_repaint_after(Duration::from_secs_f64(remaining));
+
+        egui::Area::new(egui::Id::new(TOAST_ID))
+            .anchor(
+                egui::Align2::CENTER_BOTTOM,
+                egui::vec2(0.0, -TOAST_BOTTOM_MARGIN),
+            )
+            .order(egui::Order::Foreground)
+            .interactable(false)
+            .show(ctx, |ui| {
+                egui::Frame::popup(ui.style())
+                    .inner_margin(egui::Margin::symmetric(TOAST_MARGIN_X, TOAST_MARGIN_Y))
+                    .show(ui, |ui| {
+                        ui.label(egui::RichText::new(message).size(TOAST_FONT_SIZE));
+                    });
+            });
     }
 }
 
