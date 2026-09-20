@@ -63,6 +63,7 @@ pub struct MainWindow {
     history: Vec<Okhsl>,
     toast: Option<Toast>,
     now: f64,
+    pending_toast: Option<String>,
     picker: PickerController,
 }
 
@@ -76,8 +77,17 @@ impl MainWindow {
             history: Vec::new(),
             toast: None,
             now: 0.0,
+            pending_toast: None,
             picker: PickerController::new(),
         }
+    }
+
+    pub fn with_initial(mut self, color: Okhsl) -> Self {
+        self.color = color;
+        self.push_history(color);
+        let value = self.config.default_format.format(color);
+        self.pending_toast = Some(format!("Picked {value}"));
+        self
     }
 
     fn set_toast(&mut self, message: impl Into<String>) {
@@ -147,6 +157,11 @@ impl eframe::App for MainWindow {
         let mut open_picker = false;
 
         self.now = ctx.input(|input| input.time);
+
+        if let Some(message) = self.pending_toast.take() {
+            self.set_toast(message);
+        }
+
         ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
         ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
         theme::apply(&ctx, self.config.theme, self.color);
