@@ -4,7 +4,8 @@ use crate::color::okhsl::Okhsl;
 use crate::config::Theme;
 
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
-const CONTRAST_LIGHTNESS_SHIFT: f32 = 0.4;
+const DARK_BACKGROUND_FOREGROUND_FLOOR: f32 = 0.7;
+const LIGHT_BACKGROUND_FOREGROUND_CEILING: f32 = 0.3;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
 const INACTIVE_FILL_ALPHA: u8 = 32;
 const HOVERED_FILL_ALPHA: u8 = 60;
@@ -21,10 +22,11 @@ pub fn color32(color: Okhsl) -> egui::Color32 {
 
 pub fn contrast_color32(color: Okhsl) -> egui::Color32 {
     let lightness = color.lightness();
-    let shifted = if lightness >= CONTRAST_LIGHTNESS_THRESHOLD {
-        (lightness - CONTRAST_LIGHTNESS_SHIFT).max(0.0)
+    let complement = 1.0 - lightness;
+    let shifted = if lightness < CONTRAST_LIGHTNESS_THRESHOLD {
+        complement.max(DARK_BACKGROUND_FOREGROUND_FLOOR)
     } else {
-        (lightness + CONTRAST_LIGHTNESS_SHIFT).min(1.0)
+        complement.min(LIGHT_BACKGROUND_FOREGROUND_CEILING)
     };
     color32(Okhsl::new(color.hue(), color.saturation(), shifted))
 }
