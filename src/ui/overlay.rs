@@ -171,8 +171,7 @@ impl eframe::App for StandalonePicker {
             return;
         };
         if let PickOutcome::Picked(color) = outcome {
-            let value = self.config.default_format.format(color);
-            if let Err(error) = clipboard::set_text(value) {
+            if let Err(error) = clipboard::copy_color(self.config.default_format, color) {
                 tracing::warn!(?error, "clipboard write failed");
             }
         }

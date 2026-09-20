@@ -182,7 +182,7 @@ impl MainWindow {
     pub fn with_initial(mut self, color: Okhsl) -> Self {
         self.color = color;
         self.history.push(color);
-        let value = self.config.default_format.format(color);
+        let value = self.config.format(color);
         self.pending_toast = Some(format!("Picked {value}"));
         self
     }
@@ -215,7 +215,7 @@ impl MainWindow {
             Some(color) => self.color = color,
             None => self.set_toast("Unrecognized color"),
         }
-        self.input = self.config.default_format.format(self.color);
+        self.input = self.config.format(self.color);
         self.applied_input = Some(InputKey {
             format: self.config.default_format,
             color: ColorKey::new(self.color),
@@ -223,9 +223,8 @@ impl MainWindow {
     }
 
     fn copy(&mut self, format: ColorFormat) {
-        let value = format.format(self.color);
-        match clipboard::set_text(value.clone()) {
-            Ok(()) => self.set_toast(format!("Copied {value}")),
+        match clipboard::copy_color(format, self.color) {
+            Ok(value) => self.set_toast(format!("Copied {value}")),
             Err(error) => self.set_toast(format!("Copy failed: {error}")),
         }
     }
@@ -244,9 +243,8 @@ impl MainWindow {
             Event::Picked(color) => {
                 self.color = color;
                 self.history.push(color);
-                let value = self.config.default_format.format(color);
-                match clipboard::set_text(value.clone()) {
-                    Ok(()) => self.set_toast(format!("Picked {value}")),
+                match clipboard::copy_color(self.config.default_format, color) {
+                    Ok(value) => self.set_toast(format!("Picked {value}")),
                     Err(error) => self.set_toast(format!("Copy failed: {error}")),
                 }
             }
@@ -485,7 +483,7 @@ impl MainWindow {
                             color: ColorKey::new(self.color),
                         };
                         if self.applied_input != Some(input_key) {
-                            self.input = self.config.default_format.format(self.color);
+                            self.input = self.config.format(self.color);
                             self.applied_input = Some(input_key);
                         }
                     }

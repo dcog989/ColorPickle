@@ -5,6 +5,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 use crate::color::ColorFormat;
+use crate::color::okhsl::Okhsl;
 
 pub const APP_NAME: &str = "colorpickle";
 pub const CONFIG_FILE: &str = "config.toml";
@@ -37,6 +38,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn format(&self, color: Okhsl) -> String {
+        self.default_format.format(color)
+    }
+
     pub fn path() -> Option<PathBuf> {
         directories::ProjectDirs::from("", "", APP_NAME)
             .map(|dirs| dirs.config_dir().join(CONFIG_FILE))
