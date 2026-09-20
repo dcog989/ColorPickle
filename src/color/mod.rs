@@ -58,7 +58,7 @@ impl ColorFormat {
                 let hsl = Hsl::from_color(srgb);
                 format!(
                     "hsl({:.0}, {:.0}%, {:.0}%)",
-                    hsl.hue.into_degrees(),
+                    hsl.hue.into_positive_degrees(),
                     hsl.saturation * 100.0,
                     hsl.lightness * 100.0
                 )
@@ -75,7 +75,7 @@ impl ColorFormat {
                     "oklch({:.3}, {:.3}, {:.1})",
                     oklch.l,
                     oklch.chroma,
-                    oklch.hue.into_degrees()
+                    oklch.hue.into_positive_degrees()
                 )
             }
             Self::Oklab => {
@@ -159,5 +159,30 @@ mod tests {
             ColorFormat::Okhsl.format(color),
             "okhsl(30.0, 0.500, 0.500)"
         );
+    }
+
+    fn component(text: &str, index: usize) -> f32 {
+        text.split(['(', ','])
+            .nth(index)
+            .unwrap()
+            .trim_end_matches([')', '%'])
+            .trim()
+            .parse()
+            .unwrap()
+    }
+
+    #[test]
+    fn formatted_hues_are_positive_degrees() {
+        for srgb in [
+            Srgb::new(0.0, 1.0, 1.0),
+            Srgb::new(0.5, 0.2, 0.9),
+            Srgb::new(0.1, 0.8, 0.4),
+        ] {
+            let color = Okhsl::from_srgb(srgb);
+            let hsl = ColorFormat::Hsl.format(color);
+            assert!((0.0..360.0).contains(&component(&hsl, 1)), "{hsl}");
+            let oklch = ColorFormat::Oklch.format(color);
+            assert!((0.0..360.0).contains(&component(&oklch, 3)), "{oklch}");
+        }
     }
 }
