@@ -8,17 +8,27 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 - Click to pick a single pixel, or drag to select a region and pick its averaged color
 - Copy as HEX, RGB, HSL, Okhsl, Oklch, Oklab, CMYK, or CIELAB
 - Keyboard shortcuts `1`–`8` copy the respective format
-- Okhsl-based internal color model
-- Whole-window color background with contrast-adjusted controls
+- The main window is the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
-- Wayland capture via xdg-desktop-portal with a static-frame fallback
-- Esc / right-click to dismiss the picker without copying
+- Wayland capture via the XDG desktop portal
 
-## Status
+## Usage
 
-Early scaffold. The main window uses the current color as its background, with an eyedrop launcher, gradient Hue/Saturation/Lightness sliders, the Okhsl color pipeline, seven copy formats, and a working clipboard. The picker overlay (magnifier, click-to-copy a pixel, drag-to-average a region, Esc/right-click dismiss) runs over a Wayland xdg-desktop-portal capture.
+Run `colorpickle` for the main window, or `colorpickle --launch-mode picker_first` to go straight to the picker. The launch mode and other defaults can also be set in the config file.
 
-Still pending: the X11 (`xcap`) and KDE `ScreenShot2` capture backends, the color input field and parser, history swatches, copy-on-pick, the launch-mode/default-format controls, and a follow-system theme UI.
+In the main window, click the eyedrop to open the picker. **Click** copies a single pixel; **drag** selects a region and copies its averaged color. Either way the picker closes and the value is copied to the clipboard. Press `Esc` or right-click to dismiss without copying. `Esc` exits the main window.
+
+Hover a format button to preview the current color in that format; click it, or press its number key, to copy.
+
+## Configuration
+
+Optional. ColorPickle reads `~/.config/colorpickle/config.toml` if it exists:
+
+```toml
+launch_mode = "ui_first"     # or "picker_first"
+default_format = "hex"       # hex, rgb, hsl, okhsl, oklch, oklab, cmyk, cielab
+theme = "system"             # system, light, or dark
+```
 
 ## Build
 
@@ -38,18 +48,6 @@ cargo upgrade && cargo update --verbose  # update Cargo.lock and dependencies to
 
 cargo clean && rm -rf target/            # clean build artifacts
 ```
-
-## Stack
-
-| Layer | Crate |
-|---|---|
-| GUI | `egui` + `eframe` |
-| Windowing | `winit` |
-| Capture | `xcap`, `ashpd` |
-| Clipboard | `arboard` (`wl-clipboard-rs` backend on Wayland) |
-| Color | `palette` (Okhsl, Oklab, HSL) |
-| Config | `serde`, `toml`, `directories` |
-| CLI | `clap` |
 
 ## License
 
