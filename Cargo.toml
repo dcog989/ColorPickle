@@ -24,6 +24,7 @@ tokio = { version = "1.53.1", default-features = false, features = ["net", "rt",
 toml = "1.1.6"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+url = "2.5.8"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
 wl-clipboard-rs = "0.9.3"

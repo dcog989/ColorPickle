@@ -971,6 +971,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "url",
  "wayland-client",
  "wayland-protocols",
  "wl-clipboard-rs",

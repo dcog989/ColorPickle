@@ -1,13 +1,9 @@
-use std::ffi::OsString;
-use std::os::unix::ffi::OsStringExt;
 use std::path::PathBuf;
 
 use image::RgbaImage;
+use url::Url;
 
 use crate::capture::{CaptureError, CaptureResult, DesktopRect};
-
-const FILE_SCHEME: &str = "file://";
-const HEX_RADIX: u32 = 16;
 
 pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
     let image = capture_once()?;
@@ -44,62 +40,8 @@ fn block_on<F: std::future::Future>(future: F) -> CaptureResult<F::Output> {
 }
 
 fn uri_to_path(uri: &str) -> CaptureResult<PathBuf> {
-    let encoded = uri
-        .strip_prefix(FILE_SCHEME)
-        .ok_or_else(|| CaptureError::InvalidUri(uri.to_string()))?;
-    let bytes = percent_decode(encoded).ok_or_else(|| CaptureError::InvalidUri(uri.to_string()))?;
-    Ok(PathBuf::from(OsString::from_vec(bytes)))
-}
-
-fn percent_decode(input: &str) -> Option<Vec<u8>> {
-    let bytes = input.as_bytes();
-    let mut output = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        if bytes[index] == b'%' {
-            let digits = bytes.get(index + 1..index + 3)?;
-            if !digits.iter().all(u8::is_ascii_hexdigit) {
-                return None;
-            }
-            let value = u8::from_str_radix(std::str::from_utf8(digits).ok()?, HEX_RADIX).ok()?;
-            output.push(value);
-            index += 3;
-        } else {
-            output.push(bytes[index]);
-            index += 1;
-        }
-    }
-    Some(output)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::uri_to_path;
-    use std::path::PathBuf;
-
-    #[test]
-    fn decodes_plain_file_uri() {
-        assert_eq!(
-            uri_to_path("file:///tmp/shot.png").unwrap(),
-            PathBuf::from("/tmp/shot.png")
-        );
-    }
-
-    #[test]
-    fn decodes_percent_escapes() {
-        assert_eq!(
-            uri_to_path("file:///tmp/a%20b%2Bc.png").unwrap(),
-            PathBuf::from("/tmp/a b+c.png")
-        );
-    }
-
-    #[test]
-    fn rejects_non_file_uri() {
-        assert!(uri_to_path("https://example.com/x.png").is_err());
-    }
-
-    #[test]
-    fn rejects_truncated_escape() {
-        assert!(uri_to_path("file:///tmp/a%2.png").is_err());
-    }
+    Url::parse(uri)
+        .ok()
+        .and_then(|url| url.to_file_path().ok())
+        .ok_or_else(|| CaptureError::InvalidUri(uri.to_string()))
 }
