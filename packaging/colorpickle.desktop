@@ -6,4 +6,10 @@ Exec=colorpickle
 Icon=colorpickle
 Terminal=false
 Categories=Graphics;Utility;
+Keywords=color;colour;picker;eyedropper;
+Actions=Pick;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
+
+[Desktop Action Pick]
+Name=Pick a colour
+Exec=colorpickle --launch-mode picker_first
