@@ -8,6 +8,7 @@ use crate::ui::overlay::{self, PickOutcome};
 
 const CAPTURE_TIMEOUT_SECONDS: f64 = 5.0;
 const CAPTURE_WATCHDOG_MILLIS: u64 = 250;
+const HIDE_SETTLE_MILLIS: u64 = 150;
 const PICKER_VIEWPORT_SALT: &str = "colorpickle-picker";
 
 pub enum Event {
@@ -58,10 +59,14 @@ impl PickerController {
         self.waiting_for_user = false;
         tracing::info!(generation = self.generation, "picker: capture requested");
 
+        ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+
         let (sender, receiver) = mpsc::channel();
         let ctx = ctx.clone();
         std::thread::spawn(move || {
             tracing::debug!("picker: capture worker starting");
+            // Give the compositor time to unmap the main window so it is not captured.
+            std::thread::sleep(Duration::from_millis(HIDE_SETTLE_MILLIS));
             let result = overlay::CapturedFrame::capture_with(|| {
                 let _ = sender.send(CaptureUpdate::WaitingForUser);
                 ctx.request_repaint();
@@ -86,6 +91,7 @@ impl PickerController {
                 }
                 Ok(CaptureUpdate::Finished(Err(error))) => {
                     tracing::warn!(%error, "picker: capture failed");
+                    show_main_window(ctx);
                     return Some(Event::CaptureFailed(error.to_string()));
                 }
                 Ok(CaptureUpdate::WaitingForUser) => {
@@ -101,6 +107,7 @@ impl PickerController {
                             elapsed = now - self.capture_started,
                             "picker: capture timed out"
                         );
+                        show_main_window(ctx);
                         return Some(Event::CaptureFailed("timed out".to_owned()));
                     }
                     self.capture = Some(receiver);
@@ -108,6 +115,7 @@ impl PickerController {
                 }
                 Err(TryRecvError::Disconnected) => {
                     tracing::warn!("picker: capture thread disconnected");
+                    show_main_window(ctx);
                     return Some(Event::ThreadStopped);
                 }
             }
@@ -117,6 +125,7 @@ impl PickerController {
             match overlay::show(ctx, &mut session, self.viewport) {
                 Some(outcome) => {
                     tracing::info!(?outcome, "picker: overlay closed");
+                    show_main_window(ctx);
                     return Some(match outcome {
                         PickOutcome::Picked(color) => Event::Picked(color),
                         PickOutcome::Dismissed => Event::Dismissed,
@@ -131,4 +140,8 @@ impl PickerController {
 
         None
     }
+}
+
+fn show_main_window(ctx: &egui::Context) {
+    ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
 }
