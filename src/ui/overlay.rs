@@ -77,7 +77,11 @@ impl Session {
             return texture.id();
         }
         let size = [self.frame.width() as usize, self.frame.height() as usize];
-        tracing::info!(width = size[0], height = size[1], "overlay: uploading frame texture");
+        tracing::info!(
+            width = size[0],
+            height = size[1],
+            "overlay: uploading frame texture"
+        );
         let image = egui::ColorImage::from_rgba_unmultiplied(size, self.frame.as_raw());
         let texture = ctx.load_texture(FRAME_TEXTURE, image, egui::TextureOptions::LINEAR);
         let id = texture.id();
