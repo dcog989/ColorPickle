@@ -23,6 +23,9 @@ const LOGO_HANDLE_BOTTOM: f32 = 412.0;
 const LOGO_HANDLE_RADIUS: f32 = 17.0;
 const GEAR_VIEWBOX: f32 = 24.0;
 const GEAR_STROKE: f32 = 2.0;
+const PALETTE_VIEWBOX: f32 = 24.0;
+const PALETTE_STROKE: f32 = 2.0;
+const PALETTE_DOT_RADIUS: f32 = 0.5;
 const COPY_ICON_STROKE_WIDTH: f32 = 1.5;
 const COPY_ICON_OFFSET_FRACTION: f32 = 0.18;
 const COPY_ICON_CORNER_RADIUS: u8 = 2;
@@ -83,6 +86,29 @@ pub fn settings_icon(ui: &mut egui::Ui, color: egui::Color32) {
         color,
         &GEAR_PATHS,
     );
+}
+
+pub fn palette_icon(ui: &mut egui::Ui, color: egui::Color32) {
+    let height = row_height(ui);
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(height, height), egui::Sense::hover());
+    let painter = ui.painter();
+    paint_paths(
+        painter,
+        rect,
+        PALETTE_VIEWBOX,
+        PALETTE_STROKE,
+        color,
+        &PALETTE_PATHS,
+    );
+
+    let scale = rect.width() / PALETTE_VIEWBOX;
+    for &(x, y) in &PALETTE_DOTS {
+        painter.circle_filled(
+            egui::pos2(rect.left() + x * scale, rect.top() + y * scale),
+            PALETTE_DOT_RADIUS * scale,
+            color,
+        );
+    }
 }
 
 pub fn copy_icon(ui: &mut egui::Ui, color: egui::Color32) {
@@ -346,6 +372,72 @@ const GEAR_PATHS: [&[(f32, f32)]; 2] = [
         (14.963, 11.531),
         (15.000, 12.000),
     ],
+];
+
+// Lucide "palette" (https://lucide.dev/icons/palette), outline flattened from the
+// 24x24 viewBox; the paint wells are the separate filled dots below.
+const PALETTE_PATHS: [&[(f32, f32)]; 1] = [&[
+    (12.000, 22.000),
+    (8.910, 21.500),
+    (6.120, 20.100),
+    (3.910, 17.900),
+    (2.490, 15.100),
+    (2.000, 12.000),
+    (2.490, 8.910),
+    (3.910, 6.120),
+    (6.120, 3.910),
+    (8.910, 2.490),
+    (12.000, 2.000),
+    (13.600, 2.110),
+    (15.100, 2.440),
+    (16.500, 2.980),
+    (17.900, 3.720),
+    (19.100, 4.640),
+    (20.100, 5.710),
+    (20.900, 6.910),
+    (21.500, 8.220),
+    (21.900, 9.590),
+    (22.000, 11.000),
+    (21.900, 11.800),
+    (21.800, 12.500),
+    (21.500, 13.300),
+    (21.000, 13.900),
+    (20.500, 14.500),
+    (19.900, 15.000),
+    (19.300, 15.500),
+    (18.500, 15.800),
+    (17.800, 15.900),
+    (17.000, 16.000),
+    (14.800, 16.000),
+    (14.400, 16.000),
+    (14.000, 16.200),
+    (13.700, 16.400),
+    (13.400, 16.600),
+    (13.200, 17.000),
+    (13.100, 17.300),
+    (13.000, 17.700),
+    (13.000, 18.100),
+    (13.200, 18.500),
+    (13.400, 18.800),
+    (13.700, 19.200),
+    (13.800, 19.500),
+    (14.000, 19.900),
+    (14.000, 20.300),
+    (13.900, 20.700),
+    (13.800, 21.000),
+    (13.600, 21.400),
+    (13.300, 21.600),
+    (13.000, 21.800),
+    (12.600, 22.000),
+    (12.200, 22.000),
+    (12.000, 22.000),
+]];
+
+const PALETTE_DOTS: [(f32, f32); 4] = [
+    (13.5, 6.5),
+    (17.5, 10.5),
+    (6.5, 12.5),
+    (8.5, 7.5),
 ];
 
 fn paint_paths(

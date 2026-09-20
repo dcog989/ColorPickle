@@ -1,3 +1,4 @@
+pub mod harmony;
 pub mod okhsl;
 pub mod parse;
 

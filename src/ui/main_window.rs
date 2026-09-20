@@ -5,6 +5,7 @@ use eframe::egui;
 use crate::cli::LaunchMode;
 use crate::clipboard;
 use crate::color::ColorFormat;
+use crate::color::harmony::Harmony;
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
 use crate::config::Config;
@@ -61,6 +62,7 @@ pub struct MainWindow {
     input: String,
     input_editing: bool,
     history: Vec<Okhsl>,
+    harmony: Harmony,
     toast: Option<Toast>,
     now: f64,
     pending_toast: Option<String>,
@@ -75,6 +77,7 @@ impl MainWindow {
             input: String::new(),
             input_editing: false,
             history: Vec::new(),
+            harmony: Harmony::default(),
             toast: None,
             now: 0.0,
             pending_toast: None,
@@ -295,7 +298,12 @@ impl eframe::App for MainWindow {
             });
 
         let panel_frame = egui::Frame::central_panel(ui.style())
-            .inner_margin(PANEL_MARGIN)
+            .inner_margin(egui::Margin {
+                left: PANEL_MARGIN as i8,
+                right: PANEL_MARGIN as i8,
+                top: PANEL_MARGIN as i8,
+                bottom: SETTINGS_PANEL_MARGIN_Y,
+            })
             .fill(background);
         egui::CentralPanel::default()
             .frame(panel_frame)
@@ -357,6 +365,27 @@ impl eframe::App for MainWindow {
                     if let Some(color) = selected {
                         self.color = color;
                     }
+                });
+
+                ui.with_layout(egui::Layout::bottom_up(egui::Align::Min), |ui| {
+                    ui.spacing_mut().interact_size.y = widgets::row_height(ui);
+                    ui.horizontal(|ui| {
+                        widgets::palette_icon(ui, foreground);
+                        egui::ComboBox::from_id_salt("harmony")
+                            .selected_text(self.harmony.label())
+                            .show_ui(ui, |ui| {
+                                for harmony in Harmony::ALL {
+                                    ui.selectable_value(&mut self.harmony, harmony, harmony.label());
+                                }
+                            })
+                            .response
+                            .on_hover_text("Colour harmony");
+                        for swatch in self.harmony.swatches(self.color) {
+                            if widgets::history_swatch(ui, swatch, foreground) {
+                                self.color = swatch;
+                            }
+                        }
+                    });
                 });
             });
 
