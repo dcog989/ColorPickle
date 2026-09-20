@@ -1,4 +1,5 @@
 use image::{Rgba, RgbaImage};
+use x11rb::connection::Connection;
 use x11rb::image::{Image, PixelLayout};
 
 use crate::capture::{CaptureError, CaptureResult, DesktopRect};
