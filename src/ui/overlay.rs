@@ -170,10 +170,10 @@ impl eframe::App for StandalonePicker {
         let Some(outcome) = draw(ui.ctx(), &mut self.session) else {
             return;
         };
-        if let PickOutcome::Picked(color) = outcome {
-            if let Err(error) = clipboard::copy_color(self.config.default_format, color) {
-                tracing::warn!(?error, "clipboard write failed");
-            }
+        if let PickOutcome::Picked(color) = outcome
+            && let Err(error) = clipboard::copy_color(self.config.default_format, color)
+        {
+            tracing::warn!(?error, "clipboard write failed");
         }
         self.outcome.set(Some(outcome));
         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
