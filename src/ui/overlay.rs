@@ -95,6 +95,7 @@ pub fn run(config: Config) -> Result<()> {
 
     let options = eframe::NativeOptions {
         viewport: viewport_builder(),
+        persist_window: false,
         ..Default::default()
     };
 
@@ -120,6 +121,7 @@ pub fn show(
 fn viewport_builder() -> egui::ViewportBuilder {
     egui::ViewportBuilder::default()
         .with_title(PICKER_TITLE)
+        .with_app_id("colorpickle-picker")
         .with_fullscreen(true)
         .with_decorations(false)
         .with_always_on_top()
@@ -132,6 +134,11 @@ struct StandalonePicker {
 
 impl eframe::App for StandalonePicker {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        if ui.ctx().input(|input| input.viewport().fullscreen) != Some(true) {
+            ui.ctx()
+                .send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
+        }
+
         let Some(outcome) = draw(ui.ctx(), &mut self.session, &self.config) else {
             return;
         };
