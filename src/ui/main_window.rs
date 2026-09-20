@@ -25,6 +25,7 @@ const ITEM_SPACING: f32 = 10.0;
 const INPUT_FONT_SIZE: f32 = 26.0;
 const INPUT_MARGIN_X: i8 = 12;
 const INPUT_MARGIN_Y: i8 = 10;
+const MIN_WINDOW_HEIGHT: f32 = 420.0;
 const HUE_MAX_DEGREES: f32 = 360.0;
 const HUE_FRACTION_MAX: f32 = 1.0 - f32::EPSILON;
 const DEFAULT_HUE_DEGREES: f32 = 180.0;
@@ -307,7 +308,7 @@ impl eframe::App for MainWindow {
 
                 ui.add_space(ROW_SPACING);
 
-                ui.horizontal_wrapped(|ui| {
+                let format_row = ui.horizontal(|ui| {
                     widgets::copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
                         let value = format.format(self.color);
@@ -318,6 +319,13 @@ impl eframe::App for MainWindow {
                         }
                     }
                 });
+
+                let required_width =
+                    panel_width + 2.0 * PANEL_MARGIN + format_row.response.rect.width();
+                ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(egui::vec2(
+                    required_width,
+                    MIN_WINDOW_HEIGHT,
+                )));
 
                 ui.add_space(ROW_SPACING);
 

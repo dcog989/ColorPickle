@@ -12,7 +12,7 @@ use crate::config::Config;
 use crate::ui::main_window::MainWindow;
 
 pub const WINDOW_TITLE: &str = "ColorPickle";
-pub const WINDOW_WIDTH: f32 = 600.0;
+pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 
 pub fn run_ui(config: Config) -> Result<()> {
