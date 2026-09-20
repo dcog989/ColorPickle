@@ -28,22 +28,12 @@ pub enum Theme {
     Dark,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
     pub theme: Theme,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            launch_mode: LaunchMode::default(),
-            default_format: ColorFormat::default(),
-            theme: Theme::default(),
-        }
-    }
 }
 
 impl Config {
