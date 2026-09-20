@@ -74,6 +74,9 @@ fn percent_decode(input: &str) -> Option<Vec<u8>> {
     while index < bytes.len() {
         if bytes[index] == b'%' {
             let digits = bytes.get(index + 1..index + 3)?;
+            if !digits.iter().all(u8::is_ascii_hexdigit) {
+                return None;
+            }
             let value = u8::from_str_radix(std::str::from_utf8(digits).ok()?, HEX_RADIX).ok()?;
             output.push(value);
             index += 3;

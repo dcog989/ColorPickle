@@ -60,6 +60,7 @@ pub struct MainWindow {
     color: Okhsl,
     input: String,
     input_editing: bool,
+    input_dirty: bool,
     history: Vec<Okhsl>,
     harmony: Harmony,
     toast: Option<Toast>,
@@ -75,6 +76,7 @@ impl MainWindow {
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
             input: String::new(),
             input_editing: false,
+            input_dirty: false,
             history: Vec::new(),
             harmony: Harmony::default(),
             toast: None,
@@ -323,9 +325,15 @@ impl eframe::App for MainWindow {
                     if response.gained_focus() {
                         self.input_editing = true;
                     }
+                    if response.changed() && self.input_editing {
+                        self.input_dirty = true;
+                    }
                     if response.lost_focus() {
                         self.input_editing = false;
-                        self.apply_input();
+                        if self.input_dirty {
+                            self.input_dirty = false;
+                            self.apply_input();
+                        }
                     }
                     if !self.input_editing {
                         self.input = self.config.default_format.format(self.color);
