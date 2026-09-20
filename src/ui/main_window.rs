@@ -35,7 +35,6 @@ const DEFAULT_LIGHTNESS: f32 = 0.5;
 const HISTORY_LIMIT: usize = 8;
 const TOAST_DURATION: f64 = 2.5;
 const TOAST_BOTTOM_MARGIN: f32 = 84.0;
-const TOAST_FONT_SIZE: f32 = 16.0;
 const TOAST_MARGIN_X: i8 = 16;
 const TOAST_MARGIN_Y: i8 = 10;
 const TOAST_ID: &str = "colorpickle-toast";
@@ -449,7 +448,7 @@ impl MainWindow {
                 egui::Frame::popup(ui.style())
                     .inner_margin(egui::Margin::symmetric(TOAST_MARGIN_X, TOAST_MARGIN_Y))
                     .show(ui, |ui| {
-                        ui.label(egui::RichText::new(message).size(TOAST_FONT_SIZE));
+                        ui.add(egui::Label::new(message).extend());
                     });
             });
     }
