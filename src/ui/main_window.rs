@@ -123,10 +123,14 @@ impl eframe::App for MainWindow {
 
         let panel_width =
             3.0 * SLIDER_WIDTH + 2.0 * ui.spacing().item_spacing.x + 2.0 * SLIDER_PANEL_MARGIN;
-        egui::SidePanel::right(SLIDER_PANEL_ID)
+        egui::Panel::right(SLIDER_PANEL_ID)
             .resizable(false)
             .exact_size(panel_width)
-            .frame(egui::Frame::NONE.fill(background).inner_margin(SLIDER_PANEL_MARGIN))
+            .frame(
+                egui::Frame::NONE
+                    .fill(background)
+                    .inner_margin(SLIDER_PANEL_MARGIN),
+            )
             .show(ui, |ui| {
                 let slider_height =
                     (ui.available_height() - LABEL_ROW_HEIGHT).max(SLIDER_MIN_HEIGHT);
@@ -158,9 +162,16 @@ impl eframe::App for MainWindow {
 
                     let lightness_hue = hue * HUE_MAX_DEGREES;
                     let lightness_saturation = saturation;
-                    slider_column(ui, "L", foreground, &mut lightness, slider_size, move |value| {
-                        color32(Okhsl::new(lightness_hue, lightness_saturation, value))
-                    });
+                    slider_column(
+                        ui,
+                        "L",
+                        foreground,
+                        &mut lightness,
+                        slider_size,
+                        move |value| {
+                            color32(Okhsl::new(lightness_hue, lightness_saturation, value))
+                        },
+                    );
                 });
             });
 

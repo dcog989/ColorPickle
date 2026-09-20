@@ -73,11 +73,7 @@ fn parse_rgb(values: &[f32]) -> Option<Okhsl> {
 
 fn parse_hsl(values: &[f32]) -> Option<Okhsl> {
     let [hue, saturation, lightness] = three(values)?;
-    let hsl = Hsl::new(
-        RgbHue::from_degrees(hue),
-        unit(saturation),
-        unit(lightness),
-    );
+    let hsl = Hsl::new(RgbHue::from_degrees(hue), unit(saturation), unit(lightness));
     Some(Okhsl::from_srgb(Srgb::from_color(hsl)))
 }
 
@@ -176,10 +172,7 @@ mod tests {
 
     #[test]
     fn parses_function_forms() {
-        assert_eq!(
-            parse("rgb(0, 128, 255)").unwrap().to_srgb8(),
-            [0, 128, 255]
-        );
+        assert_eq!(parse("rgb(0, 128, 255)").unwrap().to_srgb8(), [0, 128, 255]);
         let hue = parse("okhsl(210, 0.5, 0.5)").unwrap().hue();
         assert!((hue - 210.0).abs() < 1.0, "hue was {hue}");
     }
