@@ -20,8 +20,6 @@ const DRAG_MAGNIFIER_MARGIN: f32 = 24.0;
 const CROSSHAIR_ARM: f32 = 8.0;
 const CROSSHAIR_WIDTH: f32 = 1.0;
 const DRAG_THRESHOLD: f32 = 4.0;
-const READOUT_OFFSET: egui::Vec2 = egui::vec2(14.0, -14.0);
-const READOUT_FONT_SIZE: f32 = 14.0;
 const BANNER_FONT_SIZE: f32 = 14.0;
 const BANNER_TOP_MARGIN: f32 = 16.0;
 const STROKE_COLOR: egui::Color32 = egui::Color32::WHITE;
@@ -123,11 +121,10 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
 pub fn show(
     ctx: &egui::Context,
     session: &mut Session,
-    config: &Config,
     viewport: egui::ViewportId,
 ) -> Option<PickOutcome> {
     ctx.show_viewport_immediate(viewport, viewport_builder(), |ui, _class| {
-        draw(ui.ctx(), session, config)
+        draw(ui.ctx(), session)
     })
 }
 
@@ -148,7 +145,7 @@ struct StandalonePicker {
 
 impl eframe::App for StandalonePicker {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let Some(outcome) = draw(ui.ctx(), &mut self.session, &self.config) else {
+        let Some(outcome) = draw(ui.ctx(), &mut self.session) else {
             return;
         };
         if let PickOutcome::Picked(color) = outcome {
@@ -162,7 +159,7 @@ impl eframe::App for StandalonePicker {
     }
 }
 
-fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<PickOutcome> {
+fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     ctx.request_repaint();
 
     let texture_id = session.texture_id(ctx);
@@ -221,7 +218,6 @@ fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<P
             average_color(&session.frame, (pixel_x, pixel_y, pixel_x, pixel_y))
         }
     };
-    let value = config.default_format.format(color);
 
     let magnifier_center = magnifier_center(screen, pointer, dragging);
     draw_magnifier(
@@ -236,7 +232,6 @@ fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<P
     } else {
         draw_crosshair(&painter, pointer);
     }
-    draw_readout(&painter, pointer, value.as_str());
     if session.uses_portal_fallback {
         draw_banner(&painter, screen);
     }
@@ -357,25 +352,6 @@ fn draw_crosshair(painter: &egui::Painter, pointer: egui::Pos2) {
             egui::pos2(pointer.x, pointer.y + CROSSHAIR_ARM),
         ],
         stroke,
-    );
-}
-
-fn draw_readout(painter: &egui::Painter, pointer: egui::Pos2, value: &str) {
-    let position = pointer + READOUT_OFFSET;
-    let font = egui::FontId::proportional(READOUT_FONT_SIZE);
-    painter.text(
-        position + egui::vec2(1.0, 1.0),
-        egui::Align2::LEFT_BOTTOM,
-        value,
-        font.clone(),
-        SHADOW_COLOR,
-    );
-    painter.text(
-        position,
-        egui::Align2::LEFT_BOTTOM,
-        value,
-        font,
-        STROKE_COLOR,
     );
 }
 

@@ -413,7 +413,7 @@ impl eframe::App for MainWindow {
             self.open_picker(&ctx);
         }
 
-        if let Some(event) = self.picker.update(&ctx, &self.config) {
+        if let Some(event) = self.picker.update(&ctx) {
             self.handle_event(event);
         }
 

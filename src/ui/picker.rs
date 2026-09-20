@@ -4,7 +4,6 @@ use std::time::Duration;
 use eframe::egui;
 
 use crate::color::okhsl::Okhsl;
-use crate::config::Config;
 use crate::ui::overlay::{self, PickOutcome};
 
 const CAPTURE_TIMEOUT_SECONDS: f64 = 5.0;
@@ -64,7 +63,7 @@ impl PickerController {
         true
     }
 
-    pub fn update(&mut self, ctx: &egui::Context, config: &Config) -> Option<Event> {
+    pub fn update(&mut self, ctx: &egui::Context) -> Option<Event> {
         if let Some(receiver) = self.capture.take() {
             match receiver.try_recv() {
                 Ok(Ok(captured)) => {
@@ -98,7 +97,7 @@ impl PickerController {
         }
 
         if let Some(mut session) = self.session.take() {
-            match overlay::show(ctx, &mut session, config, self.viewport) {
+            match overlay::show(ctx, &mut session, self.viewport) {
                 Some(outcome) => {
                     tracing::info!(?outcome, "picker: overlay closed");
                     return Some(match outcome {
