@@ -8,7 +8,7 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 - Click to pick a single pixel, or drag to select a region and pick its averaged color
 - Copy as HEX, RGB, HSL, Okhsl, Oklch, Oklab, CMYK, or CIELAB
 - Keyboard shortcuts `1`–`8` copy the respective format
-- Type a hex code, any supported format, or a CSS color name to set the color
+- Type a HEX code, any supported format, or a CSS color name to set the color
 - The main window is the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
 - History of the last 8 picks — click one to reuse it, or clear the list
