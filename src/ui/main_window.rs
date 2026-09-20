@@ -404,7 +404,9 @@ impl eframe::App for MainWindow {
                 });
             });
 
-        if !ctx.egui_wants_keyboard_input() && !self.picker.is_busy() {
+        let keyboard_captured = ctx.egui_wants_keyboard_input();
+
+        if !keyboard_captured && !self.picker.is_busy() {
             for (format, key) in ColorFormat::ALL.iter().zip(FORMAT_KEYS) {
                 if ctx.input(|input| input.key_pressed(key)) {
                     self.copy(*format);
@@ -412,7 +414,10 @@ impl eframe::App for MainWindow {
             }
         }
 
-        if !self.picker.is_busy() && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+        if !keyboard_captured
+            && !self.picker.is_busy()
+            && ctx.input(|input| input.key_pressed(egui::Key::Escape))
+        {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
 
