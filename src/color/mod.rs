@@ -104,7 +104,7 @@ impl ColorFormat {
 
 fn decimals(value: f32, places: usize) -> String {
     let formatted = format!("{value:.places$}");
-    match formatted.split_once('.') {
+    let text = match formatted.split_once('.') {
         Some((integer, fraction)) => {
             let fraction = fraction.trim_end_matches('0');
             if fraction.is_empty() {
@@ -114,6 +114,11 @@ fn decimals(value: f32, places: usize) -> String {
             }
         }
         None => formatted,
+    };
+    if text == "-0" {
+        "0".to_string()
+    } else {
+        text
     }
 }
 
@@ -156,9 +161,18 @@ fn format_cmyk(srgb: Srgb) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ColorFormat, format_cmyk, format_hex};
+    use super::{ColorFormat, decimals, format_cmyk, format_hex};
     use crate::color::okhsl::Okhsl;
     use palette::Srgb;
+
+    #[test]
+    fn decimals_trims_and_avoids_negative_zero() {
+        assert_eq!(decimals(0.5, 3), "0.5");
+        assert_eq!(decimals(180.0, 1), "180");
+        assert_eq!(decimals(-0.0001, 3), "0");
+        assert_eq!(decimals(-0.0, 3), "0");
+        assert_eq!(decimals(-2.25, 3), "-2.25");
+    }
 
     #[test]
     fn hex_uses_uppercase_pairs() {
