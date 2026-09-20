@@ -23,6 +23,7 @@ const SELECTION_FILL_ALPHA: u8 = 80;
 const FIELD_FILL_ALPHA: u8 = 28;
 const BORDER_ALPHA: u8 = 110;
 const BORDER_WIDTH: f32 = 1.0;
+const CORNER_RADIUS: u8 = 6;
 
 pub fn color32(color: Okhsl) -> egui::Color32 {
     let [red, green, blue] = color.to_srgb8();
@@ -86,6 +87,15 @@ fn visuals(ctx: &egui::Context, theme: Theme, color: Okhsl) -> egui::Visuals {
     let foreground = contrast_color32(color);
     let surface = surface_color32(color);
     let border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, BORDER_ALPHA));
+    let corner = egui::CornerRadius::same(CORNER_RADIUS);
+
+    visuals.window_corner_radius = corner;
+    visuals.menu_corner_radius = corner;
+    visuals.widgets.noninteractive.corner_radius = corner;
+    visuals.widgets.inactive.corner_radius = corner;
+    visuals.widgets.hovered.corner_radius = corner;
+    visuals.widgets.active.corner_radius = corner;
+    visuals.widgets.open.corner_radius = corner;
 
     visuals.override_text_color = Some(foreground);
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
