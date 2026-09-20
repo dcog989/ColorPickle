@@ -2,10 +2,12 @@
 name = "colorpickle"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.95"
 description = "Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."
 readme = "README.md"
 repository = "https://github.com/dcog989/ColorPickle"
 license = "GPL-3.0-only"
+publish = false
 
 [package.metadata.deb]
 maintainer = "dcog989 <sirdavidlaws@gmail.com>"
