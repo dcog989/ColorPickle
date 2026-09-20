@@ -74,6 +74,10 @@ Individual artifacts:
 - AUR — `packaging/aur/PKGBUILD`
 - Source — `cargo install --path .`
 
+## Known limitations
+
+On KDE Plasma, the fast `org.kde.KWin.ScreenShot2` capture path is restricted by KWin to allow-listed executables (`X-KDE-DBUS-Restricted-Interfaces`), matched against the executable path. Package installs at `/usr/bin/colorpickle` (`.deb`, `.rpm`, AUR) qualify, but an AppImage runs from a temporary mount and is denied. AppImage users on Plasma therefore fall back to `ext-image-copy-capture` where the compositor supports it, or to the XDG desktop portal (shown as the "picking from a static screenshot" banner), which is slower.
+
 ## License
 
 GPL-3.0-only. See [LICENSE](LICENSE).
