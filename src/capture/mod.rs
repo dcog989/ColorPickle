@@ -39,15 +39,20 @@ pub trait CaptureBackend {
 pub fn detect() -> CaptureResult<Box<dyn CaptureBackend>> {
     if is_kde() {
         match kde::KdeBackend::new() {
-            Ok(backend) => return Ok(Box::new(backend)),
+            Ok(backend) => {
+                tracing::info!("capture: using KWin ScreenShot2");
+                return Ok(Box::new(backend));
+            }
             Err(error) => {
                 tracing::warn!(?error, "KWin ScreenShot2 capture failed; using the portal");
             }
         }
     }
     if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+        tracing::info!("capture: using xdg-desktop-portal");
         Ok(Box::new(wayland::WaylandBackend::new()?))
     } else {
+        tracing::info!("capture: using X11 xcap");
         Ok(Box::new(x11::X11Backend))
     }
 }

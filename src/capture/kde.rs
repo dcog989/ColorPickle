@@ -51,6 +51,7 @@ impl CaptureBackend for KdeBackend {
 }
 
 fn capture_workspace() -> CaptureResult<RgbaImage> {
+    tracing::debug!("kwin: connecting to ScreenShot2");
     let connection = Connection::session()?;
     let proxy = Proxy::new(&connection, SERVICE, PATH, INTERFACE)?;
 
@@ -68,8 +69,12 @@ fn capture_workspace() -> CaptureResult<RgbaImage> {
     let stride = get_u32(&reply, KEY_STRIDE)?;
     let format = get_u32(&reply, KEY_FORMAT)?;
 
-    let mut buffer = vec![0u8; stride as usize * height as usize];
+    tracing::info!(width, height, stride, format, "kwin: captured workspace");
+    let byte_len = stride as usize * height as usize;
+    tracing::debug!(byte_len, "kwin: reading pixels from pipe");
+    let mut buffer = vec![0u8; byte_len];
     reader.read_exact(&mut buffer)?;
+    tracing::debug!("kwin: pixel read complete");
 
     repack(&buffer, width, height, stride, format)
 }

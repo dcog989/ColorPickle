@@ -77,6 +77,7 @@ impl Session {
             return texture.id();
         }
         let size = [self.frame.width() as usize, self.frame.height() as usize];
+        tracing::info!(width = size[0], height = size[1], "overlay: uploading frame texture");
         let image = egui::ColorImage::from_rgba_unmultiplied(size, self.frame.as_raw());
         let texture = ctx.load_texture(FRAME_TEXTURE, image, egui::TextureOptions::LINEAR);
         let id = texture.id();
@@ -101,12 +102,15 @@ pub fn run(config: Config) -> Result<()> {
     .map_err(|error| anyhow::anyhow!("failed to run the picker: {error}"))
 }
 
-pub fn show(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<PickOutcome> {
-    ctx.show_viewport_immediate(
-        egui::ViewportId::from_hash_of(PICKER_VIEWPORT),
-        viewport_builder(),
-        |ui, _class| draw(ui.ctx(), session, config),
-    )
+pub fn show(
+    ctx: &egui::Context,
+    session: &mut Session,
+    config: &Config,
+    viewport: egui::ViewportId,
+) -> Option<PickOutcome> {
+    ctx.show_viewport_immediate(viewport, viewport_builder(), |ui, _class| {
+        draw(ui.ctx(), session, config)
+    })
 }
 
 fn viewport_builder() -> egui::ViewportBuilder {
