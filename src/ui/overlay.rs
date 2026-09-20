@@ -17,7 +17,6 @@ const PICKER_VIEWPORT: &str = "colorpickle-picker";
 const MAGNIFIER_SIZE: f32 = 180.0;
 const MAGNIFIER_ZOOM: f32 = 4.0;
 const MAGNIFIER_SOURCE_PIXELS: f32 = MAGNIFIER_SIZE / MAGNIFIER_ZOOM;
-const MAGNIFIER_PIXEL_SIZE: f32 = MAGNIFIER_SIZE / MAGNIFIER_SOURCE_PIXELS;
 const DRAG_MAGNIFIER_MARGIN: f32 = 24.0;
 const CROSSHAIR_ARM: f32 = 8.0;
 const CROSSHAIR_WIDTH: f32 = 1.0;
@@ -326,7 +325,7 @@ fn draw_magnifier(
     );
     let marker = egui::Rect::from_center_size(
         marker_center,
-        egui::vec2(MAGNIFIER_PIXEL_SIZE, MAGNIFIER_PIXEL_SIZE),
+        egui::vec2(MAGNIFIER_ZOOM, MAGNIFIER_ZOOM),
     );
     painter.rect_stroke(
         marker,
