@@ -93,6 +93,10 @@ impl MainWindow {
         self
     }
 
+    pub fn apply_theme(&self, ctx: &egui::Context) {
+        theme::apply(ctx, self.config.theme, self.color);
+    }
+
     fn set_toast(&mut self, message: impl Into<String>) {
         self.toast = Some(Toast {
             message: message.into(),

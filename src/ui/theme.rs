@@ -4,8 +4,17 @@ use crate::color::okhsl::Okhsl;
 use crate::config::Theme;
 
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
-const DARK_BACKGROUND_FOREGROUND_FLOOR: f32 = 0.7;
-const LIGHT_BACKGROUND_FOREGROUND_CEILING: f32 = 0.3;
+const CONTRAST_LUMINANCE_THRESHOLD: f32 = 0.179;
+const CONTRAST_LIGHTNESS_DELTA: f32 = 0.5;
+const SRGB_CHANNEL_MAX: f32 = 255.0;
+const SRGB_LINEAR_THRESHOLD: f32 = 0.04045;
+const SRGB_LINEAR_DIVISOR: f32 = 12.92;
+const SRGB_GAMMA_OFFSET: f32 = 0.055;
+const SRGB_GAMMA_SCALE: f32 = 1.055;
+const SRGB_GAMMA: f32 = 2.4;
+const LUMINANCE_RED: f32 = 0.2126;
+const LUMINANCE_GREEN: f32 = 0.7152;
+const LUMINANCE_BLUE: f32 = 0.0722;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
 const INACTIVE_FILL_ALPHA: u8 = 32;
 const HOVERED_FILL_ALPHA: u8 = 60;
@@ -21,19 +30,39 @@ pub fn color32(color: Okhsl) -> egui::Color32 {
 }
 
 pub fn contrast_color32(color: Okhsl) -> egui::Color32 {
-    let lightness = color.lightness();
-    let complement = 1.0 - lightness;
-    let shifted = if lightness < CONTRAST_LIGHTNESS_THRESHOLD {
-        complement.max(DARK_BACKGROUND_FOREGROUND_FLOOR)
+    let [red, green, blue] = color.to_srgb8();
+    let shifted = if relative_luminance(red, green, blue) > CONTRAST_LUMINANCE_THRESHOLD {
+        color.lightness() - CONTRAST_LIGHTNESS_DELTA
     } else {
-        complement.min(LIGHT_BACKGROUND_FOREGROUND_CEILING)
+        color.lightness() + CONTRAST_LIGHTNESS_DELTA
     };
-    color32(Okhsl::new(color.hue(), color.saturation(), shifted))
+    color32(Okhsl::new(
+        color.hue(),
+        color.saturation(),
+        shifted.clamp(0.0, 1.0),
+    ))
+}
+
+fn relative_luminance(red: u8, green: u8, blue: u8) -> f32 {
+    LUMINANCE_RED * linearize(red)
+        + LUMINANCE_GREEN * linearize(green)
+        + LUMINANCE_BLUE * linearize(blue)
+}
+
+fn linearize(channel: u8) -> f32 {
+    let value = f32::from(channel) / SRGB_CHANNEL_MAX;
+    if value <= SRGB_LINEAR_THRESHOLD {
+        value / SRGB_LINEAR_DIVISOR
+    } else {
+        ((value + SRGB_GAMMA_OFFSET) / SRGB_GAMMA_SCALE).powf(SRGB_GAMMA)
+    }
 }
 
 pub fn apply(ctx: &egui::Context, theme: Theme, color: Okhsl) {
     ctx.set_theme(theme_preference(theme));
-    ctx.set_visuals(visuals(ctx, theme, color));
+    let visuals = visuals(ctx, theme, color);
+    ctx.set_visuals_of(egui::Theme::Dark, visuals.clone());
+    ctx.set_visuals_of(egui::Theme::Light, visuals);
 }
 
 fn theme_preference(theme: Theme) -> egui::ThemePreference {
@@ -102,4 +131,34 @@ fn set_surfaces(
 
 fn fill(foreground: egui::Color32, alpha: u8) -> egui::Color32 {
     egui::Color32::from_rgba_unmultiplied(foreground.r(), foreground.g(), foreground.b(), alpha)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::contrast_color32;
+    use crate::color::okhsl::Okhsl;
+    use palette::Srgb;
+
+    fn round_trip(color: Okhsl) -> Okhsl {
+        let [red, green, blue] = color.to_srgb8();
+        Okhsl::from_srgb(Srgb::new(
+            f32::from(red) / 255.0,
+            f32::from(green) / 255.0,
+            f32::from(blue) / 255.0,
+        ))
+    }
+
+    #[test]
+    fn foreground_is_stable_across_an_srgb_round_trip() {
+        let color = Okhsl::new(180.0, 0.5, 0.5);
+        assert_eq!(contrast_color32(color), contrast_color32(round_trip(color)));
+    }
+
+    #[test]
+    fn extreme_backgrounds_do_not_get_extreme_text() {
+        let on_black = contrast_color32(Okhsl::new(0.0, 0.0, 0.0));
+        let on_white = contrast_color32(Okhsl::new(0.0, 0.0, 1.0));
+        assert!(on_black.r() > 16 && on_black.r() < 240);
+        assert!(on_white.r() > 16 && on_white.r() < 240);
+    }
 }

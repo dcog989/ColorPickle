@@ -45,11 +45,12 @@ fn run_main(config: Config, initial: Option<Okhsl>) -> Result<()> {
     eframe::run_native(
         WINDOW_TITLE,
         options,
-        Box::new(move |_cc| {
+        Box::new(move |cc| {
             let window = match initial {
                 Some(color) => MainWindow::new(config).with_initial(color),
                 None => MainWindow::new(config),
             };
+            window.apply_theme(&cc.egui_ctx);
             Ok(Box::new(window))
         }),
     )
