@@ -37,7 +37,7 @@ license-file = ["LICENSE"]
 extended-description = "Pick a pixel or drag-select a region from anywhere on screen and copy the colour in any common format."
 section = "graphics"
 priority = "optional"
-depends = "$auto, libxkbcommon0, libwayland-client0, libx11-6, libgl1"
+depends = "$auto, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libx11-6, libxcursor1, libxi6, libxrandr2, libgl1, libegl1"
 recommends = "xdg-desktop-portal"
 assets = [
     ["target/release/colorpickle", "usr/bin/", "755"],
@@ -53,3 +53,13 @@ assets = [
     { source = "packaging/colorpickle.svg", dest = "/usr/share/icons/hicolor/scalable/apps/colorpickle.svg", mode = "644" },
     { source = "assets/colorpickle.png", dest = "/usr/share/icons/hicolor/256x256/apps/colorpickle.png", mode = "644" },
 ]
+
+[package.metadata.generate-rpm.requires]
+"libXcursor.so.1()(64bit)" = "*"
+"libXi.so.6()(64bit)" = "*"
+"libXrandr.so.2()(64bit)" = "*"
+"libxkbcommon-x11.so.0()(64bit)" = "*"
+"libEGL.so.1()(64bit)" = "*"
+
+[package.metadata.generate-rpm.recommends]
+"xdg-desktop-portal" = "*"
