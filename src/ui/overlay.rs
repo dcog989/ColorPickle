@@ -23,7 +23,8 @@ const BANNER_FONT_SIZE: f32 = 14.0;
 const BANNER_TOP_MARGIN: f32 = 16.0;
 const STROKE_COLOR: egui::Color32 = egui::Color32::WHITE;
 const SHADOW_COLOR: egui::Color32 = egui::Color32::BLACK;
-const SELECTION_FILL: egui::Color32 = egui::Color32::from_white_alpha(40);
+const SELECTION_FILL: egui::Color32 =
+    egui::Color32::from_rgba_unmultiplied_const(255, 255, 255, 40);
 const RGB_MAX: f32 = 255.0;
 const FRAME_TEXTURE: &str = "picker-frame";
 const FULL_UV: egui::Rect = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
