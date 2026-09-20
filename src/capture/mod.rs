@@ -3,7 +3,7 @@ pub mod kde;
 pub mod wayland;
 pub mod x11;
 
-use image::RgbaImage;
+use image::{RgbaImage, imageops};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CaptureError {
@@ -147,6 +147,46 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
         }
     }
     Err(last_error.unwrap_or(CaptureError::NoBackend))
+}
+
+pub fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<(RgbaImage, DesktopRect)> {
+    let min_x = captures.iter().map(|(_, x, _)| *x).min().unwrap_or(0);
+    let min_y = captures.iter().map(|(_, _, y)| *y).min().unwrap_or(0);
+    let max_x = captures
+        .iter()
+        .map(|(image, x, _)| x + image.width() as i32)
+        .max()
+        .unwrap_or(0);
+    let max_y = captures
+        .iter()
+        .map(|(image, _, y)| y + image.height() as i32)
+        .max()
+        .unwrap_or(0);
+
+    let width = (max_x - min_x).max(0) as u32;
+    let height = (max_y - min_y).max(0) as u32;
+    if width == 0 || height == 0 {
+        return Err(CaptureError::EmptyFrame);
+    }
+
+    let mut canvas = RgbaImage::new(width, height);
+    for (image, x, y) in captures {
+        imageops::overlay(
+            &mut canvas,
+            &image,
+            i64::from(x - min_x),
+            i64::from(y - min_y),
+        );
+    }
+    Ok((
+        canvas,
+        DesktopRect {
+            x: min_x,
+            y: min_y,
+            width,
+            height,
+        },
+    ))
 }
 
 fn is_kde() -> bool {

@@ -27,7 +27,7 @@ use ext_image_copy_capture_manager_v1::{ExtImageCopyCaptureManagerV1, Options};
 use ext_image_copy_capture_session_v1::ExtImageCopyCaptureSessionV1;
 use ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
 
-use crate::capture::{CaptureError, CaptureResult, DesktopRect};
+use crate::capture::{CaptureError, CaptureResult, DesktopRect, composite};
 
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
@@ -422,46 +422,6 @@ fn source_pixel(
         wl_output::Transform::Flipped270 => (height - y - 1, width - x - 1),
         _ => (x, y),
     }
-}
-
-fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<(RgbaImage, DesktopRect)> {
-    let min_x = captures.iter().map(|(_, x, _)| *x).min().unwrap_or(0);
-    let min_y = captures.iter().map(|(_, _, y)| *y).min().unwrap_or(0);
-    let max_x = captures
-        .iter()
-        .map(|(image, x, _)| x + image.width() as i32)
-        .max()
-        .unwrap_or(0);
-    let max_y = captures
-        .iter()
-        .map(|(image, _, y)| y + image.height() as i32)
-        .max()
-        .unwrap_or(0);
-
-    let width = (max_x - min_x).max(0) as u32;
-    let height = (max_y - min_y).max(0) as u32;
-    if width == 0 || height == 0 {
-        return Err(failure("captured no pixels"));
-    }
-
-    let mut canvas = RgbaImage::new(width, height);
-    for (image, x, y) in captures {
-        imageops::overlay(
-            &mut canvas,
-            &image,
-            i64::from(x - min_x),
-            i64::from(y - min_y),
-        );
-    }
-    Ok((
-        canvas,
-        DesktopRect {
-            x: min_x,
-            y: min_y,
-            width,
-            height,
-        },
-    ))
 }
 
 fn failure(error: impl std::fmt::Display) -> CaptureError {
