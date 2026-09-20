@@ -54,4 +54,17 @@ impl Config {
         toml::from_str(&text)
             .with_context(|| format!("failed to parse config at {}", path.display()))
     }
+
+    pub fn save(&self) -> Result<()> {
+        let Some(path) = Self::path() else {
+            return Ok(());
+        };
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)
+                .with_context(|| format!("failed to create {}", parent.display()))?;
+        }
+        let text = toml::to_string_pretty(self).context("failed to serialize config")?;
+        std::fs::write(&path, text)
+            .with_context(|| format!("failed to write config at {}", path.display()))
+    }
 }

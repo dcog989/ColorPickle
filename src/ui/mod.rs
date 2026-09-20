@@ -3,6 +3,7 @@ pub mod overlay;
 pub mod picker;
 pub mod slider;
 pub mod theme;
+pub mod widgets;
 
 use anyhow::Result;
 use eframe::egui;

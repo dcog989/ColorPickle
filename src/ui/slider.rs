@@ -10,6 +10,21 @@ const LUMINANCE_GREEN: f32 = 0.587;
 const LUMINANCE_BLUE: f32 = 0.114;
 const LUMINANCE_THRESHOLD: f32 = 128.0;
 
+pub fn column(
+    ui: &mut egui::Ui,
+    label: &str,
+    label_color: egui::Color32,
+    value: &mut f32,
+    size: egui::Vec2,
+    gradient: impl Fn(f32) -> egui::Color32,
+) -> egui::Response {
+    ui.vertical(|ui| {
+        ui.colored_label(label_color, label);
+        vertical(ui, size, value, gradient)
+    })
+    .inner
+}
+
 pub fn vertical(
     ui: &mut egui::Ui,
     size: egui::Vec2,

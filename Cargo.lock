@@ -973,6 +973,7 @@ dependencies = [
  "winit",
  "wl-clipboard-rs",
  "xcap",
+ "zbus",
 ]
 
 [[package]]

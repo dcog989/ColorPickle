@@ -11,6 +11,8 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 - Type a hex code, any supported format, or a CSS color name to set the color
 - The main window is the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
+- History of the last 8 picks — click one to reuse it, or clear the list
+- Launch-mode and default-format selectors, saved to the config file
 - Wayland capture via the XDG desktop portal
 
 ## Usage
@@ -23,9 +25,11 @@ Hover a format button to preview the current color in that format; click it, or 
 
 The text field shows the current color in the default format. Type a replacement — `#ff0000`, `rgb(255, 0, 0)`, `oklch(0.7, 0.1, 120)`, `olive`, and so on — and press Enter to apply it.
 
+Each pick is added to the history row; click a swatch to make it the current color, or the rotate button to clear the history. The bottom row selects the launch mode and the default copy format; those changes are saved to the config file.
+
 ## Configuration
 
-Optional. ColorPickle reads `~/.config/colorpickle/config.toml` if it exists:
+ColorPickle reads `~/.config/colorpickle/config.toml`, and writes it back when you change the launch mode or default format in the UI. The keys are:
 
 ```toml
 launch_mode = "ui_first"     # or "picker_first"

@@ -1,5 +1,6 @@
 use eframe::egui;
 
+use crate::cli::LaunchMode;
 use crate::clipboard;
 use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
@@ -8,6 +9,7 @@ use crate::config::Config;
 use crate::ui::picker::{Event, PickerController};
 use crate::ui::slider;
 use crate::ui::theme::{self, color32, contrast_color32};
+use crate::ui::widgets;
 
 const SLIDER_WIDTH: f32 = 26.0;
 const SLIDER_MIN_HEIGHT: f32 = 80.0;
@@ -19,14 +21,7 @@ const HUE_FRACTION_MAX: f32 = 1.0 - f32::EPSILON;
 const DEFAULT_HUE_DEGREES: f32 = 180.0;
 const DEFAULT_SATURATION: f32 = 0.5;
 const DEFAULT_LIGHTNESS: f32 = 0.5;
-const EYEDROP_ICON_SIZE: f32 = 22.0;
-const EYEDROP_OUTER_RADIUS: f32 = 8.0;
-const EYEDROP_INNER_RADIUS: f32 = 2.5;
-const EYEDROP_STROKE_WIDTH: f32 = 1.5;
-const COPY_ICON_SIZE: f32 = 18.0;
-const COPY_ICON_STROKE_WIDTH: f32 = 1.5;
-const COPY_ICON_OFFSET: f32 = 3.0;
-const COPY_ICON_CORNER_RADIUS: u8 = 2;
+const HISTORY_LIMIT: usize = 8;
 const SATURATION_TOOLTIP: &str = "Saturation is perceptual (Okhsl-normalised), so its visual effect varies slightly with lightness.";
 const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num1,
@@ -44,6 +39,7 @@ pub struct MainWindow {
     color: Okhsl,
     input: String,
     input_editing: bool,
+    history: Vec<Okhsl>,
     status: Option<String>,
     picker: PickerController,
 }
@@ -55,8 +51,22 @@ impl MainWindow {
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
             input: String::new(),
             input_editing: false,
+            history: Vec::new(),
             status: None,
             picker: PickerController::new(),
+        }
+    }
+
+    fn push_history(&mut self, color: Okhsl) {
+        self.history
+            .retain(|existing| existing.to_srgb8() != color.to_srgb8());
+        self.history.insert(0, color);
+        self.history.truncate(HISTORY_LIMIT);
+    }
+
+    fn persist_config(&mut self) {
+        if let Err(error) = self.config.save() {
+            self.status = Some(format!("could not save settings: {error}"));
         }
     }
 
@@ -96,6 +106,7 @@ impl MainWindow {
             }
             Event::Picked(color) => {
                 self.color = color;
+                self.push_history(color);
                 let value = self.config.default_format.format(color);
                 self.status = Some(match clipboard::set_text(value) {
                     Ok(()) => format!("picked {}", self.config.default_format.label()),
@@ -138,7 +149,7 @@ impl eframe::App for MainWindow {
                 ui.horizontal_top(|ui| {
                     let hue_saturation = saturation;
                     let hue_lightness = lightness;
-                    slider_column(ui, "H", foreground, &mut hue, slider_size, move |value| {
+                    slider::column(ui, "H", foreground, &mut hue, slider_size, move |value| {
                         color32(Okhsl::new(
                             value * HUE_MAX_DEGREES,
                             hue_saturation,
@@ -148,7 +159,7 @@ impl eframe::App for MainWindow {
 
                     let saturation_hue = hue * HUE_MAX_DEGREES;
                     let saturation_lightness = lightness;
-                    slider_column(
+                    slider::column(
                         ui,
                         "S",
                         foreground,
@@ -162,7 +173,7 @@ impl eframe::App for MainWindow {
 
                     let lightness_hue = hue * HUE_MAX_DEGREES;
                     let lightness_saturation = saturation;
-                    slider_column(
+                    slider::column(
                         ui,
                         "L",
                         foreground,
@@ -186,7 +197,7 @@ impl eframe::App for MainWindow {
             .frame(panel_frame)
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
-                    open_picker |= draw_picker_launcher(ui, self.color);
+                    open_picker |= widgets::picker_launcher(ui, self.color);
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.input)
                             .desired_width(ui.available_width())
@@ -205,7 +216,7 @@ impl eframe::App for MainWindow {
                 });
 
                 ui.horizontal_wrapped(|ui| {
-                    draw_copy_icon(ui, foreground);
+                    widgets::copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
                         let value = format.format(self.color);
                         let response = ui.button(format.label()).on_hover_text(value.as_str());
@@ -214,6 +225,60 @@ impl eframe::App for MainWindow {
                         }
                     }
                 });
+
+                ui.horizontal(|ui| {
+                    if widgets::clear_history(ui, foreground) {
+                        self.history.clear();
+                    }
+                    let mut selected = None;
+                    for &color in &self.history {
+                        if widgets::history_swatch(ui, color, foreground) {
+                            selected = Some(color);
+                        }
+                    }
+                    if let Some(color) = selected {
+                        self.color = color;
+                    }
+                });
+
+                let mut config_changed = false;
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_salt("launch-mode")
+                        .selected_text(launch_mode_label(self.config.launch_mode))
+                        .show_ui(ui, |ui| {
+                            for mode in [LaunchMode::UiFirst, LaunchMode::PickerFirst] {
+                                if ui
+                                    .selectable_value(
+                                        &mut self.config.launch_mode,
+                                        mode,
+                                        launch_mode_label(mode),
+                                    )
+                                    .changed()
+                                {
+                                    config_changed = true;
+                                }
+                            }
+                        });
+                    egui::ComboBox::from_id_salt("default-format")
+                        .selected_text(self.config.default_format.label())
+                        .show_ui(ui, |ui| {
+                            for format in ColorFormat::ALL {
+                                if ui
+                                    .selectable_value(
+                                        &mut self.config.default_format,
+                                        format,
+                                        format.label(),
+                                    )
+                                    .changed()
+                                {
+                                    config_changed = true;
+                                }
+                            }
+                        });
+                });
+                if config_changed {
+                    self.persist_config();
+                }
 
                 if let Some(status) = &self.status {
                     ui.label(status.as_str());
@@ -228,6 +293,10 @@ impl eframe::App for MainWindow {
             }
         }
 
+        if !self.picker.is_busy() && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+
         if open_picker {
             self.open_picker();
         }
@@ -238,68 +307,9 @@ impl eframe::App for MainWindow {
     }
 }
 
-fn draw_picker_launcher(ui: &mut egui::Ui, color: Okhsl) -> bool {
-    let (rect, response) = ui.allocate_exact_size(
-        egui::vec2(EYEDROP_ICON_SIZE, EYEDROP_ICON_SIZE),
-        egui::Sense::click(),
-    );
-    let response = response
-        .on_hover_cursor(egui::CursorIcon::Crosshair)
-        .on_hover_text("Pick from screen");
-    paint_crosshair(ui.painter(), rect, contrast_color32(color));
-    response.clicked()
-}
-
-fn slider_column(
-    ui: &mut egui::Ui,
-    label: &str,
-    label_color: egui::Color32,
-    value: &mut f32,
-    size: egui::Vec2,
-    gradient: impl Fn(f32) -> egui::Color32,
-) -> egui::Response {
-    ui.vertical(|ui| {
-        ui.colored_label(label_color, label);
-        slider::vertical(ui, size, value, gradient)
-    })
-    .inner
-}
-
-fn draw_copy_icon(ui: &mut egui::Ui, color: egui::Color32) {
-    let (rect, _) = ui.allocate_exact_size(
-        egui::vec2(COPY_ICON_SIZE, COPY_ICON_SIZE),
-        egui::Sense::hover(),
-    );
-    let painter = ui.painter();
-    let stroke = egui::Stroke::new(COPY_ICON_STROKE_WIDTH, color);
-    let corner = egui::CornerRadius::same(COPY_ICON_CORNER_RADIUS);
-    let size = egui::vec2(
-        rect.width() - COPY_ICON_OFFSET,
-        rect.height() - COPY_ICON_OFFSET,
-    );
-    let front = egui::Rect::from_min_size(rect.min, size);
-    let back = front.translate(egui::vec2(COPY_ICON_OFFSET, COPY_ICON_OFFSET));
-    painter.rect_stroke(back, corner, stroke, egui::StrokeKind::Inside);
-    painter.rect_stroke(front, corner, stroke, egui::StrokeKind::Inside);
-}
-
-fn paint_crosshair(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    let center = rect.center();
-    let stroke = egui::Stroke::new(EYEDROP_STROKE_WIDTH, color);
-    painter.circle_stroke(center, EYEDROP_OUTER_RADIUS, stroke);
-    painter.circle_filled(center, EYEDROP_INNER_RADIUS, color);
-    painter.line_segment(
-        [
-            egui::pos2(center.x - EYEDROP_OUTER_RADIUS, center.y),
-            egui::pos2(center.x + EYEDROP_OUTER_RADIUS, center.y),
-        ],
-        stroke,
-    );
-    painter.line_segment(
-        [
-            egui::pos2(center.x, center.y - EYEDROP_OUTER_RADIUS),
-            egui::pos2(center.x, center.y + EYEDROP_OUTER_RADIUS),
-        ],
-        stroke,
-    );
+fn launch_mode_label(mode: LaunchMode) -> &'static str {
+    match mode {
+        LaunchMode::UiFirst => "UI first",
+        LaunchMode::PickerFirst => "Picker first",
+    }
 }
