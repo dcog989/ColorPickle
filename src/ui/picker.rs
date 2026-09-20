@@ -18,10 +18,16 @@ pub enum Event {
     Dismissed,
 }
 
+enum CaptureUpdate {
+    WaitingForUser,
+    Finished(overlay::CaptureOutcome),
+}
+
 pub struct PickerController {
     session: Option<overlay::Session>,
-    capture: Option<Receiver<overlay::CaptureOutcome>>,
+    capture: Option<Receiver<CaptureUpdate>>,
     capture_started: f64,
+    waiting_for_user: bool,
     generation: u64,
     viewport: egui::ViewportId,
 }
@@ -32,6 +38,7 @@ impl PickerController {
             session: None,
             capture: None,
             capture_started: 0.0,
+            waiting_for_user: false,
             generation: 0,
             viewport: egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, 0_u64)),
         }
@@ -48,15 +55,19 @@ impl PickerController {
         self.generation = self.generation.wrapping_add(1);
         self.viewport = egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, self.generation));
         self.capture_started = ctx.input(|input| input.time);
+        self.waiting_for_user = false;
         tracing::info!(generation = self.generation, "picker: capture requested");
 
         let (sender, receiver) = mpsc::channel();
         let ctx = ctx.clone();
         std::thread::spawn(move || {
             tracing::debug!("picker: capture worker starting");
-            let result = overlay::CapturedFrame::capture();
+            let result = overlay::CapturedFrame::capture_with(|| {
+                let _ = sender.send(CaptureUpdate::WaitingForUser);
+                ctx.request_repaint();
+            });
             tracing::debug!(ok = result.is_ok(), "picker: capture worker finished");
-            let _ = sender.send(result);
+            let _ = sender.send(CaptureUpdate::Finished(result));
             ctx.request_repaint();
         });
         self.capture = Some(receiver);
@@ -66,20 +77,26 @@ impl PickerController {
     pub fn update(&mut self, ctx: &egui::Context) -> Option<Event> {
         if let Some(receiver) = self.capture.take() {
             match receiver.try_recv() {
-                Ok(Ok(captured)) => {
+                Ok(CaptureUpdate::Finished(Ok(captured))) => {
                     tracing::info!("picker: frame ready, showing overlay");
                     self.session = Some(overlay::Session::new(captured));
                     // Run another frame immediately so the overlay is shown.
                     ctx.request_repaint();
                     return Some(Event::Ready);
                 }
-                Ok(Err(error)) => {
+                Ok(CaptureUpdate::Finished(Err(error))) => {
                     tracing::warn!(%error, "picker: capture failed");
                     return Some(Event::CaptureFailed(error.to_string()));
                 }
+                Ok(CaptureUpdate::WaitingForUser) => {
+                    tracing::info!("picker: waiting for the user to answer the permission prompt");
+                    self.waiting_for_user = true;
+                    self.capture = Some(receiver);
+                    ctx.request_repaint_after(Duration::from_millis(CAPTURE_WATCHDOG_MILLIS));
+                }
                 Err(TryRecvError::Empty) => {
                     let now = ctx.input(|input| input.time);
-                    if now - self.capture_started > CAPTURE_TIMEOUT_SECONDS {
+                    if !self.waiting_for_user && now - self.capture_started > CAPTURE_TIMEOUT_SECONDS {
                         tracing::warn!(
                             elapsed = now - self.capture_started,
                             "picker: capture timed out"

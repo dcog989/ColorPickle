@@ -46,8 +46,15 @@ pub struct CapturedFrame {
 
 impl CapturedFrame {
     pub fn capture() -> capture::CaptureResult<Self> {
+        Self::capture_with(|| {})
+    }
+
+    pub fn capture_with(progress: impl FnOnce()) -> capture::CaptureResult<Self> {
         let backend = capture::detect()?;
         let uses_portal_fallback = backend.uses_portal_fallback();
+        if uses_portal_fallback {
+            progress();
+        }
         let capture = backend.capture_fullscreen()?;
         Ok(Self {
             frame: capture.image,

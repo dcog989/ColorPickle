@@ -9,23 +9,20 @@ use crate::capture::{CaptureBackend, CaptureError, CaptureResult, DesktopCapture
 const FILE_SCHEME: &str = "file://";
 const HEX_RADIX: u32 = 16;
 
-pub struct WaylandBackend {
-    frame: RgbaImage,
-}
+pub struct WaylandBackend;
 
 impl WaylandBackend {
     pub fn new() -> CaptureResult<Self> {
-        Ok(Self {
-            frame: capture_once()?,
-        })
+        Ok(Self)
     }
 }
 
 impl CaptureBackend for WaylandBackend {
     fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
+        let frame = capture_once()?;
         Ok(DesktopCapture {
-            image: self.frame.clone(),
-            rect: DesktopRect::from_image(&self.frame),
+            rect: DesktopRect::from_image(&frame),
+            image: frame,
         })
     }
 
