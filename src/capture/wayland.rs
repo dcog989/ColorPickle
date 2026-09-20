@@ -33,7 +33,11 @@ impl CaptureBackend for WaylandBackend {
 
 fn capture_once() -> CaptureResult<RgbaImage> {
     let path = block_on(take_screenshot())??;
-    Ok(image::open(path)?.into_rgba8())
+    let image = image::open(&path).map(|image| image.into_rgba8());
+    if let Err(error) = std::fs::remove_file(&path) {
+        tracing::warn!(?error, path = ?path, "failed to remove the portal screenshot");
+    }
+    Ok(image?)
 }
 
 async fn take_screenshot() -> CaptureResult<PathBuf> {

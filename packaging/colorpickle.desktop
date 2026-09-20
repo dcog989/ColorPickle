@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ColorPickle
+Comment=Pick a colour from anywhere on screen
+Exec=colorpickle
+Icon=colorpickle
+Terminal=false
+Categories=Graphics;Utility;
+X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
