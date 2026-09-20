@@ -408,7 +408,9 @@ impl eframe::App for MainWindow {
                     for format in ColorFormat::ALL {
                         let response = ui
                             .button(format.label())
-                            .on_hover_ui(|ui| ui.label(format!("Copy {}", format.format(color))));
+                            .on_hover_ui(|ui| {
+                                ui.label(format!("Copy {}", format.format(color)));
+                            });
                         if response.clicked() {
                             self.copy(format);
                         }
