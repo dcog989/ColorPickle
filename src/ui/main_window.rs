@@ -11,11 +11,17 @@ use crate::ui::slider;
 use crate::ui::theme::{self, color32, contrast_color32};
 use crate::ui::widgets;
 
-const SLIDER_WIDTH: f32 = 26.0;
+const SLIDER_WIDTH: f32 = 30.0;
 const SLIDER_MIN_HEIGHT: f32 = 80.0;
-const LABEL_ROW_HEIGHT: f32 = 20.0;
-const SLIDER_PANEL_MARGIN: f32 = 8.0;
+const LABEL_ROW_HEIGHT: f32 = 26.0;
+const SLIDER_PANEL_MARGIN: f32 = 12.0;
 const SLIDER_PANEL_ID: &str = "colorpickle-sliders";
+const PANEL_MARGIN: f32 = 16.0;
+const ROW_SPACING: f32 = 18.0;
+const ITEM_SPACING: f32 = 10.0;
+const INPUT_FONT_SIZE: f32 = 26.0;
+const INPUT_MARGIN_X: i8 = 12;
+const INPUT_MARGIN_Y: i8 = 10;
 const HUE_MAX_DEGREES: f32 = 360.0;
 const HUE_FRACTION_MAX: f32 = 1.0 - f32::EPSILON;
 const DEFAULT_HUE_DEGREES: f32 = 180.0;
@@ -123,6 +129,8 @@ impl eframe::App for MainWindow {
         let ctx = ui.ctx().clone();
         let mut open_picker = false;
 
+        ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
+        ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
         theme::apply(&ctx, self.config.theme, self.color);
 
         let background = color32(self.color);
@@ -192,7 +200,9 @@ impl eframe::App for MainWindow {
             lightness,
         );
 
-        let panel_frame = egui::Frame::central_panel(ui.style()).fill(background);
+        let panel_frame = egui::Frame::central_panel(ui.style())
+            .inner_margin(PANEL_MARGIN)
+            .fill(background);
         egui::CentralPanel::default()
             .frame(panel_frame)
             .show(ui, |ui| {
@@ -200,6 +210,8 @@ impl eframe::App for MainWindow {
                     open_picker |= widgets::picker_launcher(ui, self.color);
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.input)
+                            .font(egui::FontId::proportional(INPUT_FONT_SIZE))
+                            .margin(egui::Margin::symmetric(INPUT_MARGIN_X, INPUT_MARGIN_Y))
                             .desired_width(ui.available_width())
                             .hint_text("color"),
                     );
@@ -215,6 +227,8 @@ impl eframe::App for MainWindow {
                     }
                 });
 
+                ui.add_space(ROW_SPACING);
+
                 ui.horizontal_wrapped(|ui| {
                     widgets::copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
@@ -225,6 +239,8 @@ impl eframe::App for MainWindow {
                         }
                     }
                 });
+
+                ui.add_space(ROW_SPACING);
 
                 ui.horizontal(|ui| {
                     if widgets::clear_history(ui, foreground) {
@@ -240,6 +256,8 @@ impl eframe::App for MainWindow {
                         self.color = color;
                     }
                 });
+
+                ui.add_space(ROW_SPACING);
 
                 let mut config_changed = false;
                 ui.horizontal(|ui| {
@@ -281,6 +299,7 @@ impl eframe::App for MainWindow {
                 }
 
                 if let Some(status) = &self.status {
+                    ui.add_space(ROW_SPACING);
                     ui.label(status.as_str());
                 }
             });

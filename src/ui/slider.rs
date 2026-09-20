@@ -4,6 +4,7 @@ const GRADIENT_STEPS: usize = 48;
 const HANDLE_WIDTH: f32 = 2.0;
 const HANDLE_INSET: f32 = 3.0;
 const BORDER_WIDTH: f32 = 1.0;
+const LABEL_GAP: f32 = 6.0;
 const BORDER_COLOR: egui::Color32 = egui::Color32::from_gray(60);
 const LUMINANCE_RED: f32 = 0.299;
 const LUMINANCE_GREEN: f32 = 0.587;
@@ -20,6 +21,7 @@ pub fn column(
 ) -> egui::Response {
     ui.vertical(|ui| {
         ui.colored_label(label_color, label);
+        ui.add_space(LABEL_GAP);
         vertical(ui, size, value, gradient)
     })
     .inner

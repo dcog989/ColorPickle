@@ -12,8 +12,8 @@ use crate::config::Config;
 use crate::ui::main_window::MainWindow;
 
 pub const WINDOW_TITLE: &str = "ColorPickle";
-pub const WINDOW_WIDTH: f32 = 420.0;
-pub const WINDOW_HEIGHT: f32 = 460.0;
+pub const WINDOW_WIDTH: f32 = 600.0;
+pub const WINDOW_HEIGHT: f32 = 600.0;
 
 pub fn run_ui(config: Config) -> Result<()> {
     let options = eframe::NativeOptions {
