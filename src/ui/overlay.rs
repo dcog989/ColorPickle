@@ -1,4 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::cell::Cell;
+use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::Result;
 use eframe::egui;
@@ -112,7 +114,7 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     let session = Session::new(capture::capture()?);
-    let outcome = Arc::new(Mutex::new(None));
+    let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
 
     let options = eframe::NativeOptions {
         viewport: viewport_builder(session.rect),
@@ -120,7 +122,7 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
         ..Default::default()
     };
 
-    let shared = Arc::clone(&outcome);
+    let shared = Rc::clone(&outcome);
     eframe::run_native(
         PICKER_TITLE,
         options,
@@ -134,8 +136,7 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     )
     .map_err(|error| anyhow::anyhow!("failed to run the picker: {error}"))?;
 
-    let outcome = *outcome.lock().expect("picker outcome mutex poisoned");
-    Ok(outcome)
+    Ok(outcome.get())
 }
 
 pub fn show(
@@ -162,7 +163,7 @@ fn viewport_builder(rect: capture::DesktopRect) -> egui::ViewportBuilder {
 struct StandalonePicker {
     session: Session,
     config: Config,
-    outcome: Arc<Mutex<Option<PickOutcome>>>,
+    outcome: Rc<Cell<Option<PickOutcome>>>,
 }
 
 impl eframe::App for StandalonePicker {
@@ -176,7 +177,7 @@ impl eframe::App for StandalonePicker {
                 tracing::warn!(?error, "clipboard write failed");
             }
         }
-        *self.outcome.lock().expect("picker outcome mutex poisoned") = Some(outcome);
+        self.outcome.set(Some(outcome));
         ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
     }
 }
