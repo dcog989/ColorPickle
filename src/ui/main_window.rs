@@ -8,7 +8,7 @@ use crate::color::ColorFormat;
 use crate::color::harmony::Harmony;
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
-use crate::config::Config;
+use crate::config::{Config, Theme};
 use crate::ui::picker::{Event, PickerController};
 use crate::ui::slider;
 use crate::ui::theme::{self, color32, contrast_color32};
@@ -55,6 +55,36 @@ struct Toast {
     expires_at: f64,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+struct ColorKey {
+    hue: f32,
+    saturation: f32,
+    lightness: f32,
+}
+
+impl ColorKey {
+    fn new(color: Okhsl) -> Self {
+        Self {
+            hue: color.hue(),
+            saturation: color.saturation(),
+            lightness: color.lightness(),
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+struct ThemeKey {
+    theme: Theme,
+    system: Option<egui::Theme>,
+    color: ColorKey,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+struct InputKey {
+    format: ColorFormat,
+    color: ColorKey,
+}
+
 pub struct MainWindow {
     config: Config,
     color: Okhsl,
@@ -67,6 +97,9 @@ pub struct MainWindow {
     now: f64,
     pending_toast: Option<String>,
     picker: PickerController,
+    applied_theme: Option<ThemeKey>,
+    applied_input: Option<InputKey>,
+    min_inner_size: Option<egui::Vec2>,
 }
 
 impl MainWindow {
@@ -83,6 +116,9 @@ impl MainWindow {
             now: 0.0,
             pending_toast: None,
             picker: PickerController::new(),
+            applied_theme: None,
+            applied_input: None,
+            min_inner_size: None,
         }
     }
 
@@ -94,8 +130,17 @@ impl MainWindow {
         self
     }
 
-    pub fn apply_theme(&self, ctx: &egui::Context) {
+    pub fn apply_theme(&mut self, ctx: &egui::Context) {
         theme::apply(ctx, self.config.theme, self.color);
+        self.applied_theme = Some(self.theme_key(ctx));
+    }
+
+    fn theme_key(&self, ctx: &egui::Context) -> ThemeKey {
+        ThemeKey {
+            theme: self.config.theme,
+            system: ctx.system_theme(),
+            color: ColorKey::new(self.color),
+        }
     }
 
     fn set_toast(&mut self, message: impl Into<String>) {
@@ -124,6 +169,10 @@ impl MainWindow {
             None => self.set_toast("Unrecognized color"),
         }
         self.input = self.config.default_format.format(self.color);
+        self.applied_input = Some(InputKey {
+            format: self.config.default_format,
+            color: ColorKey::new(self.color),
+        });
     }
 
     fn copy(&mut self, format: ColorFormat) {
@@ -172,7 +221,11 @@ impl eframe::App for MainWindow {
 
         ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
         ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
-        theme::apply(&ctx, self.config.theme, self.color);
+        let theme_key = self.theme_key(&ctx);
+        if self.applied_theme != Some(theme_key) {
+            theme::apply(&ctx, self.config.theme, self.color);
+            self.applied_theme = Some(theme_key);
+        }
 
         let background = color32(self.color);
         let foreground = contrast_color32(self.color);
@@ -336,18 +389,26 @@ impl eframe::App for MainWindow {
                         }
                     }
                     if !self.input_editing {
-                        self.input = self.config.default_format.format(self.color);
+                        let input_key = InputKey {
+                            format: self.config.default_format,
+                            color: ColorKey::new(self.color),
+                        };
+                        if self.applied_input != Some(input_key) {
+                            self.input = self.config.default_format.format(self.color);
+                            self.applied_input = Some(input_key);
+                        }
                     }
                 });
 
                 ui.add_space(ROW_SPACING);
 
+                let color = self.color;
                 let format_row = ui.horizontal(|ui| {
                     widgets::copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
-                        let value = format.format(self.color);
-                        let tooltip = format!("Copy {value}");
-                        let response = ui.button(format.label()).on_hover_text(tooltip);
+                        let response = ui
+                            .button(format.label())
+                            .on_hover_ui(|ui| ui.label(format!("Copy {}", format.format(color))));
                         if response.clicked() {
                             self.copy(format);
                         }
@@ -356,10 +417,11 @@ impl eframe::App for MainWindow {
 
                 let required_width =
                     panel_width + 2.0 * PANEL_MARGIN + format_row.response.rect.width();
-                ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(egui::vec2(
-                    required_width,
-                    MIN_WINDOW_HEIGHT,
-                )));
+                let min_inner_size = egui::vec2(required_width, MIN_WINDOW_HEIGHT);
+                if self.min_inner_size != Some(min_inner_size) {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::MinInnerSize(min_inner_size));
+                    self.min_inner_size = Some(min_inner_size);
+                }
 
                 ui.add_space(ROW_SPACING);
 

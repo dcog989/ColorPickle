@@ -143,7 +143,7 @@ pub fn history_swatch(ui: &mut egui::Ui, color: Okhsl, border: egui::Color32) ->
     );
     response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text(ColorFormat::Hex.format(color))
+        .on_hover_ui(|ui| ui.label(ColorFormat::Hex.format(color)))
         .clicked()
 }
 
