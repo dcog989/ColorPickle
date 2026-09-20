@@ -8,7 +8,11 @@ pub fn pixel_at(image: &egui::ColorImage, uv: egui::Pos2) -> (u32, u32) {
     (x as u32, y as u32)
 }
 
-pub fn pixel_bounds(image: &egui::ColorImage, a: egui::Pos2, b: egui::Pos2) -> (u32, u32, u32, u32) {
+pub fn pixel_bounds(
+    image: &egui::ColorImage,
+    a: egui::Pos2,
+    b: egui::Pos2,
+) -> (u32, u32, u32, u32) {
     let (x0, y0) = pixel_at(image, a);
     let (x1, y1) = pixel_at(image, b);
     (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1))

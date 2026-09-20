@@ -33,7 +33,14 @@ pub fn palette(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) 
 }
 
 pub fn broom(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    paint_paths(painter, rect, BROOM_VIEWBOX, BROOM_STROKE, color, &BROOM_PATHS);
+    paint_paths(
+        painter,
+        rect,
+        BROOM_VIEWBOX,
+        BROOM_STROKE,
+        color,
+        &BROOM_PATHS,
+    );
 }
 
 fn paint_paths(

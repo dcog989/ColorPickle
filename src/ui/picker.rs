@@ -103,7 +103,9 @@ impl PickerController {
                 }
                 Err(TryRecvError::Empty) => {
                     let now = ctx.input(|input| input.time);
-                    if !self.waiting_for_user && now - self.capture_started > CAPTURE_TIMEOUT_SECONDS {
+                    if !self.waiting_for_user
+                        && now - self.capture_started > CAPTURE_TIMEOUT_SECONDS
+                    {
                         tracing::warn!(
                             elapsed = now - self.capture_started,
                             "picker: capture timed out"

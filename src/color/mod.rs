@@ -114,11 +114,7 @@ fn decimals(value: f32, places: usize) -> String {
         }
         None => formatted,
     };
-    if text == "-0" {
-        "0".to_string()
-    } else {
-        text
-    }
+    if text == "-0" { "0".to_string() } else { text }
 }
 
 fn to_srgb8(srgb: Srgb) -> [u8; 3] {

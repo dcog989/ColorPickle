@@ -3,7 +3,10 @@ use std::io::{Read, Seek, SeekFrom};
 use std::os::fd::AsFd;
 use std::time::{Duration, Instant};
 
-use image::{RgbaImage, imageops::{self, FilterType}};
+use image::{
+    RgbaImage,
+    imageops::{self, FilterType},
+};
 use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{MemfdFlags, memfd_create};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
@@ -153,11 +156,10 @@ fn capture_output(
 ) -> CaptureResult<(RgbaImage, i32, i32)> {
     let output = state.outputs[index].output.clone();
 
-    let source =
-        state
-            .managers
-            .source_manager
-            .create_source(&output, &queue.handle(), ());
+    let source = state
+        .managers
+        .source_manager
+        .create_source(&output, &queue.handle(), ());
     let session = state.managers.capture_manager.create_session(
         &source,
         Options::empty(),
@@ -194,12 +196,10 @@ fn capture_output(
     let byte_len = stride * height as usize;
 
     let mut file = create_shm_file(byte_len)?;
-    let pool = state.managers.shm.create_pool(
-        file.as_fd(),
-        byte_len as i32,
-        &queue.handle(),
-        (),
-    );
+    let pool = state
+        .managers
+        .shm
+        .create_pool(file.as_fd(), byte_len as i32, &queue.handle(), ());
     let buffer = pool.create_buffer(
         0,
         width as i32,
@@ -556,9 +556,7 @@ impl Dispatch<ZxdgOutputV1, ()> for State {
         };
         match event {
             zxdg_output_v1::Event::LogicalPosition { x, y } => output.position = (x, y),
-            zxdg_output_v1::Event::LogicalSize { width, height }
-                if width > 0 && height > 0 =>
-            {
+            zxdg_output_v1::Event::LogicalSize { width, height } if width > 0 && height > 0 => {
                 output.logical_size = Some((width as u32, height as u32));
             }
             _ => {}

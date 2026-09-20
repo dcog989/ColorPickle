@@ -207,9 +207,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         )
     });
 
-    if primary_pressed
-        && let Some(position) = pointer_pos
-    {
+    if primary_pressed && let Some(position) = pointer_pos {
         session.drag_anchor = Some(position);
     }
 
@@ -227,10 +225,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         texture_id,
         magnifier_center,
         uv_at(screen, pointer),
-        egui::vec2(
-            session.image.size[0] as f32,
-            session.image.size[1] as f32,
-        ),
+        egui::vec2(session.image.size[0] as f32, session.image.size[1] as f32),
     );
     if let Some(rect) = region {
         draw_selection(&painter, rect);
@@ -322,10 +317,8 @@ fn draw_magnifier(
         target.min.x + marker_fraction.x * target.width(),
         target.min.y + marker_fraction.y * target.height(),
     );
-    let marker = egui::Rect::from_center_size(
-        marker_center,
-        egui::vec2(MAGNIFIER_ZOOM, MAGNIFIER_ZOOM),
-    );
+    let marker =
+        egui::Rect::from_center_size(marker_center, egui::vec2(MAGNIFIER_ZOOM, MAGNIFIER_ZOOM));
     painter.rect_stroke(
         marker,
         egui::CornerRadius::ZERO,

@@ -15,9 +15,7 @@ pub fn copy_color(format: ColorFormat, color: Okhsl) -> Result<String> {
 
 pub fn set_text(text: impl Into<String>) -> Result<()> {
     let cell = CLIPBOARD.get_or_init(|| Mutex::new(None));
-    let mut clipboard = cell
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let mut clipboard = cell.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     if clipboard.is_none() {
         *clipboard =
             Some(arboard::Clipboard::new().context("failed to open the system clipboard")?);
