@@ -1,4 +1,5 @@
 pub mod okhsl;
+pub mod parse;
 
 use clap::ValueEnum;
 use palette::{FromColor, Hsl, Lab, Oklab, Oklch, Srgb};

@@ -8,6 +8,7 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 - Click to pick a single pixel, or drag to select a region and pick its averaged color
 - Copy as HEX, RGB, HSL, Okhsl, Oklch, Oklab, CMYK, or CIELAB
 - Keyboard shortcuts `1`–`8` copy the respective format
+- Type a hex code, any supported format, or a CSS color name to set the color
 - The main window is the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
 - Wayland capture via the XDG desktop portal
@@ -19,6 +20,8 @@ Run `colorpickle` for the main window, or `colorpickle --launch-mode picker_firs
 In the main window, click the eyedrop to open the picker. **Click** copies a single pixel; **drag** selects a region and copies its averaged color. Either way the picker closes and the value is copied to the clipboard. Press `Esc` or right-click to dismiss without copying. `Esc` exits the main window.
 
 Hover a format button to preview the current color in that format; click it, or press its number key, to copy.
+
+The text field shows the current color in the default format. Type a replacement — `#ff0000`, `rgb(255, 0, 0)`, `oklch(0.7, 0.1, 120)`, `olive`, and so on — and press Enter to apply it.
 
 ## Configuration
 

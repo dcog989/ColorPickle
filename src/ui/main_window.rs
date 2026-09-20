@@ -3,6 +3,7 @@ use eframe::egui;
 use crate::clipboard;
 use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
+use crate::color::parse;
 use crate::config::Config;
 use crate::ui::picker::{Event, PickerController};
 use crate::ui::slider;
@@ -38,6 +39,8 @@ const FORMAT_KEYS: [egui::Key; 8] = [
 pub struct MainWindow {
     config: Config,
     color: Okhsl,
+    input: String,
+    input_editing: bool,
     status: Option<String>,
     picker: PickerController,
 }
@@ -47,9 +50,22 @@ impl MainWindow {
         Self {
             config,
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
+            input: String::new(),
+            input_editing: false,
             status: None,
             picker: PickerController::new(),
         }
+    }
+
+    fn apply_input(&mut self) {
+        match parse::parse(&self.input) {
+            Some(color) => {
+                self.color = color;
+                self.status = Some("parsed color".to_owned());
+            }
+            None => self.status = Some("unrecognized color".to_owned()),
+        }
+        self.input = self.config.default_format.format(self.color);
     }
 
     fn copy(&mut self, format: ColorFormat) {
@@ -101,7 +117,21 @@ impl eframe::App for MainWindow {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     open_picker |= draw_picker_launcher(ui, self.color);
-                    ui.heading("ColorPickle");
+                    let response = ui.add(
+                        egui::TextEdit::singleline(&mut self.input)
+                            .desired_width(ui.available_width())
+                            .hint_text("color"),
+                    );
+                    if response.gained_focus() {
+                        self.input_editing = true;
+                    }
+                    if response.lost_focus() {
+                        self.input_editing = false;
+                        self.apply_input();
+                    }
+                    if !self.input_editing {
+                        self.input = self.config.default_format.format(self.color);
+                    }
                 });
 
                 let mut hue = self.color.hue() / HUE_MAX_DEGREES;
