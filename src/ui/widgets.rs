@@ -5,9 +5,11 @@ use crate::color::okhsl::Okhsl;
 use crate::ui::theme::{color32, contrast_color32};
 
 const EYEDROP_ICON_SIZE: f32 = 22.0;
-const EYEDROP_OUTER_RADIUS: f32 = 8.0;
-const EYEDROP_INNER_RADIUS: f32 = 2.5;
-const EYEDROP_STROKE_WIDTH: f32 = 1.5;
+const EYEDROP_MARGIN_FRACTION: f32 = 0.22;
+const EYEDROP_SHAFT_FRACTION: f32 = 0.12;
+const EYEDROP_BULB_FRACTION: f32 = 0.16;
+const EYEDROP_TIP_LENGTH_FRACTION: f32 = 0.2;
+const EYEDROP_TIP_HALF_FRACTION: f32 = 0.1;
 const COPY_ICON_SIZE: f32 = 18.0;
 const COPY_ICON_STROKE_WIDTH: f32 = 1.5;
 const COPY_ICON_OFFSET: f32 = 3.0;
@@ -29,7 +31,7 @@ pub fn picker_launcher(ui: &mut egui::Ui, color: Okhsl) -> bool {
     let response = response
         .on_hover_cursor(egui::CursorIcon::Crosshair)
         .on_hover_text("Pick from screen");
-    paint_crosshair(ui.painter(), rect, contrast_color32(color));
+    paint_eyedrop(ui.painter(), rect, contrast_color32(color));
     response.clicked()
 }
 
@@ -78,25 +80,29 @@ pub fn clear_history(ui: &mut egui::Ui, color: egui::Color32) -> bool {
     response.clicked()
 }
 
-fn paint_crosshair(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    let center = rect.center();
-    let stroke = egui::Stroke::new(EYEDROP_STROKE_WIDTH, color);
-    painter.circle_stroke(center, EYEDROP_OUTER_RADIUS, stroke);
-    painter.circle_filled(center, EYEDROP_INNER_RADIUS, color);
+fn paint_eyedrop(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    let size = rect.width();
+    let margin = size * EYEDROP_MARGIN_FRACTION;
+    let bulb = egui::pos2(rect.right() - margin, rect.top() + margin);
+    let tip = egui::pos2(rect.left() + margin, rect.bottom() - margin);
+
     painter.line_segment(
-        [
-            egui::pos2(center.x - EYEDROP_OUTER_RADIUS, center.y),
-            egui::pos2(center.x + EYEDROP_OUTER_RADIUS, center.y),
-        ],
-        stroke,
+        [bulb, tip],
+        egui::Stroke::new(size * EYEDROP_SHAFT_FRACTION, color),
     );
-    painter.line_segment(
-        [
-            egui::pos2(center.x, center.y - EYEDROP_OUTER_RADIUS),
-            egui::pos2(center.x, center.y + EYEDROP_OUTER_RADIUS),
+    painter.circle_filled(bulb, size * EYEDROP_BULB_FRACTION, color);
+
+    let direction = (tip - bulb).normalized();
+    let perpendicular = egui::vec2(-direction.y, direction.x);
+    painter.add(egui::Shape::convex_polygon(
+        vec![
+            tip + direction * size * EYEDROP_TIP_LENGTH_FRACTION,
+            tip + perpendicular * size * EYEDROP_TIP_HALF_FRACTION,
+            tip - perpendicular * size * EYEDROP_TIP_HALF_FRACTION,
         ],
-        stroke,
-    );
+        color,
+        egui::Stroke::NONE,
+    ));
 }
 
 fn paint_rotate_ccw(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
