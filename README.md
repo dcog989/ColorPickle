@@ -57,6 +57,23 @@ cargo upgrade && cargo update --verbose  # update Cargo.lock and dependencies to
 cargo clean && rm -rf target/            # clean build artifacts
 ```
 
+## Packaging
+
+Release artifacts are built by `.github/workflows/release.yml` when a `v*` tag is pushed. To build them locally:
+
+```sh
+cargo install cargo-deb cargo-generate-rpm   # once
+packaging/build.sh                           # .deb, .rpm and AppImage into target/
+```
+
+Individual artifacts:
+
+- `.deb` — `cargo deb` (Debian/Ubuntu)
+- `.rpm` — `cargo generate-rpm` (Fedora/RHEL/openSUSE)
+- AppImage — `packaging/appimage/build.sh`, requires `linuxdeploy` on `PATH` (`LINUXDEPLOY=/path/to/linuxdeploy` to override)
+- AUR — `packaging/aur/PKGBUILD`
+- Source — `cargo install --path .`
+
 ## License
 
 GPL-3.0-only. See [LICENSE](LICENSE).

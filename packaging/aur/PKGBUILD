@@ -1,0 +1,26 @@
+# Maintainer: dcog989 <sirdavidlaws@gmail.com>
+pkgname=colorpickle
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."
+arch=('x86_64' 'aarch64')
+url="https://github.com/dcog989/ColorPickle"
+license=('GPL-3.0-only')
+depends=('gcc-libs' 'glibc' 'libx11' 'libxcb' 'libxkbcommon' 'mesa' 'pipewire' 'wayland')
+makedepends=('cargo' 'clang' 'pkgconf' 'rust')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/dcog989/ColorPickle/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "$pkgname-$pkgver"
+    cargo build --release --locked
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    install -Dm755 target/release/colorpickle "$pkgdir/usr/bin/colorpickle"
+    install -Dm644 packaging/colorpickle.desktop "$pkgdir/usr/share/applications/colorpickle.desktop"
+    install -Dm644 packaging/colorpickle.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/colorpickle.svg"
+    install -Dm644 assets/colorpickle.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/colorpickle.png"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

@@ -28,3 +28,27 @@ wayland-protocols = { version = "0.32", features = ["client", "staging"] }
 wl-clipboard-rs = "0.9.3"
 xcap = { version = "0.9.8", features = ["image"] }
 zbus = "5.19"
+
+[package.metadata.deb]
+maintainer = "dcog989 <sirdavidlaws@gmail.com>"
+copyright = "2026, dcog989"
+license-file = ["LICENSE"]
+extended-description = "Pick a pixel or drag-select a region from anywhere on screen and copy the colour in any common format."
+section = "graphics"
+priority = "optional"
+depends = "$auto, libxkbcommon0, libwayland-client0, libx11-6, libgl1"
+recommends = "xdg-desktop-portal"
+assets = [
+    ["target/release/colorpickle", "usr/bin/", "755"],
+    ["packaging/colorpickle.desktop", "usr/share/applications/", "644"],
+    ["packaging/colorpickle.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["assets/colorpickle.png", "usr/share/icons/hicolor/256x256/apps/", "644"],
+]
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/colorpickle", dest = "/usr/bin/colorpickle", mode = "755" },
+    { source = "packaging/colorpickle.desktop", dest = "/usr/share/applications/colorpickle.desktop", mode = "644" },
+    { source = "packaging/colorpickle.svg", dest = "/usr/share/icons/hicolor/scalable/apps/colorpickle.svg", mode = "644" },
+    { source = "assets/colorpickle.png", dest = "/usr/share/icons/hicolor/256x256/apps/colorpickle.png", mode = "644" },
+]
