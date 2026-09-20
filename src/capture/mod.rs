@@ -9,8 +9,6 @@ use image::{RgbaImage, imageops};
 pub enum CaptureError {
     #[error("X11 capture failed")]
     Xcap(#[from] xcap::XCapError),
-    #[error("failed to create the portal runtime")]
-    Runtime(#[source] std::io::Error),
     #[error("portal screenshot request failed")]
     Portal(#[from] ashpd::Error),
     #[error("KWin screen shot request failed")]

@@ -12,7 +12,7 @@ pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
 }
 
 fn capture_once() -> CaptureResult<RgbaImage> {
-    let path = block_on(take_screenshot())??;
+    let path = block_on(take_screenshot())?;
     let image = image::open(&path).map(|image| image.into_rgba8());
     if let Err(error) = std::fs::remove_file(&path) {
         tracing::warn!(?error, path = ?path, "failed to remove the portal screenshot");
@@ -30,13 +30,8 @@ async fn take_screenshot() -> CaptureResult<PathBuf> {
     uri_to_path(response.uri().as_str())
 }
 
-fn block_on<F: std::future::Future>(future: F) -> CaptureResult<F::Output> {
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .map_err(CaptureError::Runtime)?;
-    Ok(runtime.block_on(future))
+fn block_on<F: std::future::Future>(future: F) -> F::Output {
+    pollster::block_on(future)
 }
 
 fn uri_to_path(uri: &str) -> CaptureResult<PathBuf> {
