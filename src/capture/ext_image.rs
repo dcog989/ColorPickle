@@ -28,7 +28,7 @@ use ext_image_copy_capture_manager_v1::{ExtImageCopyCaptureManagerV1, Options};
 use ext_image_copy_capture_session_v1::ExtImageCopyCaptureSessionV1;
 use ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
 
-use crate::capture::{CaptureBackend, CaptureError, CaptureResult};
+use crate::capture::{CaptureBackend, CaptureError, CaptureResult, DesktopCapture, DesktopRect};
 
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
@@ -40,7 +40,7 @@ const DISPATCH_TIMEOUT: Duration = Duration::from_secs(2);
 static SHM_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub struct ExtImageBackend {
-    frame: RgbaImage,
+    frame: DesktopCapture,
 }
 
 impl ExtImageBackend {
@@ -50,8 +50,11 @@ impl ExtImageBackend {
 }
 
 impl CaptureBackend for ExtImageBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<RgbaImage> {
-        Ok(self.frame.clone())
+    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
+        Ok(DesktopCapture {
+            image: self.frame.image.clone(),
+            rect: self.frame.rect,
+        })
     }
 }
 
@@ -101,7 +104,7 @@ impl Default for State {
     }
 }
 
-fn capture() -> CaptureResult<RgbaImage> {
+fn capture() -> CaptureResult<DesktopCapture> {
     let connection = Connection::connect_to_env().map_err(failure)?;
     let (globals, mut queue) = registry_queue_init::<State>(&connection).map_err(failure)?;
     let qh = queue.handle();
@@ -451,7 +454,7 @@ fn source_pixel(
     }
 }
 
-fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<RgbaImage> {
+fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<DesktopCapture> {
     let min_x = captures.iter().map(|(_, x, _)| *x).min().unwrap_or(0);
     let min_y = captures.iter().map(|(_, _, y)| *y).min().unwrap_or(0);
     let max_x = captures
@@ -480,7 +483,15 @@ fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<RgbaImage> {
             i64::from(y - min_y),
         );
     }
-    Ok(canvas)
+    Ok(DesktopCapture {
+        image: canvas,
+        rect: DesktopRect {
+            x: min_x,
+            y: min_y,
+            width,
+            height,
+        },
+    })
 }
 
 fn failure(error: impl std::fmt::Display) -> CaptureError {

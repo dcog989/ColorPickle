@@ -5,7 +5,7 @@ use image::RgbaImage;
 use zbus::blocking::{Connection, Proxy};
 use zbus::zvariant::{DynamicTuple, Fd, OwnedValue};
 
-use crate::capture::{CaptureBackend, CaptureError, CaptureResult};
+use crate::capture::{CaptureBackend, CaptureError, CaptureResult, DesktopCapture, DesktopRect};
 
 const SERVICE: &str = "org.kde.KWin.ScreenShot2";
 const PATH: &str = "/org/kde/KWin/ScreenShot2";
@@ -41,8 +41,11 @@ impl KdeBackend {
 }
 
 impl CaptureBackend for KdeBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<RgbaImage> {
-        Ok(self.frame.clone())
+    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
+        Ok(DesktopCapture {
+            image: self.frame.clone(),
+            rect: DesktopRect::from_image(&self.frame),
+        })
     }
 }
 

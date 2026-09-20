@@ -40,6 +40,7 @@ pub type CaptureOutcome = capture::CaptureResult<CapturedFrame>;
 
 pub struct CapturedFrame {
     frame: RgbaImage,
+    rect: capture::DesktopRect,
     uses_portal_fallback: bool,
 }
 
@@ -47,9 +48,10 @@ impl CapturedFrame {
     pub fn capture() -> capture::CaptureResult<Self> {
         let backend = capture::detect()?;
         let uses_portal_fallback = backend.uses_portal_fallback();
-        let frame = backend.capture_fullscreen()?;
+        let capture = backend.capture_fullscreen()?;
         Ok(Self {
-            frame,
+            frame: capture.image,
+            rect: capture.rect,
             uses_portal_fallback,
         })
     }
@@ -57,6 +59,7 @@ impl CapturedFrame {
 
 pub struct Session {
     frame: RgbaImage,
+    rect: capture::DesktopRect,
     texture: Option<egui::TextureHandle>,
     uses_portal_fallback: bool,
     drag_anchor: Option<egui::Pos2>,
@@ -66,6 +69,7 @@ impl Session {
     pub fn new(captured: CapturedFrame) -> Self {
         Self {
             frame: captured.frame,
+            rect: captured.rect,
             texture: None,
             uses_portal_fallback: captured.uses_portal_fallback,
             drag_anchor: None,
@@ -95,7 +99,7 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     let outcome = Arc::new(Mutex::new(None));
 
     let options = eframe::NativeOptions {
-        viewport: viewport_builder(),
+        viewport: viewport_builder(session.rect),
         persist_window: false,
         ..Default::default()
     };
@@ -123,18 +127,20 @@ pub fn show(
     session: &mut Session,
     viewport: egui::ViewportId,
 ) -> Option<PickOutcome> {
-    ctx.show_viewport_immediate(viewport, viewport_builder(), |ui, _class| {
+    ctx.show_viewport_immediate(viewport, viewport_builder(session.rect), |ui, _class| {
         draw(ui.ctx(), session)
     })
 }
 
-fn viewport_builder() -> egui::ViewportBuilder {
+fn viewport_builder(rect: capture::DesktopRect) -> egui::ViewportBuilder {
     egui::ViewportBuilder::default()
         .with_title(PICKER_TITLE)
         .with_app_id(PICKER_VIEWPORT)
-        .with_fullscreen(true)
         .with_decorations(false)
         .with_always_on_top()
+        .with_clamp_size_to_monitor_size(false)
+        .with_position(egui::pos2(rect.x as f32, rect.y as f32))
+        .with_inner_size(egui::vec2(rect.width as f32, rect.height as f32))
 }
 
 struct StandalonePicker {

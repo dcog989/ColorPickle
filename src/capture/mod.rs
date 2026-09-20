@@ -33,8 +33,32 @@ pub enum CaptureError {
 
 pub type CaptureResult<T> = Result<T, CaptureError>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopRect {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl DesktopRect {
+    pub fn from_image(image: &RgbaImage) -> Self {
+        Self {
+            x: 0,
+            y: 0,
+            width: image.width(),
+            height: image.height(),
+        }
+    }
+}
+
+pub struct DesktopCapture {
+    pub image: RgbaImage,
+    pub rect: DesktopRect,
+}
+
 pub trait CaptureBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<RgbaImage>;
+    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture>;
 
     fn uses_portal_fallback(&self) -> bool {
         false
