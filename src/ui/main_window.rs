@@ -10,7 +10,10 @@ use crate::ui::slider;
 use crate::ui::theme::{self, color32, contrast_color32};
 
 const SLIDER_WIDTH: f32 = 26.0;
-const SLIDER_HEIGHT: f32 = 200.0;
+const SLIDER_MIN_HEIGHT: f32 = 80.0;
+const LABEL_ROW_HEIGHT: f32 = 20.0;
+const SLIDER_PANEL_MARGIN: f32 = 8.0;
+const SLIDER_PANEL_ID: &str = "colorpickle-sliders";
 const HUE_MAX_DEGREES: f32 = 360.0;
 const HUE_FRACTION_MAX: f32 = 1.0 - f32::EPSILON;
 const DEFAULT_HUE_DEGREES: f32 = 180.0;
@@ -111,7 +114,63 @@ impl eframe::App for MainWindow {
 
         theme::apply(&ctx, self.config.theme, self.color);
 
-        let panel_frame = egui::Frame::central_panel(ui.style()).fill(color32(self.color));
+        let background = color32(self.color);
+        let foreground = contrast_color32(self.color);
+
+        let mut hue = self.color.hue() / HUE_MAX_DEGREES;
+        let mut saturation = self.color.saturation();
+        let mut lightness = self.color.lightness();
+
+        let panel_width =
+            3.0 * SLIDER_WIDTH + 2.0 * ui.spacing().item_spacing.x + 2.0 * SLIDER_PANEL_MARGIN;
+        egui::SidePanel::right(SLIDER_PANEL_ID)
+            .resizable(false)
+            .exact_size(panel_width)
+            .frame(egui::Frame::NONE.fill(background).inner_margin(SLIDER_PANEL_MARGIN))
+            .show(ui, |ui| {
+                let slider_height =
+                    (ui.available_height() - LABEL_ROW_HEIGHT).max(SLIDER_MIN_HEIGHT);
+                let slider_size = egui::vec2(SLIDER_WIDTH, slider_height);
+                ui.horizontal_top(|ui| {
+                    let hue_saturation = saturation;
+                    let hue_lightness = lightness;
+                    slider_column(ui, "H", foreground, &mut hue, slider_size, move |value| {
+                        color32(Okhsl::new(
+                            value * HUE_MAX_DEGREES,
+                            hue_saturation,
+                            hue_lightness,
+                        ))
+                    });
+
+                    let saturation_hue = hue * HUE_MAX_DEGREES;
+                    let saturation_lightness = lightness;
+                    slider_column(
+                        ui,
+                        "S",
+                        foreground,
+                        &mut saturation,
+                        slider_size,
+                        move |value| {
+                            color32(Okhsl::new(saturation_hue, value, saturation_lightness))
+                        },
+                    )
+                    .on_hover_text(SATURATION_TOOLTIP);
+
+                    let lightness_hue = hue * HUE_MAX_DEGREES;
+                    let lightness_saturation = saturation;
+                    slider_column(ui, "L", foreground, &mut lightness, slider_size, move |value| {
+                        color32(Okhsl::new(lightness_hue, lightness_saturation, value))
+                    });
+                });
+            });
+
+        self.color = Okhsl::new(
+            hue.min(HUE_FRACTION_MAX) * HUE_MAX_DEGREES,
+            saturation,
+            lightness,
+        );
+
+        let panel_frame = egui::Frame::central_panel(ui.style()).fill(background);
         egui::CentralPanel::default()
             .frame(panel_frame)
             .show(ui, |ui| {
@@ -134,44 +193,8 @@ impl eframe::App for MainWindow {
                     }
                 });
 
-                let mut hue = self.color.hue() / HUE_MAX_DEGREES;
-                let mut saturation = self.color.saturation();
-                let mut lightness = self.color.lightness();
-                let slider_size = egui::vec2(SLIDER_WIDTH, SLIDER_HEIGHT);
-
-                ui.horizontal(|ui| {
-                    let hue_saturation = saturation;
-                    let hue_lightness = lightness;
-                    slider::vertical(ui, slider_size, &mut hue, move |value| {
-                        color32(Okhsl::new(
-                            value * HUE_MAX_DEGREES,
-                            hue_saturation,
-                            hue_lightness,
-                        ))
-                    });
-
-                    let saturation_hue = hue * HUE_MAX_DEGREES;
-                    let saturation_lightness = lightness;
-                    slider::vertical(ui, slider_size, &mut saturation, move |value| {
-                        color32(Okhsl::new(saturation_hue, value, saturation_lightness))
-                    })
-                    .on_hover_text(SATURATION_TOOLTIP);
-
-                    let lightness_hue = hue * HUE_MAX_DEGREES;
-                    let lightness_saturation = saturation;
-                    slider::vertical(ui, slider_size, &mut lightness, move |value| {
-                        color32(Okhsl::new(lightness_hue, lightness_saturation, value))
-                    });
-                });
-
-                self.color = Okhsl::new(
-                    hue.min(HUE_FRACTION_MAX) * HUE_MAX_DEGREES,
-                    saturation,
-                    lightness,
-                );
-
                 ui.horizontal_wrapped(|ui| {
-                    draw_copy_icon(ui, contrast_color32(self.color));
+                    draw_copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
                         let value = format.format(self.color);
                         let response = ui.button(format.label()).on_hover_text(value.as_str());
@@ -214,6 +237,21 @@ fn draw_picker_launcher(ui: &mut egui::Ui, color: Okhsl) -> bool {
         .on_hover_text("Pick from screen");
     paint_crosshair(ui.painter(), rect, contrast_color32(color));
     response.clicked()
+}
+
+fn slider_column(
+    ui: &mut egui::Ui,
+    label: &str,
+    label_color: egui::Color32,
+    value: &mut f32,
+    size: egui::Vec2,
+    gradient: impl Fn(f32) -> egui::Color32,
+) -> egui::Response {
+    ui.vertical(|ui| {
+        ui.colored_label(label_color, label);
+        slider::vertical(ui, size, value, gradient)
+    })
+    .inner
 }
 
 fn draw_copy_icon(ui: &mut egui::Ui, color: egui::Color32) {
