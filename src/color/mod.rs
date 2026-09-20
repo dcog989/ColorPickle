@@ -1,7 +1,7 @@
 pub mod okhsl;
 
 use clap::ValueEnum;
-use palette::{FromColor, Hsl, Oklab, Oklch, Srgb};
+use palette::{FromColor, Hsl, Lab, Oklab, Oklch, Srgb};
 use serde::{Deserialize, Serialize};
 
 use self::okhsl::Okhsl;
@@ -17,10 +17,11 @@ pub enum ColorFormat {
     Oklch,
     Oklab,
     Cmyk,
+    Cielab,
 }
 
 impl ColorFormat {
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Hex,
         Self::Rgb,
         Self::Hsl,
@@ -28,6 +29,7 @@ impl ColorFormat {
         Self::Oklch,
         Self::Oklab,
         Self::Cmyk,
+        Self::Cielab,
     ];
 
     pub const fn label(self) -> &'static str {
@@ -39,6 +41,7 @@ impl ColorFormat {
             Self::Oklch => "Oklch",
             Self::Oklab => "Oklab",
             Self::Cmyk => "CMYK",
+            Self::Cielab => "CIELAB",
         }
     }
 
@@ -79,6 +82,10 @@ impl ColorFormat {
                 format!("oklab({:.3}, {:.3}, {:.3})", oklab.l, oklab.a, oklab.b)
             }
             Self::Cmyk => format_cmyk(srgb),
+            Self::Cielab => {
+                let lab: Lab = Lab::from_color(srgb);
+                format!("lab({:.1}, {:.1}, {:.1})", lab.l, lab.a, lab.b)
+            }
         }
     }
 }

@@ -19,7 +19,21 @@ const EYEDROP_ICON_SIZE: f32 = 22.0;
 const EYEDROP_OUTER_RADIUS: f32 = 8.0;
 const EYEDROP_INNER_RADIUS: f32 = 2.5;
 const EYEDROP_STROKE_WIDTH: f32 = 1.5;
+const COPY_ICON_SIZE: f32 = 18.0;
+const COPY_ICON_STROKE_WIDTH: f32 = 1.5;
+const COPY_ICON_OFFSET: f32 = 3.0;
+const COPY_ICON_CORNER_RADIUS: u8 = 2;
 const SATURATION_TOOLTIP: &str = "Saturation is perceptual (Okhsl-normalised), so its visual effect varies slightly with lightness.";
+const FORMAT_KEYS: [egui::Key; 8] = [
+    egui::Key::Num1,
+    egui::Key::Num2,
+    egui::Key::Num3,
+    egui::Key::Num4,
+    egui::Key::Num5,
+    egui::Key::Num6,
+    egui::Key::Num7,
+    egui::Key::Num8,
+];
 
 pub struct MainWindow {
     config: Config,
@@ -127,6 +141,7 @@ impl eframe::App for MainWindow {
                 );
 
                 ui.horizontal_wrapped(|ui| {
+                    draw_copy_icon(ui, contrast_color32(self.color));
                     for format in ColorFormat::ALL {
                         let value = format.format(self.color);
                         let response = ui.button(format.label()).on_hover_text(value.as_str());
@@ -140,6 +155,14 @@ impl eframe::App for MainWindow {
                     ui.label(status.as_str());
                 }
             });
+
+        if !ctx.egui_wants_keyboard_input() && !self.picker.is_busy() {
+            for (format, key) in ColorFormat::ALL.iter().zip(FORMAT_KEYS) {
+                if ctx.input(|input| input.key_pressed(key)) {
+                    self.copy(*format);
+                }
+            }
+        }
 
         if open_picker {
             self.open_picker();
@@ -161,6 +184,24 @@ fn draw_picker_launcher(ui: &mut egui::Ui, color: Okhsl) -> bool {
         .on_hover_text("Pick from screen");
     paint_crosshair(ui.painter(), rect, contrast_color32(color));
     response.clicked()
+}
+
+fn draw_copy_icon(ui: &mut egui::Ui, color: egui::Color32) {
+    let (rect, _) = ui.allocate_exact_size(
+        egui::vec2(COPY_ICON_SIZE, COPY_ICON_SIZE),
+        egui::Sense::hover(),
+    );
+    let painter = ui.painter();
+    let stroke = egui::Stroke::new(COPY_ICON_STROKE_WIDTH, color);
+    let corner = egui::CornerRadius::same(COPY_ICON_CORNER_RADIUS);
+    let size = egui::vec2(
+        rect.width() - COPY_ICON_OFFSET,
+        rect.height() - COPY_ICON_OFFSET,
+    );
+    let front = egui::Rect::from_min_size(rect.min, size);
+    let back = front.translate(egui::vec2(COPY_ICON_OFFSET, COPY_ICON_OFFSET));
+    painter.rect_stroke(back, corner, stroke, egui::StrokeKind::Inside);
+    painter.rect_stroke(front, corner, stroke, egui::StrokeKind::Inside);
 }
 
 fn paint_crosshair(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {

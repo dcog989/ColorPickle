@@ -30,8 +30,12 @@ impl PickerController {
         }
     }
 
+    pub fn is_busy(&self) -> bool {
+        self.session.is_some() || self.capture.is_some()
+    }
+
     pub fn request(&mut self) -> bool {
-        if self.session.is_some() || self.capture.is_some() {
+        if self.is_busy() {
             return false;
         }
         let (sender, receiver) = mpsc::channel();

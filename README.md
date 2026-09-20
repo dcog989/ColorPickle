@@ -6,7 +6,8 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 
 - Fullscreen picker overlay with a magnified view of the area under the cursor
 - Click to pick a single pixel, or drag to select a region and pick its averaged color
-- Copy as HEX, RGB, HSL, Okhsl, Oklch, Oklab, or CMYK
+- Copy as HEX, RGB, HSL, Okhsl, Oklch, Oklab, CMYK, or CIELAB
+- Keyboard shortcuts `1`–`8` copy the respective format
 - Okhsl-based internal color model
 - Whole-window color background with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
@@ -17,7 +18,7 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 
 Early scaffold. The main window uses the current color as its background, with an eyedrop launcher, gradient Hue/Saturation/Lightness sliders, the Okhsl color pipeline, seven copy formats, and a working clipboard. The picker overlay (magnifier, click-to-copy a pixel, drag-to-average a region, Esc/right-click dismiss) runs over a Wayland xdg-desktop-portal capture.
 
-Still pending: the X11 (`xcap`) and KDE `ScreenShot2` capture backends, the color input field and parser, CIELAB plus `1`–`8` shortcuts, history swatches, copy-on-pick, the launch-mode/default-format controls, and a follow-system theme UI.
+Still pending: the X11 (`xcap`) and KDE `ScreenShot2` capture backends, the color input field and parser, history swatches, copy-on-pick, the launch-mode/default-format controls, and a follow-system theme UI.
 
 ## Build
 
