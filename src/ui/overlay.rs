@@ -208,15 +208,13 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         )
     });
 
-    if primary_pressed {
-        if let Some(position) = pointer_pos {
-            session.drag_anchor = Some(position);
-        }
+    if primary_pressed
+        && let Some(position) = pointer_pos
+    {
+        session.drag_anchor = Some(position);
     }
 
-    let Some(pointer) = pointer_pos else {
-        return None;
-    };
+    let pointer = pointer_pos?;
 
     let region = session.drag_anchor.and_then(|anchor| {
         let moved = (pointer - anchor).length() >= DRAG_THRESHOLD;

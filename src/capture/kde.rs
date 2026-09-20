@@ -114,7 +114,7 @@ fn repack(
         buffer.truncate(height as usize * row_bytes);
     }
 
-    for pixel in buffer.chunks_exact_mut(BYTES_PER_PIXEL) {
+    for pixel in buffer.as_chunks_mut::<BYTES_PER_PIXEL>().0 {
         let [red, green, blue] = order.rgb(pixel);
         pixel.copy_from_slice(&[red, green, blue, OPAQUE]);
     }

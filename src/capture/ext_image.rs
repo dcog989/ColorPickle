@@ -86,14 +86,15 @@ pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
     let connection = Connection::connect_to_env().map_err(failure)?;
     let (globals, mut queue) = registry_queue_init::<State>(&connection).map_err(failure)?;
     let qh = queue.handle();
-    let mut state = State::default();
-
-    state.shm = Some(bind::<wl_shm::WlShm>(&globals, &qh)?);
-    state.source_manager = Some(bind::<ExtOutputImageCaptureSourceManagerV1>(&globals, &qh)?);
-    state.capture_manager = Some(bind::<ExtImageCopyCaptureManagerV1>(&globals, &qh)?);
-    state.xdg_output_manager = globals
-        .bind::<ZxdgOutputManagerV1, _, _>(&qh, 1..=XDG_OUTPUT_MANAGER_MAX_VERSION, ())
-        .ok();
+    let mut state = State {
+        shm: Some(bind::<wl_shm::WlShm>(&globals, &qh)?),
+        source_manager: Some(bind::<ExtOutputImageCaptureSourceManagerV1>(&globals, &qh)?),
+        capture_manager: Some(bind::<ExtImageCopyCaptureManagerV1>(&globals, &qh)?),
+        xdg_output_manager: globals
+            .bind::<ZxdgOutputManagerV1, _, _>(&qh, 1..=XDG_OUTPUT_MANAGER_MAX_VERSION, ())
+            .ok(),
+        ..Default::default()
+    };
 
     for global in globals.contents().clone_list() {
         if global.interface == "wl_output" {
@@ -330,7 +331,7 @@ fn read_shm(file: &mut File, width: u32, height: u32, stride: usize) -> CaptureR
         bytes.truncate(height as usize * row_bytes);
     }
 
-    for pixel in bytes.chunks_exact_mut(BYTES_PER_PIXEL) {
+    for pixel in bytes.as_chunks_mut::<BYTES_PER_PIXEL>().0 {
         pixel.swap(0, 2);
         pixel[3] = OPAQUE;
     }
@@ -595,10 +596,10 @@ impl Dispatch<ExtImageCopyCaptureSessionV1, ()> for State {
                 state.session_width = width;
                 state.session_height = height;
             }
-            ext_image_copy_capture_session_v1::Event::ShmFormat { format } => {
-                if let WEnum::Value(format) = format {
-                    state.session_formats.push(format);
-                }
+            ext_image_copy_capture_session_v1::Event::ShmFormat {
+                format: WEnum::Value(format),
+            } => {
+                state.session_formats.push(format);
             }
             ext_image_copy_capture_session_v1::Event::Done => {
                 state.session_done = true;
@@ -621,10 +622,10 @@ impl Dispatch<ExtImageCopyCaptureFrameV1, ()> for State {
         _: &QueueHandle<State>,
     ) {
         match event {
-            ext_image_copy_capture_frame_v1::Event::Transform { transform } => {
-                if let WEnum::Value(transform) = transform {
-                    state.frame_transform = transform;
-                }
+            ext_image_copy_capture_frame_v1::Event::Transform {
+                transform: WEnum::Value(transform),
+            } => {
+                state.frame_transform = transform;
             }
             ext_image_copy_capture_frame_v1::Event::Ready => state.frame_ready = true,
             ext_image_copy_capture_frame_v1::Event::Failed { reason } => {
@@ -665,10 +666,10 @@ impl Dispatch<ZxdgOutputV1, ()> for State {
         };
         match event {
             zxdg_output_v1::Event::LogicalPosition { x, y } => output.position = (x, y),
-            zxdg_output_v1::Event::LogicalSize { width, height } => {
-                if width > 0 && height > 0 {
-                    output.logical_size = Some((width as u32, height as u32));
-                }
+            zxdg_output_v1::Event::LogicalSize { width, height }
+                if width > 0 && height > 0 =>
+            {
+                output.logical_size = Some((width as u32, height as u32));
             }
             _ => {}
         }

@@ -119,10 +119,10 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
         if !(backend.available)() {
             continue;
         }
-        if backend.source.uses_portal_fallback() {
-            if let Some(notify) = progress.take() {
-                notify();
-            }
+        if backend.source.uses_portal_fallback()
+            && let Some(notify) = progress.take()
+        {
+            notify();
         }
         match (backend.run)() {
             Ok((image, rect)) => {
