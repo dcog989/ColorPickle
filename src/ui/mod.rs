@@ -34,6 +34,7 @@ pub fn run_picker(config: Config) -> Result<()> {
 fn run_main(config: Config, initial: Option<Okhsl>) -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(WINDOW_TITLE)
+        .with_app_id("colorpickle")
         .with_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT]);
     if let Some(icon) = app_icon() {
         viewport = viewport.with_icon(icon);
