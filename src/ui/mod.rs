@@ -1,6 +1,7 @@
 pub mod main_window;
 pub mod overlay;
 pub mod picker;
+pub mod pixels;
 pub mod slider;
 pub mod theme;
 pub mod widgets;
