@@ -12,6 +12,7 @@ const PICKER_TITLE: &str = "ColorPickle";
 const PICKER_VIEWPORT: &str = "colorpickle-picker";
 const MAGNIFIER_SIZE: f32 = 180.0;
 const MAGNIFIER_ZOOM: f32 = 8.0;
+const MAGNIFIER_SOURCE_PIXELS: f32 = MAGNIFIER_SIZE / MAGNIFIER_ZOOM;
 const MAGNIFIER_OFFSET: f32 = 24.0;
 const DRAG_MAGNIFIER_MARGIN: f32 = 24.0;
 const CROSSHAIR_ARM: f32 = 8.0;
@@ -203,6 +204,7 @@ fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<P
         texture_id,
         magnifier_center,
         uv_at(screen, pointer),
+        egui::vec2(session.frame.width() as f32, session.frame.height() as f32),
     );
     if let Some(rect) = region {
         draw_selection(&painter, rect);
@@ -263,11 +265,17 @@ fn draw_magnifier(
     texture_id: egui::TextureId,
     center: egui::Pos2,
     uv: egui::Pos2,
+    frame_size: egui::Vec2,
 ) {
-    let half = 0.5 / MAGNIFIER_ZOOM;
+    let half_x = (MAGNIFIER_SOURCE_PIXELS * 0.5 / frame_size.x).min(0.5);
+    let half_y = (MAGNIFIER_SOURCE_PIXELS * 0.5 / frame_size.y).min(0.5);
+    let source_center = egui::pos2(
+        uv.x.clamp(half_x, 1.0 - half_x),
+        uv.y.clamp(half_y, 1.0 - half_y),
+    );
     let source = egui::Rect::from_min_max(
-        egui::pos2(uv.x - half, uv.y - half),
-        egui::pos2(uv.x + half, uv.y + half),
+        egui::pos2(source_center.x - half_x, source_center.y - half_y),
+        egui::pos2(source_center.x + half_x, source_center.y + half_y),
     );
     let target = egui::Rect::from_center_size(center, egui::vec2(MAGNIFIER_SIZE, MAGNIFIER_SIZE));
 
