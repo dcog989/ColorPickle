@@ -46,10 +46,14 @@ struct OutputState {
     mode: Option<(i32, i32)>,
 }
 
+struct Managers {
+    shm: wl_shm::WlShm,
+    source_manager: ExtOutputImageCaptureSourceManagerV1,
+    capture_manager: ExtImageCopyCaptureManagerV1,
+}
+
 struct State {
-    shm: Option<wl_shm::WlShm>,
-    source_manager: Option<ExtOutputImageCaptureSourceManagerV1>,
-    capture_manager: Option<ExtImageCopyCaptureManagerV1>,
+    managers: Managers,
     xdg_output_manager: Option<ZxdgOutputManagerV1>,
     outputs: Vec<OutputState>,
     session_width: u32,
@@ -62,13 +66,11 @@ struct State {
     frame_transform: wl_output::Transform,
 }
 
-impl Default for State {
-    fn default() -> Self {
+impl State {
+    fn new(managers: Managers, xdg_output_manager: Option<ZxdgOutputManagerV1>) -> Self {
         Self {
-            shm: None,
-            source_manager: None,
-            capture_manager: None,
-            xdg_output_manager: None,
+            managers,
+            xdg_output_manager,
             outputs: Vec::new(),
             session_width: 0,
             session_height: 0,
@@ -86,15 +88,16 @@ pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
     let connection = Connection::connect_to_env().map_err(failure)?;
     let (globals, mut queue) = registry_queue_init::<State>(&connection).map_err(failure)?;
     let qh = queue.handle();
-    let mut state = State {
-        shm: Some(bind::<wl_shm::WlShm>(&globals, &qh)?),
-        source_manager: Some(bind::<ExtOutputImageCaptureSourceManagerV1>(&globals, &qh)?),
-        capture_manager: Some(bind::<ExtImageCopyCaptureManagerV1>(&globals, &qh)?),
-        xdg_output_manager: globals
+    let mut state = State::new(
+        Managers {
+            shm: bind::<wl_shm::WlShm>(&globals, &qh)?,
+            source_manager: bind::<ExtOutputImageCaptureSourceManagerV1>(&globals, &qh)?,
+            capture_manager: bind::<ExtImageCopyCaptureManagerV1>(&globals, &qh)?,
+        },
+        globals
             .bind::<ZxdgOutputManagerV1, _, _>(&qh, 1..=XDG_OUTPUT_MANAGER_MAX_VERSION, ())
             .ok(),
-        ..Default::default()
-    };
+    );
 
     for global in globals.contents().clone_list() {
         if global.interface == "wl_output" {
@@ -150,16 +153,17 @@ fn capture_output(
 ) -> CaptureResult<(RgbaImage, i32, i32)> {
     let output = state.outputs[index].output.clone();
 
-    let source = state
-        .source_manager
-        .as_ref()
-        .expect("source manager bound")
-        .create_source(&output, &queue.handle(), ());
-    let session = state
-        .capture_manager
-        .as_ref()
-        .expect("capture manager bound")
-        .create_session(&source, Options::empty(), &queue.handle(), ());
+    let source =
+        state
+            .managers
+            .source_manager
+            .create_source(&output, &queue.handle(), ());
+    let session = state.managers.capture_manager.create_session(
+        &source,
+        Options::empty(),
+        &queue.handle(),
+        (),
+    );
 
     state.session_width = 0;
     state.session_height = 0;
@@ -190,7 +194,7 @@ fn capture_output(
     let byte_len = stride * height as usize;
 
     let mut file = create_shm_file(byte_len)?;
-    let pool = state.shm.as_ref().expect("shm bound").create_pool(
+    let pool = state.managers.shm.create_pool(
         file.as_fd(),
         byte_len as i32,
         &queue.handle(),
