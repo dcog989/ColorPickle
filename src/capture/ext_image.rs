@@ -4,7 +4,8 @@ use std::os::fd::AsFd;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use image::{Rgba, RgbaImage, imageops};
+use image::imageops::{self, FilterType};
+use image::{Rgba, RgbaImage};
 use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
 use wayland_client::protocol::{wl_buffer, wl_output, wl_registry, wl_shm, wl_shm_pool};
@@ -15,6 +16,10 @@ use wayland_protocols::ext::image_capture_source::v1::client::{
 use wayland_protocols::ext::image_copy_capture::v1::client::{
     ext_image_copy_capture_frame_v1, ext_image_copy_capture_manager_v1,
     ext_image_copy_capture_session_v1,
+};
+use wayland_protocols::xdg::xdg_output::zv1::client::{
+    zxdg_output_manager_v1::{self, ZxdgOutputManagerV1},
+    zxdg_output_v1::{self, ZxdgOutputV1},
 };
 
 use ext_image_capture_source_v1::ExtImageCaptureSourceV1;
@@ -28,6 +33,7 @@ use crate::capture::{CaptureBackend, CaptureError, CaptureResult};
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
 const OUTPUT_MAX_VERSION: u32 = 4;
+const XDG_OUTPUT_MANAGER_MAX_VERSION: u32 = 3;
 const PROTOCOL_VERSION: u32 = 1;
 const DISPATCH_TIMEOUT: Duration = Duration::from_secs(2);
 
@@ -51,15 +57,19 @@ impl CaptureBackend for ExtImageBackend {
 
 struct OutputState {
     output: wl_output::WlOutput,
-    x: i32,
-    y: i32,
+    xdg_output: Option<ZxdgOutputV1>,
+    position: (i32, i32),
+    logical_size: Option<(u32, u32)>,
+    transform: wl_output::Transform,
+    scale: i32,
+    mode: Option<(i32, i32)>,
 }
 
-#[derive(Default)]
 struct State {
     shm: Option<wl_shm::WlShm>,
     source_manager: Option<ExtOutputImageCaptureSourceManagerV1>,
     capture_manager: Option<ExtImageCopyCaptureManagerV1>,
+    xdg_output_manager: Option<ZxdgOutputManagerV1>,
     outputs: Vec<OutputState>,
     session_width: u32,
     session_height: u32,
@@ -68,6 +78,27 @@ struct State {
     session_stopped: bool,
     frame_ready: bool,
     frame_failed: Option<String>,
+    frame_transform: wl_output::Transform,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            shm: None,
+            source_manager: None,
+            capture_manager: None,
+            xdg_output_manager: None,
+            outputs: Vec::new(),
+            session_width: 0,
+            session_height: 0,
+            session_formats: Vec::new(),
+            session_done: false,
+            session_stopped: false,
+            frame_ready: false,
+            frame_failed: None,
+            frame_transform: wl_output::Transform::Normal,
+        }
+    }
 }
 
 fn capture() -> CaptureResult<RgbaImage> {
@@ -79,6 +110,9 @@ fn capture() -> CaptureResult<RgbaImage> {
     state.shm = Some(bind::<wl_shm::WlShm>(&globals, &qh)?);
     state.source_manager = Some(bind::<ExtOutputImageCaptureSourceManagerV1>(&globals, &qh)?);
     state.capture_manager = Some(bind::<ExtImageCopyCaptureManagerV1>(&globals, &qh)?);
+    state.xdg_output_manager = globals
+        .bind::<ZxdgOutputManagerV1, _, _>(&qh, 1..=XDG_OUTPUT_MANAGER_MAX_VERSION, ())
+        .ok();
 
     for global in globals.contents().clone_list() {
         if global.interface == "wl_output" {
@@ -88,13 +122,35 @@ fn capture() -> CaptureResult<RgbaImage> {
                 &qh,
                 (),
             );
-            state.outputs.push(OutputState { output, x: 0, y: 0 });
+            state.outputs.push(OutputState {
+                output,
+                xdg_output: None,
+                position: (0, 0),
+                logical_size: None,
+                transform: wl_output::Transform::Normal,
+                scale: 1,
+                mode: None,
+            });
         }
     }
+
+    if let Some(manager) = state.xdg_output_manager.clone() {
+        for output in &mut state.outputs {
+            output.xdg_output = Some(manager.get_xdg_output(&output.output, &qh, ()));
+        }
+    }
+
     roundtrip(&mut queue, &mut state)?;
 
     if state.outputs.is_empty() {
         return Err(CaptureError::ExtImageUnavailable);
+    }
+
+    for output in &mut state.outputs {
+        if output.logical_size.is_none() {
+            let size = fallback_logical_size(output);
+            output.logical_size = size;
+        }
     }
 
     let mut captures = Vec::with_capacity(state.outputs.len());
@@ -110,10 +166,7 @@ fn capture_output(
     state: &mut State,
     index: usize,
 ) -> CaptureResult<(RgbaImage, i32, i32)> {
-    let (output, x, y) = {
-        let output = &state.outputs[index];
-        (output.output.clone(), output.x, output.y)
-    };
+    let output = state.outputs[index].output.clone();
 
     let source = state
         .source_manager
@@ -178,6 +231,7 @@ fn capture_output(
 
     state.frame_ready = false;
     state.frame_failed = None;
+    state.frame_transform = wl_output::Transform::Normal;
     dispatch_until(queue, state, Instant::now() + DISPATCH_TIMEOUT, |state| {
         state.frame_ready || state.frame_failed.is_some()
     })?;
@@ -197,7 +251,15 @@ fn capture_output(
     }
 
     let image = read_shm(&mut file, width, height, stride)?;
-    Ok((image, x, y))
+    let image = orient(image, state.frame_transform);
+    let output = &state.outputs[index];
+    let image = match output.logical_size {
+        Some(size) if image.dimensions() != size => {
+            imageops::resize(&image, size.0, size.1, FilterType::Triangle)
+        }
+        _ => image,
+    };
+    Ok((image, output.position.0, output.position.1))
 }
 
 fn bind<T>(
@@ -309,6 +371,86 @@ fn read_shm(file: &mut File, width: u32, height: u32, stride: usize) -> CaptureR
     Ok(image)
 }
 
+fn fallback_logical_size(output: &OutputState) -> Option<(u32, u32)> {
+    let (mode_width, mode_height) = output.mode?;
+    let swapped = is_quarter_turn(output.transform);
+    let (width, height) = if swapped {
+        (mode_height, mode_width)
+    } else {
+        (mode_width, mode_height)
+    };
+    let scale = output.scale.max(1);
+    Some((
+        (width / scale).max(1) as u32,
+        (height / scale).max(1) as u32,
+    ))
+}
+
+fn orient(image: RgbaImage, transform: wl_output::Transform) -> RgbaImage {
+    if matches!(transform, wl_output::Transform::Normal) {
+        return image;
+    }
+
+    let (buffer_width, buffer_height) = image.dimensions();
+    let (width, height) = if is_quarter_turn(transform) {
+        (buffer_height, buffer_width)
+    } else {
+        (buffer_width, buffer_height)
+    };
+
+    let source_transform = invert_transform(transform);
+    let mut oriented = RgbaImage::new(width, height);
+    for y in 0..height {
+        for x in 0..width {
+            let (source_x, source_y) = source_pixel(source_transform, x, y, width, height);
+            if let Some(pixel) = image.get_pixel_checked(source_x, source_y) {
+                oriented.put_pixel(x, y, *pixel);
+            }
+        }
+    }
+    oriented
+}
+
+fn is_quarter_turn(transform: wl_output::Transform) -> bool {
+    matches!(
+        transform,
+        wl_output::Transform::_90
+            | wl_output::Transform::_270
+            | wl_output::Transform::Flipped90
+            | wl_output::Transform::Flipped270
+    )
+}
+
+fn invert_transform(transform: wl_output::Transform) -> wl_output::Transform {
+    match transform {
+        wl_output::Transform::_90 => wl_output::Transform::_270,
+        wl_output::Transform::_270 => wl_output::Transform::_90,
+        wl_output::Transform::Flipped90 => wl_output::Transform::Flipped270,
+        wl_output::Transform::Flipped270 => wl_output::Transform::Flipped90,
+        other => other,
+    }
+}
+
+fn source_pixel(
+    transform: wl_output::Transform,
+    x: u32,
+    y: u32,
+    width: u32,
+    height: u32,
+) -> (u32, u32) {
+    match transform {
+        wl_output::Transform::Normal => (x, y),
+        wl_output::Transform::_90 => (height - y - 1, x),
+        wl_output::Transform::_180 => (width - x - 1, height - y - 1),
+        wl_output::Transform::_270 => (y, width - x - 1),
+        wl_output::Transform::Flipped => (width - x - 1, y),
+        wl_output::Transform::Flipped90 => (y, x),
+        wl_output::Transform::Flipped180 => (x, height - y - 1),
+        wl_output::Transform::Flipped270 => (height - y - 1, width - x - 1),
+        _ => (x, y),
+    }
+}
+
 fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<RgbaImage> {
     let min_x = captures.iter().map(|(_, x, _)| *x).min().unwrap_or(0);
     let min_y = captures.iter().map(|(_, _, y)| *y).min().unwrap_or(0);
@@ -409,9 +551,20 @@ impl Dispatch<wl_output::WlOutput, ()> for State {
         else {
             return;
         };
-        if let wl_output::Event::Geometry { x, y, .. } = event {
-            output.x = x;
-            output.y = y;
+        match event {
+            wl_output::Event::Geometry {
+                x, y, transform, ..
+            } => {
+                output.position = (x, y);
+                if let WEnum::Value(transform) = transform {
+                    output.transform = transform;
+                }
+            }
+            wl_output::Event::Mode { width, height, .. } => {
+                output.mode = Some((width, height));
+            }
+            wl_output::Event::Scale { factor } => output.scale = factor,
+            _ => {}
         }
     }
 }
@@ -492,9 +645,54 @@ impl Dispatch<ExtImageCopyCaptureFrameV1, ()> for State {
         _: &QueueHandle<State>,
     ) {
         match event {
+            ext_image_copy_capture_frame_v1::Event::Transform { transform } => {
+                if let WEnum::Value(transform) = transform {
+                    state.frame_transform = transform;
+                }
+            }
             ext_image_copy_capture_frame_v1::Event::Ready => state.frame_ready = true,
             ext_image_copy_capture_frame_v1::Event::Failed { reason } => {
                 state.frame_failed = Some(format!("{reason:?}"));
+            }
+            _ => {}
+        }
+    }
+}
+
+impl Dispatch<ZxdgOutputManagerV1, ()> for State {
+    fn event(
+        _: &mut State,
+        _: &ZxdgOutputManagerV1,
+        _: zxdg_output_manager_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<State>,
+    ) {
+    }
+}
+
+impl Dispatch<ZxdgOutputV1, ()> for State {
+    fn event(
+        state: &mut State,
+        proxy: &ZxdgOutputV1,
+        event: zxdg_output_v1::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<State>,
+    ) {
+        let Some(output) = state
+            .outputs
+            .iter_mut()
+            .find(|output| output.xdg_output.as_ref() == Some(proxy))
+        else {
+            return;
+        };
+        match event {
+            zxdg_output_v1::Event::LogicalPosition { x, y } => output.position = (x, y),
+            zxdg_output_v1::Event::LogicalSize { width, height } => {
+                if width > 0 && height > 0 {
+                    output.logical_size = Some((width as u32, height as u32));
+                }
             }
             _ => {}
         }
