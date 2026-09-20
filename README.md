@@ -19,13 +19,13 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 
 Run `colorpickle` for the main window, or `colorpickle --launch-mode picker_first` to go straight to the picker. In picker-first mode the main window opens with the picked color once you pick. The launch mode and other defaults can also be set in the config file.
 
-In the main window, click the eyedrop to open the picker. **Click** copies a single pixel; **drag** selects a region and copies its averaged color. Either way the picker closes and the value is copied to the clipboard. Press `Esc` or right-click to dismiss without copying. `Esc` exits the main window.
+In the main window, click the logo button to open the picker. **Click** copies a single pixel; **drag** selects a region and copies its averaged color. Either way the picker closes and the value is copied to the clipboard. Press `Esc` or right-click to dismiss without copying. `Esc` exits the main window.
 
 Hover a format button to preview the current color in that format; click it, or press its number key, to copy.
 
 The text field shows the current color in the default format. Type a replacement — `#ff0000`, `rgb(255, 0, 0)`, `oklch(0.7, 0.1, 120)`, `olive`, and so on — and press Enter to apply it.
 
-Each pick is added to the history row; click a swatch to make it the current color, or the rotate button to clear the history. The bottom row selects the launch mode and the default copy format; those changes are saved to the config file.
+Each pick is added to the history row; click a swatch to make it the current color, or the broom button to clear the history. The bottom row selects the launch mode and the default copy format; those changes are saved to the config file.
 
 ## Configuration
 

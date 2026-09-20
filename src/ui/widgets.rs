@@ -4,9 +4,23 @@ use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
 use crate::ui::theme::color32;
 
-const PIPETTE_PADDING: f32 = 8.0;
-const PIPETTE_VIEWBOX: f32 = 24.0;
-const PIPETTE_STROKE: f32 = 2.0;
+const LOGO_PADDING: f32 = 8.0;
+const LOGO_VIEWBOX: f32 = 512.0;
+const LOGO_RADIUS: f32 = 256.0;
+const LOGO_CIRCLE_STROKE: f32 = 24.0;
+const LOGO_TINE_X: [f32; 4] = [186.0, 226.0, 266.0, 306.0];
+const LOGO_TINE_WIDTH: f32 = 20.0;
+const LOGO_TINE_TOP: f32 = 100.0;
+const LOGO_TINE_BOTTOM: f32 = 210.0;
+const LOGO_TINE_RADIUS: f32 = 10.0;
+const LOGO_SHOULDER_LEFT: f32 = 186.0;
+const LOGO_SHOULDER_RIGHT: f32 = 326.0;
+const LOGO_SHOULDER_TOP: f32 = 190.0;
+const LOGO_SHOULDER_BOTTOM: f32 = 258.0;
+const LOGO_HANDLE_LEFT: f32 = 239.0;
+const LOGO_HANDLE_RIGHT: f32 = 273.0;
+const LOGO_HANDLE_BOTTOM: f32 = 412.0;
+const LOGO_HANDLE_RADIUS: f32 = 17.0;
 const GEAR_VIEWBOX: f32 = 24.0;
 const GEAR_STROKE: f32 = 2.0;
 const COPY_ICON_STROKE_WIDTH: f32 = 1.5;
@@ -24,8 +38,8 @@ pub fn picker_launcher(ui: &mut egui::Ui, height: f32) -> bool {
         ui,
         egui::vec2(height, height),
         "Launch screen picker",
-        PIPETTE_PADDING,
-        paint_pipette,
+        LOGO_PADDING,
+        paint_logo,
     )
 }
 
@@ -118,92 +132,62 @@ pub fn clear_history(ui: &mut egui::Ui) -> bool {
     )
 }
 
-// Lucide "pipette" (https://lucide.dev/icons/pipette), paths flattened from the
-// 24x24 viewBox, stroke-width 2, round caps/joins.
-const PIPETTE_PATHS: [&[(f32, f32)]; 3] = [
-    &[
-        (12.000, 9.000),
-        (3.586, 17.414),
-        (3.413, 17.611),
-        (3.268, 17.828),
-        (3.152, 18.063),
-        (3.068, 18.310),
-        (3.017, 18.567),
-        (3.000, 18.828),
-        (3.000, 20.172),
-        (2.983, 20.433),
-        (2.932, 20.690),
-        (2.848, 20.937),
-        (2.732, 21.172),
-        (2.587, 21.389),
-        (2.414, 21.586),
-        (2.611, 21.413),
-        (2.828, 21.268),
-        (3.063, 21.152),
-        (3.310, 21.068),
-        (3.567, 21.017),
-        (3.828, 21.000),
-        (5.172, 21.000),
-        (5.433, 20.983),
-        (5.690, 20.932),
-        (5.937, 20.848),
-        (6.172, 20.732),
-        (6.389, 20.587),
-        (6.586, 20.414),
-        (15.000, 12.000),
-    ],
-    &[
-        (18.000, 9.000),
-        (18.400, 9.400),
-        (18.696, 9.771),
-        (18.902, 10.199),
-        (19.008, 10.662),
-        (19.008, 11.138),
-        (18.902, 11.601),
-        (18.696, 12.029),
-        (18.400, 12.400),
-        (18.029, 12.696),
-        (17.601, 12.902),
-        (17.138, 13.008),
-        (16.662, 13.008),
-        (16.199, 12.902),
-        (15.771, 12.696),
-        (15.400, 12.400),
-        (11.600, 8.600),
-        (11.304, 8.229),
-        (11.098, 7.801),
-        (10.992, 7.338),
-        (10.992, 6.862),
-        (11.098, 6.399),
-        (11.304, 5.971),
-        (11.600, 5.600),
-        (11.971, 5.304),
-        (12.399, 5.098),
-        (12.862, 4.992),
-        (13.338, 4.992),
-        (13.801, 5.098),
-        (14.229, 5.304),
-        (14.600, 5.600),
-        (15.000, 6.000),
-        (18.400, 2.600),
-        (18.771, 2.304),
-        (19.199, 2.098),
-        (19.662, 1.992),
-        (20.138, 1.992),
-        (20.601, 2.098),
-        (21.029, 2.304),
-        (21.400, 2.600),
-        (21.696, 2.971),
-        (21.902, 3.399),
-        (22.008, 3.862),
-        (22.008, 4.338),
-        (21.902, 4.801),
-        (21.696, 5.229),
-        (21.400, 5.600),
-        (18.000, 9.000),
-    ],
-    &[(2.000, 22.000), (2.414, 21.586)],
-];
+// Logo mark: the same fork-in-circle geometry as packaging/colorpickle.svg,
+// flattened from its 512x512 viewBox. Painted in the current foreground colour
+// so the launcher follows the dynamic theme like the other icons.
+fn paint_logo(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    let scale = rect.width() / LOGO_VIEWBOX;
+    let map = |x: f32, y: f32| egui::pos2(rect.left() + x * scale, rect.top() + y * scale);
+
+    painter.circle_stroke(
+        map(LOGO_RADIUS, LOGO_RADIUS),
+        (LOGO_RADIUS - LOGO_CIRCLE_STROKE / 2.0) * scale,
+        egui::Stroke::new(LOGO_CIRCLE_STROKE * scale, color),
+    );
+
+    let handle_radius = (LOGO_HANDLE_RADIUS * scale).round() as u8;
+    painter.rect_filled(
+        egui::Rect::from_min_max(
+            map(LOGO_HANDLE_LEFT, LOGO_SHOULDER_BOTTOM),
+            map(LOGO_HANDLE_RIGHT, LOGO_HANDLE_BOTTOM),
+        ),
+        egui::CornerRadius {
+            nw: 0,
+            ne: 0,
+            sw: handle_radius,
+            se: handle_radius,
+        },
+        color,
+    );
+
+    painter.add(egui::Shape::convex_polygon(
+        vec![
+            map(LOGO_SHOULDER_LEFT, LOGO_SHOULDER_TOP),
+            map(LOGO_SHOULDER_RIGHT, LOGO_SHOULDER_TOP),
+            map(LOGO_HANDLE_RIGHT, LOGO_SHOULDER_BOTTOM),
+            map(LOGO_HANDLE_LEFT, LOGO_SHOULDER_BOTTOM),
+        ],
+        color,
+        egui::Stroke::NONE,
+    ));
+
+    let tine_radius = (LOGO_TINE_RADIUS * scale).round() as u8;
+    for x in LOGO_TINE_X {
+        painter.rect_filled(
+            egui::Rect::from_min_max(
+                map(x, LOGO_TINE_TOP),
+                map(x + LOGO_TINE_WIDTH, LOGO_TINE_BOTTOM),
+            ),
+            egui::CornerRadius {
+                nw: tine_radius,
+                ne: tine_radius,
+                sw: 0,
+                se: 0,
+            },
+            color,
+        );
+    }
+}
 
 // Lucide "settings" (https://lucide.dev/icons/settings): the cog outline plus the
 // centre hole, both flattened from the 24x24 viewBox.
@@ -363,17 +347,6 @@ const GEAR_PATHS: [&[(f32, f32)]; 2] = [
         (15.000, 12.000),
     ],
 ];
-
-fn paint_pipette(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    paint_paths(
-        painter,
-        rect,
-        PIPETTE_VIEWBOX,
-        PIPETTE_STROKE,
-        color,
-        &PIPETTE_PATHS,
-    );
-}
 
 fn paint_paths(
     painter: &egui::Painter,
