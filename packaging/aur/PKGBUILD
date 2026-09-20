@@ -1,5 +1,6 @@
 # Maintainer: dcog989 <sirdavidlaws@gmail.com>
 pkgname=colorpickle
+_reponame=ColorPickle
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."
@@ -12,12 +13,12 @@ source=("$pkgname-$pkgver.tar.gz::https://github.com/dcog989/ColorPickle/archive
 sha256sums=('SKIP')
 
 build() {
-    cd "$pkgname-$pkgver"
+    cd "$_reponame-$pkgver"
     cargo build --release --locked
 }
 
 package() {
-    cd "$pkgname-$pkgver"
+    cd "$_reponame-$pkgver"
     install -Dm755 target/release/colorpickle "$pkgdir/usr/bin/colorpickle"
     install -Dm644 packaging/colorpickle.desktop "$pkgdir/usr/share/applications/colorpickle.desktop"
     install -Dm644 packaging/colorpickle.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/colorpickle.svg"
