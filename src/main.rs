@@ -11,11 +11,16 @@ use clap::Parser;
 use crate::cli::Cli;
 use crate::config::LaunchMode;
 
+#[cfg(debug_assertions)]
+const DEFAULT_LOG_FILTER: &str = "colorpickle=debug";
+#[cfg(not(debug_assertions))]
+const DEFAULT_LOG_FILTER: &str = "colorpickle=info";
+
 fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("colorpickle=debug")),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
         )
         .init();
 
