@@ -315,41 +315,31 @@ impl MainWindow {
             )
             .show(ui, |ui| {
                 ui.horizontal_top(|ui| {
-                    let hue_saturation = saturation;
-                    let hue_lightness = lightness;
-                    slider::column(ui, "H", foreground, &mut hue, SLIDER_WIDTH, move |value| {
-                        color32(Okhsl::new(
-                            value * HUE_MAX_DEGREES,
-                            hue_saturation,
-                            hue_lightness,
-                        ))
-                    });
+                    let hue_gradient =
+                        channel_gradient(SliderChannel::Hue, hue, saturation, lightness);
+                    slider::column(ui, "H", foreground, &mut hue, SLIDER_WIDTH, hue_gradient);
 
-                    let saturation_hue = hue * HUE_MAX_DEGREES;
-                    let saturation_lightness = lightness;
+                    let saturation_gradient =
+                        channel_gradient(SliderChannel::Saturation, hue, saturation, lightness);
                     slider::column(
                         ui,
                         "S",
                         foreground,
                         &mut saturation,
                         SLIDER_WIDTH,
-                        move |value| {
-                            color32(Okhsl::new(saturation_hue, value, saturation_lightness))
-                        },
+                        saturation_gradient,
                     )
                     .on_hover_text(SATURATION_TOOLTIP);
 
-                    let lightness_hue = hue * HUE_MAX_DEGREES;
-                    let lightness_saturation = saturation;
+                    let lightness_gradient =
+                        channel_gradient(SliderChannel::Lightness, hue, saturation, lightness);
                     slider::column(
                         ui,
                         "L",
                         foreground,
                         &mut lightness,
                         SLIDER_WIDTH,
-                        move |value| {
-                            color32(Okhsl::new(lightness_hue, lightness_saturation, value))
-                        },
+                        lightness_gradient,
                     );
                 });
             });
@@ -599,5 +589,28 @@ fn launch_mode_label(mode: LaunchMode) -> &'static str {
     match mode {
         LaunchMode::UiFirst => "UI first",
         LaunchMode::PickerFirst => "Picker first",
+    }
+}
+
+#[derive(Clone, Copy)]
+enum SliderChannel {
+    Hue,
+    Saturation,
+    Lightness,
+}
+
+fn channel_gradient(
+    channel: SliderChannel,
+    hue: f32,
+    saturation: f32,
+    lightness: f32,
+) -> impl Fn(f32) -> egui::Color32 {
+    move |value| {
+        let color = match channel {
+            SliderChannel::Hue => Okhsl::new(value * HUE_MAX_DEGREES, saturation, lightness),
+            SliderChannel::Saturation => Okhsl::new(hue * HUE_MAX_DEGREES, value, lightness),
+            SliderChannel::Lightness => Okhsl::new(hue * HUE_MAX_DEGREES, saturation, value),
+        };
+        color32(color)
     }
 }
