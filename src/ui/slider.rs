@@ -9,6 +9,7 @@ const LABEL_GAP: f32 = 2.0;
 const LABEL_HEIGHT: f32 = 16.0;
 const LABEL_FONT_SIZE: f32 = 14.0;
 const MIN_HEIGHT: f32 = 80.0;
+const GRADIENT_STOPS: usize = 64;
 
 pub fn column(
     ui: &mut egui::Ui,
@@ -70,17 +71,21 @@ fn paint_gradient(
     radius: f32,
     gradient: &impl Fn(f32) -> egui::Color32,
 ) {
-    let steps = (rect.height().ceil() as usize).max(2);
+    let stops: Vec<egui::Color32> = (0..=GRADIENT_STOPS)
+        .map(|index| gradient(index as f32 / GRADIENT_STOPS as f32))
+        .collect();
+
+    let rows = (rect.height().ceil() as usize).max(2);
     let mut mesh = egui::Mesh::default();
-    for index in 0..=steps {
-        let fraction = index as f32 / steps as f32;
+    for index in 0..=rows {
+        let fraction = index as f32 / rows as f32;
         let y = rect.top() + fraction * rect.height();
         let inset = corner_inset(radius, y - rect.top(), rect.bottom() - y);
-        let color = gradient(1.0 - fraction);
+        let color = interpolate_stops(&stops, 1.0 - fraction);
         mesh.colored_vertex(egui::pos2(rect.left() + inset, y), color);
         mesh.colored_vertex(egui::pos2(rect.right() - inset, y), color);
     }
-    for index in 0..steps as u32 {
+    for index in 0..rows as u32 {
         let top_left = index * 2;
         let top_right = top_left + 1;
         let bottom_left = top_left + 2;
@@ -89,6 +94,25 @@ fn paint_gradient(
         mesh.add_triangle(top_right, bottom_right, bottom_left);
     }
     painter.add(egui::Shape::mesh(mesh));
+}
+
+fn interpolate_stops(stops: &[egui::Color32], value: f32) -> egui::Color32 {
+    let scaled = value.clamp(0.0, 1.0) * (stops.len() - 1) as f32;
+    let lower = scaled.floor() as usize;
+    let upper = (lower + 1).min(stops.len() - 1);
+    let t = scaled - lower as f32;
+    let from = stops[lower];
+    let to = stops[upper];
+    egui::Color32::from_rgba_premultiplied(
+        interpolate_u8(from.r(), to.r(), t),
+        interpolate_u8(from.g(), to.g(), t),
+        interpolate_u8(from.b(), to.b(), t),
+        interpolate_u8(from.a(), to.a(), t),
+    )
+}
+
+fn interpolate_u8(from: u8, to: u8, t: f32) -> u8 {
+    (f32::from(from) + (f32::from(to) - f32::from(from)) * t).round() as u8
 }
 
 fn corner_inset(radius: f32, distance_from_top: f32, distance_from_bottom: f32) -> f32 {
