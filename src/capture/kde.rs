@@ -44,10 +44,6 @@ impl CaptureBackend for KdeBackend {
     fn capture_fullscreen(&self) -> CaptureResult<RgbaImage> {
         Ok(self.frame.clone())
     }
-
-    fn uses_static_frame(&self) -> bool {
-        true
-    }
 }
 
 fn capture_workspace() -> CaptureResult<RgbaImage> {

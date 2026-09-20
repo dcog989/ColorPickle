@@ -42,17 +42,17 @@ pub type CaptureOutcome = capture::CaptureResult<CapturedFrame>;
 
 pub struct CapturedFrame {
     frame: RgbaImage,
-    uses_static_frame: bool,
+    uses_portal_fallback: bool,
 }
 
 impl CapturedFrame {
     pub fn capture() -> capture::CaptureResult<Self> {
         let backend = capture::detect()?;
-        let uses_static_frame = backend.uses_static_frame();
+        let uses_portal_fallback = backend.uses_portal_fallback();
         let frame = backend.capture_fullscreen()?;
         Ok(Self {
             frame,
-            uses_static_frame,
+            uses_portal_fallback,
         })
     }
 }
@@ -60,7 +60,7 @@ impl CapturedFrame {
 pub struct Session {
     frame: RgbaImage,
     texture: Option<egui::TextureHandle>,
-    uses_static_frame: bool,
+    uses_portal_fallback: bool,
     drag_anchor: Option<egui::Pos2>,
 }
 
@@ -69,7 +69,7 @@ impl Session {
         Self {
             frame: captured.frame,
             texture: None,
-            uses_static_frame: captured.uses_static_frame,
+            uses_portal_fallback: captured.uses_portal_fallback,
             drag_anchor: None,
         }
     }
@@ -237,7 +237,7 @@ fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<P
         draw_crosshair(&painter, pointer);
     }
     draw_readout(&painter, pointer, value.as_str());
-    if session.uses_static_frame {
+    if session.uses_portal_fallback {
         draw_banner(&painter, screen);
     }
 

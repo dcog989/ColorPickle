@@ -26,7 +26,7 @@ impl CaptureBackend for WaylandBackend {
         Ok(self.frame.clone())
     }
 
-    fn uses_static_frame(&self) -> bool {
+    fn uses_portal_fallback(&self) -> bool {
         true
     }
 }

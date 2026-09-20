@@ -31,7 +31,7 @@ pub type CaptureResult<T> = Result<T, CaptureError>;
 pub trait CaptureBackend {
     fn capture_fullscreen(&self) -> CaptureResult<RgbaImage>;
 
-    fn uses_static_frame(&self) -> bool {
+    fn uses_portal_fallback(&self) -> bool {
         false
     }
 }
