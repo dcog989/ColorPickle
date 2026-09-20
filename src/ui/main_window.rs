@@ -101,10 +101,7 @@ impl MainWindow {
 
     fn apply_input(&mut self) {
         match parse::parse(&self.input) {
-            Some(color) => {
-                self.color = color;
-                self.set_toast("Parsed color");
-            }
+            Some(color) => self.color = color,
             None => self.set_toast("Unrecognized color"),
         }
         self.input = self.config.default_format.format(self.color);
