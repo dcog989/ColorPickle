@@ -49,6 +49,8 @@ const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num8,
 ];
 
+const _: () = assert!(FORMAT_KEYS.len() == ColorFormat::ALL.len());
+
 struct Toast {
     message: String,
     expires_at: f64,
