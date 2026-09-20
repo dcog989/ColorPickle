@@ -68,7 +68,7 @@ impl CapturedFrame {
 }
 
 pub struct Session {
-    frame: RgbaImage,
+    image: Arc<egui::ColorImage>,
     rect: capture::DesktopRect,
     texture: Option<egui::TextureHandle>,
     uses_portal_fallback: bool,
@@ -77,8 +77,16 @@ pub struct Session {
 
 impl Session {
     pub fn new(captured: CapturedFrame) -> Self {
+        let size = [
+            captured.frame.width() as usize,
+            captured.frame.height() as usize,
+        ];
+        let image = Arc::new(egui::ColorImage::from_rgba_unmultiplied(
+            size,
+            captured.frame.as_raw(),
+        ));
         Self {
-            frame: captured.frame,
+            image,
             rect: captured.rect,
             texture: None,
             uses_portal_fallback: captured.uses_portal_fallback,
@@ -90,14 +98,16 @@ impl Session {
         if let Some(texture) = &self.texture {
             return texture.id();
         }
-        let size = [self.frame.width() as usize, self.frame.height() as usize];
         tracing::info!(
-            width = size[0],
-            height = size[1],
+            width = self.image.size[0],
+            height = self.image.size[1],
             "overlay: uploading frame texture"
         );
-        let image = egui::ColorImage::from_rgba_unmultiplied(size, self.frame.as_raw());
-        let texture = ctx.load_texture(FRAME_TEXTURE, image, egui::TextureOptions::NEAREST);
+        let texture = ctx.load_texture(
+            FRAME_TEXTURE,
+            Arc::clone(&self.image),
+            egui::TextureOptions::NEAREST,
+        );
         let id = texture.id();
         self.texture = Some(texture);
         id
@@ -226,7 +236,10 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         texture_id,
         magnifier_center,
         uv_at(screen, pointer),
-        egui::vec2(session.frame.width() as f32, session.frame.height() as f32),
+        egui::vec2(
+            session.image.size[0] as f32,
+            session.image.size[1] as f32,
+        ),
     );
     if let Some(rect) = region {
         draw_selection(&painter, rect);
@@ -242,15 +255,15 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         let color = match region {
             Some(rect) => {
                 let bounds = pixel_bounds(
-                    &session.frame,
+                    &session.image,
                     uv_at(screen, rect.min),
                     uv_at(screen, rect.max),
                 );
-                average_color(&session.frame, bounds)
+                average_color(&session.image, bounds)
             }
             None => {
-                let (pixel_x, pixel_y) = pixel_at(&session.frame, uv_at(screen, pointer));
-                average_color(&session.frame, (pixel_x, pixel_y, pixel_x, pixel_y))
+                let (pixel_x, pixel_y) = pixel_at(&session.image, uv_at(screen, pointer));
+                average_color(&session.image, (pixel_x, pixel_y, pixel_x, pixel_y))
             }
         };
         return Some(PickOutcome::Picked(color));
@@ -283,15 +296,17 @@ fn magnifier_center(screen: egui::Rect, pointer: egui::Pos2, dragging: bool) -> 
     }
 }
 
-fn pixel_at(frame: &RgbaImage, uv: egui::Pos2) -> (u32, u32) {
-    let x = (uv.x * frame.width() as f32).clamp(0.0, frame.width() as f32 - 1.0);
-    let y = (uv.y * frame.height() as f32).clamp(0.0, frame.height() as f32 - 1.0);
+fn pixel_at(image: &egui::ColorImage, uv: egui::Pos2) -> (u32, u32) {
+    let width = image.size[0] as f32;
+    let height = image.size[1] as f32;
+    let x = (uv.x * width).clamp(0.0, width - 1.0);
+    let y = (uv.y * height).clamp(0.0, height - 1.0);
     (x as u32, y as u32)
 }
 
-fn pixel_bounds(frame: &RgbaImage, a: egui::Pos2, b: egui::Pos2) -> (u32, u32, u32, u32) {
-    let (x0, y0) = pixel_at(frame, a);
-    let (x1, y1) = pixel_at(frame, b);
+fn pixel_bounds(image: &egui::ColorImage, a: egui::Pos2, b: egui::Pos2) -> (u32, u32, u32, u32) {
+    let (x0, y0) = pixel_at(image, a);
+    let (x1, y1) = pixel_at(image, b);
     (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1))
 }
 
@@ -380,8 +395,8 @@ fn draw_banner(painter: &egui::Painter, screen: egui::Rect) {
     );
 }
 
-fn average_color(frame: &RgbaImage, bounds: (u32, u32, u32, u32)) -> Okhsl {
-    let [red, green, blue] = average_rgb8(frame, bounds);
+fn average_color(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> Okhsl {
+    let [red, green, blue] = average_rgb8(image, bounds);
     Okhsl::from_srgb(Srgb::new(
         f32::from(red) / RGB_MAX,
         f32::from(green) / RGB_MAX,
@@ -389,16 +404,17 @@ fn average_color(frame: &RgbaImage, bounds: (u32, u32, u32, u32)) -> Okhsl {
     ))
 }
 
-fn average_rgb8(frame: &RgbaImage, bounds: (u32, u32, u32, u32)) -> [u8; 3] {
+fn average_rgb8(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> [u8; 3] {
+    let width = image.size[0];
     let (start_x, start_y, end_x, end_y) = bounds;
     let mut sums = [0u64; 3];
     let mut count = 0u64;
     for y in start_y..=end_y {
         for x in start_x..=end_x {
-            let pixel = frame.get_pixel(x, y);
-            sums[0] += u64::from(pixel[0]);
-            sums[1] += u64::from(pixel[1]);
-            sums[2] += u64::from(pixel[2]);
+            let pixel = image.pixels[y as usize * width + x as usize];
+            sums[0] += u64::from(pixel.r());
+            sums[1] += u64::from(pixel.g());
+            sums[2] += u64::from(pixel.b());
             count += 1;
         }
     }
@@ -416,30 +432,33 @@ fn average_rgb8(frame: &RgbaImage, bounds: (u32, u32, u32, u32)) -> [u8; 3] {
 #[cfg(test)]
 mod tests {
     use super::average_rgb8;
-    use image::{Rgba, RgbaImage};
+    use eframe::egui::{self, Color32};
 
     #[test]
     fn averages_a_region_block() {
-        let mut frame = RgbaImage::new(4, 4);
+        let mut pixels = vec![Color32::TRANSPARENT; 4 * 4];
         for y in 0..2 {
             for x in 0..2 {
-                frame.put_pixel(x, y, Rgba([255, 0, 0, 255]));
+                pixels[y * 4 + x] = Color32::RED;
             }
         }
-        assert_eq!(average_rgb8(&frame, (0, 0, 1, 1)), [255, 0, 0]);
+        let image = egui::ColorImage::new([4, 4], pixels);
+        assert_eq!(average_rgb8(&image, (0, 0, 1, 1)), [255, 0, 0]);
     }
 
     #[test]
     fn averages_partial_coverage() {
-        let mut frame = RgbaImage::new(2, 2);
-        frame.put_pixel(0, 0, Rgba([255, 255, 255, 255]));
-        assert_eq!(average_rgb8(&frame, (0, 0, 1, 1)), [63, 63, 63]);
+        let mut pixels = vec![Color32::TRANSPARENT; 2 * 2];
+        pixels[0] = Color32::WHITE;
+        let image = egui::ColorImage::new([2, 2], pixels);
+        assert_eq!(average_rgb8(&image, (0, 0, 1, 1)), [63, 63, 63]);
     }
 
     #[test]
     fn single_pixel_region_returns_that_pixel() {
-        let mut frame = RgbaImage::new(2, 2);
-        frame.put_pixel(1, 1, Rgba([10, 20, 30, 255]));
-        assert_eq!(average_rgb8(&frame, (1, 1, 1, 1)), [10, 20, 30]);
+        let mut pixels = vec![Color32::TRANSPARENT; 2 * 2];
+        pixels[3] = Color32::from_rgb(10, 20, 30);
+        let image = egui::ColorImage::new([2, 2], pixels);
+        assert_eq!(average_rgb8(&image, (1, 1, 1, 1)), [10, 20, 30]);
     }
 }

@@ -3,8 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::os::fd::AsFd;
 use std::time::{Duration, Instant};
 
-use image::imageops::{self, FilterType};
-use image::{Rgba, RgbaImage};
+use image::{RgbaImage, imageops::{self, FilterType}};
 use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{MemfdFlags, memfd_create};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
@@ -48,11 +47,9 @@ impl ExtImageBackend {
 }
 
 impl CaptureBackend for ExtImageBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
-        Ok(DesktopCapture {
-            image: self.frame.image.clone(),
-            rect: self.frame.rect,
-        })
+    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture> {
+        let ExtImageBackend { frame } = *self;
+        Ok(frame)
     }
 }
 
@@ -341,19 +338,22 @@ fn read_shm(file: &mut File, width: u32, height: u32, stride: usize) -> CaptureR
     let mut bytes = vec![0u8; stride * height as usize];
     file.read_exact(&mut bytes).map_err(failure)?;
 
-    let mut image = RgbaImage::new(width, height);
-    for y in 0..height {
-        let row = &bytes[y as usize * stride..];
-        for x in 0..width {
-            let offset = x as usize * BYTES_PER_PIXEL;
-            image.put_pixel(
-                x,
-                y,
-                Rgba([row[offset + 2], row[offset + 1], row[offset], OPAQUE]),
-            );
+    let row_bytes = width as usize * BYTES_PER_PIXEL;
+    if stride != row_bytes {
+        for row in 1..height as usize {
+            let source = row * stride;
+            bytes.copy_within(source..source + row_bytes, row * row_bytes);
         }
+        bytes.truncate(height as usize * row_bytes);
     }
-    Ok(image)
+
+    for pixel in bytes.chunks_exact_mut(BYTES_PER_PIXEL) {
+        pixel.swap(0, 2);
+        pixel[3] = OPAQUE;
+    }
+
+    RgbaImage::from_raw(width, height, bytes)
+        .ok_or_else(|| failure("capture frame has invalid dimensions"))
 }
 
 fn fallback_logical_size(output: &OutputState) -> Option<(u32, u32)> {

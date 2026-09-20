@@ -18,7 +18,7 @@ impl WaylandBackend {
 }
 
 impl CaptureBackend for WaylandBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
+    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture> {
         let frame = capture_once()?;
         Ok(DesktopCapture {
             rect: DesktopRect::from_image(&frame),

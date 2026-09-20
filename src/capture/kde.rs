@@ -41,11 +41,10 @@ impl KdeBackend {
 }
 
 impl CaptureBackend for KdeBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
-        Ok(DesktopCapture {
-            image: self.frame.clone(),
-            rect: DesktopRect::from_image(&self.frame),
-        })
+    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture> {
+        let KdeBackend { frame } = *self;
+        let rect = DesktopRect::from_image(&frame);
+        Ok(DesktopCapture { image: frame, rect })
     }
 }
 
@@ -75,7 +74,7 @@ fn capture_workspace() -> CaptureResult<RgbaImage> {
     reader.read_exact(&mut buffer)?;
     tracing::debug!("kwin: pixel read complete");
 
-    repack(&buffer, width, height, stride, format)
+    repack(buffer, width, height, stride, format)
 }
 
 fn get_u32(map: &HashMap<String, OwnedValue>, key: &str) -> CaptureResult<u32> {
@@ -108,7 +107,7 @@ impl PixelOrder {
 }
 
 fn repack(
-    buffer: &[u8],
+    mut buffer: Vec<u8>,
     width: u32,
     height: u32,
     stride: u32,
@@ -121,15 +120,20 @@ fn repack(
         return Err(CaptureError::MalformedReply("image size".to_owned()));
     }
 
-    let mut rgba = Vec::with_capacity(width as usize * height as usize * BYTES_PER_PIXEL);
-    for row in buffer.chunks_exact(stride).take(height as usize) {
-        for pixel in row[..row_bytes].chunks_exact(BYTES_PER_PIXEL) {
-            let [red, green, blue] = order.rgb(pixel);
-            rgba.extend_from_slice(&[red, green, blue, OPAQUE]);
+    if stride != row_bytes {
+        for row in 1..height as usize {
+            let source = row * stride;
+            buffer.copy_within(source..source + row_bytes, row * row_bytes);
         }
+        buffer.truncate(height as usize * row_bytes);
     }
 
-    RgbaImage::from_raw(width, height, rgba)
+    for pixel in buffer.chunks_exact_mut(BYTES_PER_PIXEL) {
+        let [red, green, blue] = order.rgb(pixel);
+        pixel.copy_from_slice(&[red, green, blue, OPAQUE]);
+    }
+
+    RgbaImage::from_raw(width, height, buffer)
         .ok_or_else(|| CaptureError::MalformedReply("image dimensions".to_owned()))
 }
 
@@ -143,7 +147,7 @@ mod tests {
         let buffer = vec![
             10, 20, 30, 255, 40, 50, 60, 255, 0, 0, 0, 0, // 2 px + 4 pad
         ];
-        let image = repack(&buffer, 2, 1, 12, 16).unwrap();
+        let image = repack(buffer, 2, 1, 12, 16).unwrap();
         assert_eq!(image.get_pixel(0, 0), &Rgba([10, 20, 30, 255]));
         assert_eq!(image.get_pixel(1, 0), &Rgba([40, 50, 60, 255]));
     }
@@ -151,12 +155,12 @@ mod tests {
     #[test]
     fn repacks_bgra_pixels() {
         let buffer = vec![30, 20, 10, 255];
-        let image = repack(&buffer, 1, 1, 4, 6).unwrap();
+        let image = repack(buffer, 1, 1, 4, 6).unwrap();
         assert_eq!(image.get_pixel(0, 0), &Rgba([10, 20, 30, 255]));
     }
 
     #[test]
     fn rejects_unknown_format() {
-        assert!(repack(&[0, 0, 0, 0], 1, 1, 4, 99).is_err());
+        assert!(repack(vec![0, 0, 0, 0], 1, 1, 4, 99).is_err());
     }
 }

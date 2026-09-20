@@ -60,7 +60,7 @@ pub struct DesktopCapture {
 }
 
 pub trait CaptureBackend {
-    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture>;
+    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture>;
 
     fn uses_portal_fallback(&self) -> bool {
         false

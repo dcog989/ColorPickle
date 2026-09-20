@@ -6,7 +6,7 @@ use crate::capture::{CaptureBackend, CaptureResult, DesktopCapture, DesktopRect}
 pub struct X11Backend;
 
 impl CaptureBackend for X11Backend {
-    fn capture_fullscreen(&self) -> CaptureResult<DesktopCapture> {
+    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture> {
         let monitors = Monitor::all()?;
         match monitors.as_slice() {
             [monitor] => {
