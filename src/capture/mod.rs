@@ -31,6 +31,8 @@ pub enum CaptureError {
     ExtImage(String),
     #[error("captured an empty frame")]
     EmptyFrame,
+    #[error("no capture backend is available")]
+    NoBackend,
 }
 
 pub type CaptureResult<T> = Result<T, CaptureError>;
@@ -54,57 +56,109 @@ impl DesktopRect {
     }
 }
 
-pub struct DesktopCapture {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CaptureSource {
+    KWin,
+    ExtImage,
+    X11,
+    Portal,
+}
+
+impl CaptureSource {
+    pub fn uses_portal_fallback(self) -> bool {
+        matches!(self, Self::Portal)
+    }
+}
+
+#[derive(Debug)]
+pub struct Capture {
     pub image: RgbaImage,
     pub rect: DesktopRect,
+    pub source: CaptureSource,
 }
 
-pub trait CaptureBackend {
-    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture>;
+type BackendCapture = (RgbaImage, DesktopRect);
 
-    fn uses_portal_fallback(&self) -> bool {
-        false
-    }
+struct Backend {
+    source: CaptureSource,
+    available: fn() -> bool,
+    run: fn() -> CaptureResult<BackendCapture>,
 }
 
-pub fn detect() -> CaptureResult<Box<dyn CaptureBackend>> {
-    if is_kde() {
-        match kde::KdeBackend::new() {
-            Ok(backend) => {
-                tracing::info!("capture: using KWin ScreenShot2");
-                return Ok(Box::new(backend));
+const BACKENDS: &[Backend] = &[
+    Backend {
+        source: CaptureSource::KWin,
+        available: is_kde,
+        run: kde::capture,
+    },
+    Backend {
+        source: CaptureSource::ExtImage,
+        available: is_wayland,
+        run: ext_image::capture,
+    },
+    Backend {
+        source: CaptureSource::X11,
+        available: is_x11,
+        run: x11::capture,
+    },
+    Backend {
+        source: CaptureSource::Portal,
+        available: is_wayland,
+        run: wayland::capture,
+    },
+];
+
+pub fn capture() -> CaptureResult<Capture> {
+    capture_with(|| {})
+}
+
+pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
+    let mut last_error = None;
+    let mut progress = Some(progress);
+    for backend in BACKENDS {
+        if !(backend.available)() {
+            continue;
+        }
+        if backend.source.uses_portal_fallback() {
+            if let Some(notify) = progress.take() {
+                notify();
+            }
+        }
+        match (backend.run)() {
+            Ok((image, rect)) => {
+                if image.width() == 0 || image.height() == 0 {
+                    return Err(CaptureError::EmptyFrame);
+                }
+                tracing::info!(source = ?backend.source, "capture: frame ready");
+                return Ok(Capture {
+                    image,
+                    rect,
+                    source: backend.source,
+                });
             }
             Err(error) => {
                 tracing::warn!(
                     ?error,
-                    "KWin ScreenShot2 capture failed; trying the next backend"
+                    source = ?backend.source,
+                    "capture: backend failed; trying the next"
                 );
+                last_error = Some(error);
             }
         }
     }
-    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
-        match ext_image::ExtImageBackend::new() {
-            Ok(backend) => {
-                tracing::info!("capture: using ext-image-copy-capture");
-                return Ok(Box::new(backend));
-            }
-            Err(error) => {
-                tracing::warn!(
-                    ?error,
-                    "ext-image-copy-capture unavailable; using the portal"
-                );
-            }
-        }
-        tracing::info!("capture: using xdg-desktop-portal");
-        Ok(Box::new(wayland::WaylandBackend::new()?))
-    } else {
-        tracing::info!("capture: using X11 xcap");
-        Ok(Box::new(x11::X11Backend))
-    }
+    Err(last_error.unwrap_or(CaptureError::NoBackend))
 }
 
 fn is_kde() -> bool {
     std::env::var("XDG_CURRENT_DESKTOP")
         .map(|value| value.to_ascii_lowercase().contains("kde"))
         .unwrap_or(false)
+}
+
+fn is_wayland() -> bool {
+    std::env::var_os("WAYLAND_DISPLAY").is_some()
+}
+
+fn is_x11() -> bool {
+    !is_wayland()
 }

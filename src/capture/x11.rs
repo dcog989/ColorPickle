@@ -1,30 +1,28 @@
 use image::{RgbaImage, imageops};
 use xcap::Monitor;
 
-use crate::capture::{CaptureBackend, CaptureResult, DesktopCapture, DesktopRect};
+use crate::capture::{CaptureResult, DesktopRect};
 
-pub struct X11Backend;
-
-impl CaptureBackend for X11Backend {
-    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture> {
-        let monitors = Monitor::all()?;
-        match monitors.as_slice() {
-            [monitor] => {
-                let image = monitor.capture_image()?;
-                let rect = DesktopRect {
-                    x: monitor.x()?,
-                    y: monitor.y()?,
-                    width: image.width(),
-                    height: image.height(),
-                };
-                Ok(DesktopCapture { image, rect })
-            }
-            _ => composite(&monitors),
-        }
+pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
+    let monitors = Monitor::all()?;
+    match monitors.as_slice() {
+        [monitor] => capture_monitor(monitor),
+        _ => composite(&monitors),
     }
 }
 
-fn composite(monitors: &[Monitor]) -> CaptureResult<DesktopCapture> {
+fn capture_monitor(monitor: &Monitor) -> CaptureResult<(RgbaImage, DesktopRect)> {
+    let image = monitor.capture_image()?;
+    let rect = DesktopRect {
+        x: monitor.x()?,
+        y: monitor.y()?,
+        width: image.width(),
+        height: image.height(),
+    };
+    Ok((image, rect))
+}
+
+fn composite(monitors: &[Monitor]) -> CaptureResult<(RgbaImage, DesktopRect)> {
     let mut min_x = i32::MAX;
     let mut min_y = i32::MAX;
     let mut max_x = i32::MIN;
@@ -50,13 +48,13 @@ fn composite(monitors: &[Monitor]) -> CaptureResult<DesktopCapture> {
         imageops::overlay(&mut canvas, &image, x, y);
     }
 
-    Ok(DesktopCapture {
-        image: canvas,
-        rect: DesktopRect {
+    Ok((
+        canvas,
+        DesktopRect {
             x: min_x,
             y: min_y,
             width,
             height,
         },
-    })
+    ))
 }

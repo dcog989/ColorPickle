@@ -2,7 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use eframe::egui;
-use image::RgbaImage;
 use palette::Srgb;
 
 use crate::capture;
@@ -36,37 +35,6 @@ pub enum PickOutcome {
     Dismissed,
 }
 
-pub type CaptureOutcome = capture::CaptureResult<CapturedFrame>;
-
-pub struct CapturedFrame {
-    frame: RgbaImage,
-    rect: capture::DesktopRect,
-    uses_portal_fallback: bool,
-}
-
-impl CapturedFrame {
-    pub fn capture() -> capture::CaptureResult<Self> {
-        Self::capture_with(|| {})
-    }
-
-    pub fn capture_with(progress: impl FnOnce()) -> capture::CaptureResult<Self> {
-        let backend = capture::detect()?;
-        let uses_portal_fallback = backend.uses_portal_fallback();
-        if uses_portal_fallback {
-            progress();
-        }
-        let capture = backend.capture_fullscreen()?;
-        if capture.image.width() == 0 || capture.image.height() == 0 {
-            return Err(capture::CaptureError::EmptyFrame);
-        }
-        Ok(Self {
-            frame: capture.image,
-            rect: capture.rect,
-            uses_portal_fallback,
-        })
-    }
-}
-
 pub struct Session {
     image: Arc<egui::ColorImage>,
     rect: capture::DesktopRect,
@@ -76,20 +44,20 @@ pub struct Session {
 }
 
 impl Session {
-    pub fn new(captured: CapturedFrame) -> Self {
+    pub fn new(captured: capture::Capture) -> Self {
         let size = [
-            captured.frame.width() as usize,
-            captured.frame.height() as usize,
+            captured.image.width() as usize,
+            captured.image.height() as usize,
         ];
         let image = Arc::new(egui::ColorImage::from_rgba_unmultiplied(
             size,
-            captured.frame.as_raw(),
+            captured.image.as_raw(),
         ));
         Self {
             image,
             rect: captured.rect,
             texture: None,
-            uses_portal_fallback: captured.uses_portal_fallback,
+            uses_portal_fallback: captured.source.uses_portal_fallback(),
             drag_anchor: None,
         }
     }
@@ -142,7 +110,7 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 }
 
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
-    let session = Session::new(CapturedFrame::capture()?);
+    let session = Session::new(capture::capture()?);
     let outcome = Arc::new(Mutex::new(None));
 
     let options = eframe::NativeOptions {

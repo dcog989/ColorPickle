@@ -4,31 +4,15 @@ use std::path::PathBuf;
 
 use image::RgbaImage;
 
-use crate::capture::{CaptureBackend, CaptureError, CaptureResult, DesktopCapture, DesktopRect};
+use crate::capture::{CaptureError, CaptureResult, DesktopRect};
 
 const FILE_SCHEME: &str = "file://";
 const HEX_RADIX: u32 = 16;
 
-pub struct WaylandBackend;
-
-impl WaylandBackend {
-    pub fn new() -> CaptureResult<Self> {
-        Ok(Self)
-    }
-}
-
-impl CaptureBackend for WaylandBackend {
-    fn capture_fullscreen(self: Box<Self>) -> CaptureResult<DesktopCapture> {
-        let frame = capture_once()?;
-        Ok(DesktopCapture {
-            rect: DesktopRect::from_image(&frame),
-            image: frame,
-        })
-    }
-
-    fn uses_portal_fallback(&self) -> bool {
-        true
-    }
+pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
+    let image = capture_once()?;
+    let rect = DesktopRect::from_image(&image);
+    Ok((image, rect))
 }
 
 fn capture_once() -> CaptureResult<RgbaImage> {

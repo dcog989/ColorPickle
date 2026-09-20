@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use eframe::egui;
 
+use crate::capture;
 use crate::color::okhsl::Okhsl;
 use crate::ui::overlay::{self, PickOutcome};
 
@@ -21,7 +22,7 @@ pub enum Event {
 
 enum CaptureUpdate {
     WaitingForUser,
-    Finished(overlay::CaptureOutcome),
+    Finished(capture::CaptureResult<capture::Capture>),
 }
 
 pub struct PickerController {
@@ -67,7 +68,7 @@ impl PickerController {
             tracing::debug!("picker: capture worker starting");
             // Give the compositor time to unmap the main window so it is not captured.
             std::thread::sleep(Duration::from_millis(HIDE_SETTLE_MILLIS));
-            let result = overlay::CapturedFrame::capture_with(|| {
+            let result = capture::capture_with(|| {
                 let _ = sender.send(CaptureUpdate::WaitingForUser);
                 ctx.request_repaint();
             });
