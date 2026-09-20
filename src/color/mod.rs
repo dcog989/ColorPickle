@@ -65,30 +65,55 @@ impl ColorFormat {
                 )
             }
             Self::Okhsl => format!(
-                "okhsl({:.1}, {:.3}, {:.3})",
-                color.hue(),
-                color.saturation(),
-                color.lightness()
+                "okhsl({}, {}, {})",
+                decimals(color.hue(), 1),
+                decimals(color.saturation(), 3),
+                decimals(color.lightness(), 3)
             ),
             Self::Oklch => {
                 let oklch = Oklch::from_color(Oklab::from_color(srgb));
                 format!(
-                    "oklch({:.3}, {:.3}, {:.1})",
-                    oklch.l,
-                    oklch.chroma,
-                    oklch.hue.into_positive_degrees()
+                    "oklch({}, {}, {})",
+                    decimals(oklch.l, 3),
+                    decimals(oklch.chroma, 3),
+                    decimals(oklch.hue.into_positive_degrees(), 1)
                 )
             }
             Self::Oklab => {
                 let oklab = Oklab::from_color(srgb);
-                format!("oklab({:.3}, {:.3}, {:.3})", oklab.l, oklab.a, oklab.b)
+                format!(
+                    "oklab({}, {}, {})",
+                    decimals(oklab.l, 3),
+                    decimals(oklab.a, 3),
+                    decimals(oklab.b, 3)
+                )
             }
             Self::Cmyk => format_cmyk(srgb),
             Self::Cielab => {
                 let lab: Lab = Lab::from_color(srgb);
-                format!("lab({:.1}, {:.1}, {:.1})", lab.l, lab.a, lab.b)
+                format!(
+                    "lab({}, {}, {})",
+                    decimals(lab.l, 1),
+                    decimals(lab.a, 1),
+                    decimals(lab.b, 1)
+                )
             }
         }
+    }
+}
+
+fn decimals(value: f32, places: usize) -> String {
+    let formatted = format!("{value:.places$}");
+    match formatted.split_once('.') {
+        Some((integer, fraction)) => {
+            let fraction = fraction.trim_end_matches('0');
+            if fraction.is_empty() {
+                integer.to_string()
+            } else {
+                format!("{integer}.{fraction}")
+            }
+        }
+        None => formatted,
     }
 }
 
@@ -156,10 +181,9 @@ mod tests {
     #[test]
     fn okhsl_format_is_native() {
         let color = Okhsl::new(30.0, 0.5, 0.5);
-        assert_eq!(
-            ColorFormat::Okhsl.format(color),
-            "okhsl(30.0, 0.500, 0.500)"
-        );
+        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(30, 0.5, 0.5)");
+        let color = Okhsl::new(180.0, 0.500, 0.500);
+        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(180, 0.5, 0.5)");
     }
 
     fn component(text: &str, index: usize) -> f32 {
