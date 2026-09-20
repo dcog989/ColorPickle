@@ -56,6 +56,9 @@ impl CapturedFrame {
             progress();
         }
         let capture = backend.capture_fullscreen()?;
+        if capture.image.width() == 0 || capture.image.height() == 0 {
+            return Err(capture::CaptureError::EmptyFrame);
+        }
         Ok(Self {
             frame: capture.image,
             rect: capture.rect,

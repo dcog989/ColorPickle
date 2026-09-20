@@ -39,8 +39,8 @@ fn composite(monitors: &[Monitor]) -> CaptureResult<DesktopCapture> {
         max_y = max_y.max(y + monitor.height()? as i32);
     }
 
-    let width = (max_x - min_x).max(0) as u32;
-    let height = (max_y - min_y).max(0) as u32;
+    let width = max_x.saturating_sub(min_x).max(0) as u32;
+    let height = max_y.saturating_sub(min_y).max(0) as u32;
     let mut canvas = RgbaImage::new(width, height);
 
     for monitor in monitors {

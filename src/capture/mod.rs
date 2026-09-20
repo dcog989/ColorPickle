@@ -29,6 +29,8 @@ pub enum CaptureError {
     ExtImageUnavailable,
     #[error("ext-image-copy-capture failed: {0}")]
     ExtImage(String),
+    #[error("captured an empty frame")]
+    EmptyFrame,
 }
 
 pub type CaptureResult<T> = Result<T, CaptureError>;
