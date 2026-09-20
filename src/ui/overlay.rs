@@ -204,7 +204,7 @@ fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<P
         texture_id,
         magnifier_center,
         uv_at(screen, pointer),
-        egui::vec2(session.frame.width() as f32, session.frame.height() as f32),
+        screen,
     );
     if let Some(rect) = region {
         draw_selection(&painter, rect);
@@ -265,10 +265,10 @@ fn draw_magnifier(
     texture_id: egui::TextureId,
     center: egui::Pos2,
     uv: egui::Pos2,
-    frame_size: egui::Vec2,
+    screen: egui::Rect,
 ) {
-    let half_x = (MAGNIFIER_SOURCE_PIXELS * 0.5 / frame_size.x).min(0.5);
-    let half_y = (MAGNIFIER_SOURCE_PIXELS * 0.5 / frame_size.y).min(0.5);
+    let half_x = (MAGNIFIER_SOURCE_PIXELS * 0.5 / screen.width()).min(0.5);
+    let half_y = (MAGNIFIER_SOURCE_PIXELS * 0.5 / screen.height()).min(0.5);
     let source_center = egui::pos2(
         uv.x.clamp(half_x, 1.0 - half_x),
         uv.y.clamp(half_y, 1.0 - half_y),
