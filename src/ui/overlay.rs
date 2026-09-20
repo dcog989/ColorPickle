@@ -15,7 +15,7 @@ const PICKER_VIEWPORT: &str = "colorpickle-picker";
 const MAGNIFIER_SIZE: f32 = 180.0;
 const MAGNIFIER_ZOOM: f32 = 4.0;
 const MAGNIFIER_SOURCE_PIXELS: f32 = MAGNIFIER_SIZE / MAGNIFIER_ZOOM;
-const MAGNIFIER_OFFSET: f32 = 24.0;
+const MAGNIFIER_PIXEL_SIZE: f32 = MAGNIFIER_SIZE / MAGNIFIER_SOURCE_PIXELS;
 const DRAG_MAGNIFIER_MARGIN: f32 = 24.0;
 const CROSSHAIR_ARM: f32 = 8.0;
 const CROSSHAIR_WIDTH: f32 = 1.0;
@@ -85,7 +85,7 @@ impl Session {
             "overlay: uploading frame texture"
         );
         let image = egui::ColorImage::from_rgba_unmultiplied(size, self.frame.as_raw());
-        let texture = ctx.load_texture(FRAME_TEXTURE, image, egui::TextureOptions::LINEAR);
+        let texture = ctx.load_texture(FRAME_TEXTURE, image, egui::TextureOptions::NEAREST);
         let id = texture.id();
         self.texture = Some(texture);
         id
@@ -229,7 +229,7 @@ fn draw(ctx: &egui::Context, session: &mut Session, config: &Config) -> Option<P
         texture_id,
         magnifier_center,
         uv_at(screen, pointer),
-        screen,
+        egui::vec2(session.frame.width() as f32, session.frame.height() as f32),
     );
     if let Some(rect) = region {
         draw_selection(&painter, rect);
@@ -269,7 +269,7 @@ fn magnifier_center(screen: egui::Rect, pointer: egui::Pos2, dragging: bool) -> 
             screen.bottom() - MAGNIFIER_SIZE / 2.0 - DRAG_MAGNIFIER_MARGIN,
         )
     } else {
-        pointer + egui::vec2(MAGNIFIER_OFFSET, MAGNIFIER_OFFSET)
+        pointer
     }
 }
 
@@ -290,10 +290,10 @@ fn draw_magnifier(
     texture_id: egui::TextureId,
     center: egui::Pos2,
     uv: egui::Pos2,
-    screen: egui::Rect,
+    source_size: egui::Vec2,
 ) {
-    let half_x = (MAGNIFIER_SOURCE_PIXELS * 0.5 / screen.width()).min(0.5);
-    let half_y = (MAGNIFIER_SOURCE_PIXELS * 0.5 / screen.height()).min(0.5);
+    let half_x = (MAGNIFIER_SOURCE_PIXELS * 0.5 / source_size.x).min(0.5);
+    let half_y = (MAGNIFIER_SOURCE_PIXELS * 0.5 / source_size.y).min(0.5);
     let source_center = egui::pos2(
         uv.x.clamp(half_x, 1.0 - half_x),
         uv.y.clamp(half_y, 1.0 - half_y),
@@ -310,6 +310,25 @@ fn draw_magnifier(
         egui::CornerRadius::ZERO,
         egui::Stroke::new(CROSSHAIR_WIDTH * 2.0, STROKE_COLOR),
         egui::StrokeKind::Inside,
+    );
+
+    let marker_fraction = egui::vec2(
+        (uv.x - source.min.x) / source.width(),
+        (uv.y - source.min.y) / source.height(),
+    );
+    let marker_center = egui::pos2(
+        target.min.x + marker_fraction.x * target.width(),
+        target.min.y + marker_fraction.y * target.height(),
+    );
+    let marker = egui::Rect::from_center_size(
+        marker_center,
+        egui::vec2(MAGNIFIER_PIXEL_SIZE, MAGNIFIER_PIXEL_SIZE),
+    );
+    painter.rect_stroke(
+        marker,
+        egui::CornerRadius::ZERO,
+        egui::Stroke::new(CROSSHAIR_WIDTH, SHADOW_COLOR),
+        egui::StrokeKind::Outside,
     );
 }
 
