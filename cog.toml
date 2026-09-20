@@ -1,2 +1,8 @@
 tag_prefix = "v"
 branch_whitelist = ["main"]
+
+pre_bump_hooks = [
+    "cargo set-version {{version}}",
+    "sed -i 's/^pkgver=.*/pkgver={{version}}/' packaging/aur/PKGBUILD",
+    "cd packaging/aur && makepkg --printsrcinfo > .SRCINFO",
+]
