@@ -4,7 +4,7 @@
 
 - Name: ColorPickle
 - Description: Linux screen color picker. Pick a pixel or drag-select a region from anywhere on screen, get the color in any common format, copy it. One glance, one click.
-- Tech: Rust (single binary); `egui`/`eframe` + `winit` GUI; `xcap`/`ashpd` capture; `arboard`/`wl-clipboard-rs` clipboard; `palette`; `clap`, `serde`, `toml`, `directories`, `anyhow`, `thiserror`, `tracing`, `image`; Lefthook + Cocogitto.
+- Tech: Rust (single binary); `egui`/`eframe` + `winit` GUI; `x11rb`/`ashpd` capture; `arboard`/`wl-clipboard-rs` clipboard; `palette`; `clap`, `serde`, `toml`, `directories`, `anyhow`, `thiserror`, `tracing`, `image`; Lefthook + Cocogitto.
 
 See `.docs/HLD.md` for architecture, UI, capture backends, color pipeline, and distribution.
 

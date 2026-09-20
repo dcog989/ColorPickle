@@ -7,8 +7,14 @@ use image::{RgbaImage, imageops};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CaptureError {
+    #[error("X11 connection failed")]
+    X11Connect(#[from] x11rb::errors::ConnectError),
     #[error("X11 capture failed")]
-    Xcap(#[from] xcap::XCapError),
+    X11Reply(#[from] x11rb::errors::ReplyError),
+    #[error("X11 image conversion failed")]
+    X11Parse(#[from] x11rb::errors::ParseError),
+    #[error("X11 visual {0} is unavailable")]
+    X11Visual(u32),
     #[error("portal screenshot request failed")]
     Portal(#[from] ashpd::Error),
     #[error("KWin screen shot request failed")]

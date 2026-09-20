@@ -1,32 +1,46 @@
-use image::RgbaImage;
-use xcap::Monitor;
+use image::{Rgba, RgbaImage};
+use x11rb::image::{Image, PixelLayout};
 
-use crate::capture::{CaptureResult, DesktopRect, composite};
+use crate::capture::{CaptureError, CaptureResult, DesktopRect};
 
 pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
-    let monitors = Monitor::all()?;
-    match monitors.as_slice() {
-        [monitor] => capture_monitor(monitor),
-        _ => composite_monitors(&monitors),
+    let (connection, screen) = x11rb::connect(None)?;
+    let root = &connection.setup().roots[screen];
+    let width = root.width_in_pixels;
+    let height = root.height_in_pixels;
+
+    let (image, visual_id) = Image::get(&connection, root.root, 0, 0, width, height)?;
+    let visual = root
+        .allowed_depths
+        .iter()
+        .flat_map(|depth| &depth.visuals)
+        .find(|visual| visual.visual_id == visual_id)
+        .ok_or(CaptureError::X11Visual(visual_id))?;
+    let layout = PixelLayout::from_visual_type(*visual)?;
+
+    let mut canvas = RgbaImage::new(u32::from(width), u32::from(height));
+    for y in 0..height {
+        for x in 0..width {
+            let (red, green, blue) = layout.decode(image.get_pixel(x, y));
+            canvas.put_pixel(
+                u32::from(x),
+                u32::from(y),
+                Rgba([high_byte(red), high_byte(green), high_byte(blue), 255]),
+            );
+        }
     }
+
+    Ok((
+        canvas,
+        DesktopRect {
+            x: 0,
+            y: 0,
+            width: u32::from(width),
+            height: u32::from(height),
+        },
+    ))
 }
 
-fn capture_monitor(monitor: &Monitor) -> CaptureResult<(RgbaImage, DesktopRect)> {
-    let image = monitor.capture_image()?;
-    let rect = DesktopRect {
-        x: monitor.x()?,
-        y: monitor.y()?,
-        width: image.width(),
-        height: image.height(),
-    };
-    Ok((image, rect))
-}
-
-fn composite_monitors(monitors: &[Monitor]) -> CaptureResult<(RgbaImage, DesktopRect)> {
-    let mut captures = Vec::with_capacity(monitors.len());
-    for monitor in monitors {
-        let image = monitor.capture_image()?;
-        captures.push((image, monitor.x()?, monitor.y()?));
-    }
-    composite(captures)
+fn high_byte(component: u16) -> u8 {
+    (component >> 8) as u8
 }
