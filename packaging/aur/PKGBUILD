@@ -9,13 +9,21 @@ url="https://github.com/dcog989/ColorPickle"
 license=('GPL-3.0-only')
 depends=('gcc-libs' 'glibc' 'libx11' 'libxcb' 'libxcursor' 'libxi' 'libxkbcommon' 'libxkbcommon-x11' 'libxrandr' 'libglvnd' 'mesa' 'wayland')
 optdepends=('xdg-desktop-portal: screenshot fallback')
-makedepends=('cargo' 'pkgconf' 'rust')
+makedepends=('pkgconf' 'rust')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/dcog989/ColorPickle/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
+prepare() {
+    cd "$_reponame-$pkgver"
+    export RUSTUP_TOOLCHAIN=stable
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
 build() {
     cd "$_reponame-$pkgver"
-    cargo build --release --locked
+    export RUSTUP_TOOLCHAIN=stable
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release
 }
 
 package() {
