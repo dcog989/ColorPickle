@@ -220,21 +220,6 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     });
     let dragging = region.is_some();
 
-    let color = match region {
-        Some(rect) => {
-            let bounds = pixel_bounds(
-                &session.frame,
-                uv_at(screen, rect.min),
-                uv_at(screen, rect.max),
-            );
-            average_color(&session.frame, bounds)
-        }
-        None => {
-            let (pixel_x, pixel_y) = pixel_at(&session.frame, uv_at(screen, pointer));
-            average_color(&session.frame, (pixel_x, pixel_y, pixel_x, pixel_y))
-        }
-    };
-
     let magnifier_center = magnifier_center(screen, pointer, dragging);
     draw_magnifier(
         &painter,
@@ -254,6 +239,20 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
 
     if primary_released {
         session.drag_anchor = None;
+        let color = match region {
+            Some(rect) => {
+                let bounds = pixel_bounds(
+                    &session.frame,
+                    uv_at(screen, rect.min),
+                    uv_at(screen, rect.max),
+                );
+                average_color(&session.frame, bounds)
+            }
+            None => {
+                let (pixel_x, pixel_y) = pixel_at(&session.frame, uv_at(screen, pointer));
+                average_color(&session.frame, (pixel_x, pixel_y, pixel_x, pixel_y))
+            }
+        };
         return Some(PickOutcome::Picked(color));
     }
     if secondary_clicked || escape_pressed {
