@@ -2,13 +2,12 @@ use std::time::Duration;
 
 use eframe::egui;
 
-use crate::cli::LaunchMode;
 use crate::clipboard;
 use crate::color::ColorFormat;
 use crate::color::harmony::Harmony;
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
-use crate::config::{Config, Theme};
+use crate::config::{Config, LaunchMode, Theme};
 use crate::ui::picker::{Event, PickerController};
 use crate::ui::slider;
 use crate::ui::theme::{self, color32, contrast_color32};

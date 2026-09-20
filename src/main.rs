@@ -8,7 +8,8 @@ mod ui;
 use anyhow::Result;
 use clap::Parser;
 
-use crate::cli::{Cli, LaunchMode};
+use crate::cli::Cli;
+use crate::config::LaunchMode;
 
 fn main() -> Result<()> {
     tracing_subscriber::fmt()

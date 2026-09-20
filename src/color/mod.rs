@@ -2,13 +2,12 @@ pub mod harmony;
 pub mod okhsl;
 pub mod parse;
 
-use clap::ValueEnum;
 use palette::{FromColor, Hsl, Lab, Oklab, Oklch, Srgb};
 use serde::{Deserialize, Serialize};
 
 use self::okhsl::Okhsl;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, ValueEnum, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ColorFormat {
     #[default]

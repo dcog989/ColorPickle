@@ -1,13 +1,23 @@
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-use crate::cli::LaunchMode;
 use crate::color::ColorFormat;
 
 pub const APP_NAME: &str = "colorpickle";
 pub const CONFIG_FILE: &str = "config.toml";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum LaunchMode {
+    #[default]
+    #[value(name = "ui_first")]
+    UiFirst,
+    #[value(name = "picker_first")]
+    PickerFirst,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
