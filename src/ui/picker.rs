@@ -1,13 +1,10 @@
 use std::sync::mpsc::{self, Receiver, TryRecvError};
-use std::time::Duration;
 
 use eframe::egui;
 
 use crate::color::okhsl::Okhsl;
 use crate::config::Config;
 use crate::ui::overlay::{self, PickOutcome};
-
-const CAPTURE_POLL_MILLIS: u64 = 50;
 
 pub enum Event {
     Ready,
@@ -34,13 +31,15 @@ impl PickerController {
         self.session.is_some() || self.capture.is_some()
     }
 
-    pub fn request(&mut self) -> bool {
+    pub fn request(&mut self, ctx: &egui::Context) -> bool {
         if self.is_busy() {
             return false;
         }
         let (sender, receiver) = mpsc::channel();
+        let ctx = ctx.clone();
         std::thread::spawn(move || {
             let _ = sender.send(overlay::CapturedFrame::capture());
+            ctx.request_repaint();
         });
         self.capture = Some(receiver);
         true
@@ -54,10 +53,7 @@ impl PickerController {
                     return Some(Event::Ready);
                 }
                 Ok(Err(error)) => return Some(Event::CaptureFailed(error.to_string())),
-                Err(TryRecvError::Empty) => {
-                    self.capture = Some(receiver);
-                    ctx.request_repaint_after(Duration::from_millis(CAPTURE_POLL_MILLIS));
-                }
+                Err(TryRecvError::Empty) => self.capture = Some(receiver),
                 Err(TryRecvError::Disconnected) => return Some(Event::ThreadStopped),
             }
         }

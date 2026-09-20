@@ -6,8 +6,8 @@ use image::RgbaImage;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CaptureError {
-    #[error("capture backend is not implemented: {0}")]
-    NotImplemented(&'static str),
+    #[error("X11 capture failed")]
+    Xcap(#[from] xcap::XCapError),
     #[error("failed to create the portal runtime")]
     Runtime(#[source] std::io::Error),
     #[error("portal screenshot request failed")]

@@ -118,8 +118,8 @@ impl MainWindow {
         }
     }
 
-    fn open_picker(&mut self) {
-        if self.picker.request() {
+    fn open_picker(&mut self, ctx: &egui::Context) {
+        if self.picker.request(ctx) {
             self.set_toast("Capturing screen...");
         }
     }
@@ -353,7 +353,7 @@ impl eframe::App for MainWindow {
         }
 
         if open_picker {
-            self.open_picker();
+            self.open_picker(&ctx);
         }
 
         if let Some(event) = self.picker.update(&ctx, &self.config) {
