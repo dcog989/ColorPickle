@@ -8,7 +8,7 @@ use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{MemfdFlags, memfd_create};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
 use wayland_client::protocol::{wl_buffer, wl_output, wl_registry, wl_shm, wl_shm_pool};
-use wayland_client::{Connection, Dispatch, EventQueue, QueueHandle, WEnum};
+use wayland_client::{Connection, Dispatch, EventQueue, QueueHandle, WEnum, delegate_noop};
 use wayland_protocols::ext::image_capture_source::v1::client::{
     ext_image_capture_source_v1, ext_output_image_capture_source_manager_v1,
 };
@@ -17,7 +17,7 @@ use wayland_protocols::ext::image_copy_capture::v1::client::{
     ext_image_copy_capture_session_v1,
 };
 use wayland_protocols::xdg::xdg_output::zv1::client::{
-    zxdg_output_manager_v1::{self, ZxdgOutputManagerV1},
+    zxdg_output_manager_v1::ZxdgOutputManagerV1,
     zxdg_output_v1::{self, ZxdgOutputV1},
 };
 
@@ -480,41 +480,9 @@ impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
     }
 }
 
-impl Dispatch<wl_shm::WlShm, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &wl_shm::WlShm,
-        _: wl_shm::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
-
-impl Dispatch<wl_shm_pool::WlShmPool, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &wl_shm_pool::WlShmPool,
-        _: <wl_shm_pool::WlShmPool as wayland_client::Proxy>::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
-
-impl Dispatch<wl_buffer::WlBuffer, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &wl_buffer::WlBuffer,
-        _: wl_buffer::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
+delegate_noop!(State: ignore wl_shm::WlShm);
+delegate_noop!(State: wl_shm_pool::WlShmPool);
+delegate_noop!(State: ignore wl_buffer::WlBuffer);
 
 impl Dispatch<wl_output::WlOutput, ()> for State {
     fn event(
@@ -550,41 +518,9 @@ impl Dispatch<wl_output::WlOutput, ()> for State {
     }
 }
 
-impl Dispatch<ExtOutputImageCaptureSourceManagerV1, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &ExtOutputImageCaptureSourceManagerV1,
-        _: ext_output_image_capture_source_manager_v1::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
-
-impl Dispatch<ExtImageCaptureSourceV1, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &ExtImageCaptureSourceV1,
-        _: ext_image_capture_source_v1::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
-
-impl Dispatch<ExtImageCopyCaptureManagerV1, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &ExtImageCopyCaptureManagerV1,
-        _: ext_image_copy_capture_manager_v1::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
+delegate_noop!(State: ExtOutputImageCaptureSourceManagerV1);
+delegate_noop!(State: ExtImageCaptureSourceV1);
+delegate_noop!(State: ExtImageCopyCaptureManagerV1);
 
 impl Dispatch<ExtImageCopyCaptureSessionV1, ()> for State {
     fn event(
@@ -640,17 +576,7 @@ impl Dispatch<ExtImageCopyCaptureFrameV1, ()> for State {
     }
 }
 
-impl Dispatch<ZxdgOutputManagerV1, ()> for State {
-    fn event(
-        _: &mut State,
-        _: &ZxdgOutputManagerV1,
-        _: zxdg_output_manager_v1::Event,
-        _: &(),
-        _: &Connection,
-        _: &QueueHandle<State>,
-    ) {
-    }
-}
+delegate_noop!(State: ZxdgOutputManagerV1);
 
 impl Dispatch<ZxdgOutputV1, ()> for State {
     fn event(
