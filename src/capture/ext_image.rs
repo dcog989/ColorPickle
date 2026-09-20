@@ -1,12 +1,12 @@
-use std::fs::{File, OpenOptions};
+use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::os::fd::AsFd;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use image::imageops::{self, FilterType};
 use image::{Rgba, RgbaImage};
 use rustix::event::{PollFd, PollFlags, Timespec, poll};
+use rustix::fs::{MemfdFlags, memfd_create};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
 use wayland_client::protocol::{wl_buffer, wl_output, wl_registry, wl_shm, wl_shm_pool};
 use wayland_client::{Connection, Dispatch, EventQueue, QueueHandle, WEnum};
@@ -36,8 +36,6 @@ const OUTPUT_MAX_VERSION: u32 = 4;
 const XDG_OUTPUT_MANAGER_MAX_VERSION: u32 = 3;
 const PROTOCOL_VERSION: u32 = 1;
 const DISPATCH_TIMEOUT: Duration = Duration::from_secs(2);
-
-static SHM_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 pub struct ExtImageBackend {
     frame: DesktopCapture,
@@ -332,24 +330,8 @@ fn dispatch_within(
 }
 
 fn create_shm_file(byte_len: usize) -> CaptureResult<File> {
-    let unique = SHM_COUNTER.fetch_add(1, Ordering::Relaxed);
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos())
-        .unwrap_or_default();
-    let mut path = std::env::temp_dir();
-    path.push(format!(
-        "colorpickle-shm-{}-{nanos}-{unique}",
-        std::process::id()
-    ));
-
-    let file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create_new(true)
-        .open(&path)
-        .map_err(failure)?;
-    std::fs::remove_file(&path).map_err(failure)?;
+    let fd = memfd_create("colorpickle-shm", MemfdFlags::CLOEXEC).map_err(failure)?;
+    let file = File::from(fd);
     file.set_len(byte_len as u64).map_err(failure)?;
     Ok(file)
 }
