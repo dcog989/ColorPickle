@@ -1,3 +1,4 @@
+pub mod kde;
 pub mod wayland;
 pub mod x11;
 
@@ -11,7 +12,13 @@ pub enum CaptureError {
     Runtime(#[source] std::io::Error),
     #[error("portal screenshot request failed")]
     Portal(#[from] ashpd::Error),
-    #[error("failed to read the screenshot file")]
+    #[error("KWin screen shot request failed")]
+    Dbus(#[from] zbus::Error),
+    #[error("KWin screen shot reply is missing field: {0}")]
+    MalformedReply(String),
+    #[error("unsupported QImage format: {0}")]
+    UnsupportedFormat(u32),
+    #[error("failed to read capture data")]
     Io(#[from] std::io::Error),
     #[error("failed to decode the screenshot")]
     Image(#[from] image::ImageError),
@@ -30,9 +37,23 @@ pub trait CaptureBackend {
 }
 
 pub fn detect() -> CaptureResult<Box<dyn CaptureBackend>> {
+    if is_kde() {
+        match kde::KdeBackend::new() {
+            Ok(backend) => return Ok(Box::new(backend)),
+            Err(error) => {
+                tracing::warn!(?error, "KWin ScreenShot2 capture failed; using the portal");
+            }
+        }
+    }
     if std::env::var_os("WAYLAND_DISPLAY").is_some() {
         Ok(Box::new(wayland::WaylandBackend::new()?))
     } else {
         Ok(Box::new(x11::X11Backend))
     }
+}
+
+fn is_kde() -> bool {
+    std::env::var("XDG_CURRENT_DESKTOP")
+        .map(|value| value.to_ascii_lowercase().contains("kde"))
+        .unwrap_or(false)
 }

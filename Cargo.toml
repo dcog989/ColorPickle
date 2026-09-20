@@ -25,3 +25,4 @@ tracing = "0.1.44"
 winit = "0.30.13"
 wl-clipboard-rs = "0.9.3"
 xcap = { version = "0.9.8", features = ["image"] }
+zbus = "5.19"
