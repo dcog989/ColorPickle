@@ -9,7 +9,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 anyhow = "1.0.104"
-arboard = { version = "3.6.1", features = ["wl-clipboard-rs"] }
+arboard = { version = "3.6.1", default-features = false, features = ["wayland-data-control"] }
 ashpd = { version = "0.13.13", default-features = false, features = ["async-io", "screenshot"] }
 clap = { version = "4.6.7", features = ["derive"] }
 directories = "6.0.0"
@@ -27,7 +27,6 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
-wl-clipboard-rs = "0.9.3"
 xcap = { version = "0.9.8", features = ["image"] }
 zbus = "5.19"
 

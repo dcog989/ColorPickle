@@ -974,7 +974,6 @@ dependencies = [
  "url",
  "wayland-client",
  "wayland-protocols",
- "wl-clipboard-rs",
  "xcap",
  "zbus",
 ]
