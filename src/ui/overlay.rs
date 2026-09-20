@@ -11,7 +11,7 @@ use crate::config::Config;
 const PICKER_TITLE: &str = "ColorPickle";
 const PICKER_VIEWPORT: &str = "colorpickle-picker";
 const MAGNIFIER_SIZE: f32 = 180.0;
-const MAGNIFIER_ZOOM: f32 = 8.0;
+const MAGNIFIER_ZOOM: f32 = 4.0;
 const MAGNIFIER_SOURCE_PIXELS: f32 = MAGNIFIER_SIZE / MAGNIFIER_ZOOM;
 const MAGNIFIER_OFFSET: f32 = 24.0;
 const DRAG_MAGNIFIER_MARGIN: f32 = 24.0;
