@@ -1,4 +1,5 @@
 use eframe::egui;
+use palette::{FromColor, Xyz};
 
 use crate::color::okhsl::Okhsl;
 use crate::config::Theme;
@@ -6,15 +7,6 @@ use crate::config::Theme;
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
 const CONTRAST_LUMINANCE_THRESHOLD: f32 = 0.179;
 const CONTRAST_LIGHTNESS_DELTA: f32 = 0.5;
-const SRGB_CHANNEL_MAX: f32 = 255.0;
-const SRGB_LINEAR_THRESHOLD: f32 = 0.04045;
-const SRGB_LINEAR_DIVISOR: f32 = 12.92;
-const SRGB_GAMMA_OFFSET: f32 = 0.055;
-const SRGB_GAMMA_SCALE: f32 = 1.055;
-const SRGB_GAMMA: f32 = 2.4;
-const LUMINANCE_RED: f32 = 0.2126;
-const LUMINANCE_GREEN: f32 = 0.7152;
-const LUMINANCE_BLUE: f32 = 0.0722;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
 const INACTIVE_FILL_ALPHA: u8 = 32;
 const HOVERED_FILL_ALPHA: u8 = 60;
@@ -31,8 +23,7 @@ pub fn color32(color: Okhsl) -> egui::Color32 {
 }
 
 pub fn contrast_color32(color: Okhsl) -> egui::Color32 {
-    let [red, green, blue] = color.to_srgb8();
-    let shifted = if relative_luminance(red, green, blue) > CONTRAST_LUMINANCE_THRESHOLD {
+    let shifted = if relative_luminance(color) > CONTRAST_LUMINANCE_THRESHOLD {
         color.lightness() - CONTRAST_LIGHTNESS_DELTA
     } else {
         color.lightness() + CONTRAST_LIGHTNESS_DELTA
@@ -44,19 +35,8 @@ pub fn contrast_color32(color: Okhsl) -> egui::Color32 {
     ))
 }
 
-fn relative_luminance(red: u8, green: u8, blue: u8) -> f32 {
-    LUMINANCE_RED * linearize(red)
-        + LUMINANCE_GREEN * linearize(green)
-        + LUMINANCE_BLUE * linearize(blue)
-}
-
-fn linearize(channel: u8) -> f32 {
-    let value = f32::from(channel) / SRGB_CHANNEL_MAX;
-    if value <= SRGB_LINEAR_THRESHOLD {
-        value / SRGB_LINEAR_DIVISOR
-    } else {
-        ((value + SRGB_GAMMA_OFFSET) / SRGB_GAMMA_SCALE).powf(SRGB_GAMMA)
-    }
+fn relative_luminance(color: Okhsl) -> f32 {
+    Xyz::from_color(color.to_srgb()).y
 }
 
 pub fn apply(ctx: &egui::Context, theme: Theme, color: Okhsl) {
