@@ -17,6 +17,7 @@ eframe = "0.36.2"
 egui = "0.36.2"
 image = "0.25.10"
 palette = "0.7.7"
+rustix = { version = "1", features = ["event"] }
 serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", default-features = false, features = ["net", "rt", "time"] }

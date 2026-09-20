@@ -964,6 +964,7 @@ dependencies = [
  "egui",
  "image",
  "palette",
+ "rustix 1.1.5",
  "serde",
  "thiserror 2.0.20",
  "tokio",

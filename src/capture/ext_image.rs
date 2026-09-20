@@ -2,9 +2,10 @@ use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom};
 use std::os::fd::AsFd;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use image::{Rgba, RgbaImage, imageops};
+use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
 use wayland_client::protocol::{wl_buffer, wl_output, wl_registry, wl_shm, wl_shm_pool};
 use wayland_client::{Connection, Dispatch, EventQueue, QueueHandle, WEnum};
@@ -28,7 +29,7 @@ const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
 const OUTPUT_MAX_VERSION: u32 = 4;
 const PROTOCOL_VERSION: u32 = 1;
-const ROUNDTRIP_LIMIT: usize = 64;
+const DISPATCH_TIMEOUT: Duration = Duration::from_secs(2);
 
 static SHM_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -131,11 +132,9 @@ fn capture_output(
     state.session_done = false;
     state.session_stopped = false;
 
-    let mut attempts = 0;
-    while !state.session_done && !state.session_stopped && attempts < ROUNDTRIP_LIMIT {
-        roundtrip(queue, state)?;
-        attempts += 1;
-    }
+    dispatch_until(queue, state, Instant::now() + DISPATCH_TIMEOUT, |state| {
+        state.session_done || state.session_stopped
+    })?;
     if state.session_stopped {
         return Err(failure("capture session stopped"));
     }
@@ -179,11 +178,9 @@ fn capture_output(
 
     state.frame_ready = false;
     state.frame_failed = None;
-    let mut attempts = 0;
-    while !state.frame_ready && state.frame_failed.is_none() && attempts < ROUNDTRIP_LIMIT {
-        roundtrip(queue, state)?;
-        attempts += 1;
-    }
+    dispatch_until(queue, state, Instant::now() + DISPATCH_TIMEOUT, |state| {
+        state.frame_ready || state.frame_failed.is_some()
+    })?;
     let failed = state.frame_failed.take();
 
     frame.destroy();
@@ -219,6 +216,54 @@ where
 fn roundtrip(queue: &mut EventQueue<State>, state: &mut State) -> CaptureResult<()> {
     queue.roundtrip(state).map_err(failure)?;
     Ok(())
+}
+
+fn dispatch_until(
+    queue: &mut EventQueue<State>,
+    state: &mut State,
+    deadline: Instant,
+    done: impl Fn(&State) -> bool,
+) -> CaptureResult<()> {
+    while !done(state) {
+        let Some(remaining) = deadline.checked_duration_since(Instant::now()) else {
+            break;
+        };
+        if !dispatch_within(queue, state, remaining)? {
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn dispatch_within(
+    queue: &mut EventQueue<State>,
+    state: &mut State,
+    timeout: Duration,
+) -> CaptureResult<bool> {
+    queue.dispatch_pending(state).map_err(failure)?;
+    queue.flush().map_err(failure)?;
+
+    let Some(guard) = queue.prepare_read() else {
+        return Ok(true);
+    };
+    let ready = {
+        let fd = guard.connection_fd();
+        let mut fds = [PollFd::new(&fd, PollFlags::IN | PollFlags::ERR)];
+        let timeout = Timespec::try_from(timeout).map_err(failure)?;
+        match poll(&mut fds, Some(&timeout)) {
+            Ok(0) => false,
+            Ok(_) => true,
+            Err(rustix::io::Errno::INTR) => return Ok(true),
+            Err(error) => return Err(failure(error)),
+        }
+    };
+    if !ready {
+        return Ok(false);
+    }
+
+    guard.read().map_err(failure)?;
+    queue.dispatch_pending(state).map_err(failure)?;
+    Ok(true)
 }
 
 fn create_shm_file(byte_len: usize) -> CaptureResult<File> {
