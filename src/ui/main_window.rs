@@ -54,6 +54,62 @@ struct Toast {
     expires_at: f64,
 }
 
+impl Toast {
+    fn new(message: impl Into<String>, now: f64) -> Self {
+        Self {
+            message: message.into(),
+            expires_at: now + TOAST_DURATION,
+        }
+    }
+
+    fn is_expired(&self, now: f64) -> bool {
+        now >= self.expires_at
+    }
+
+    fn remaining(&self, now: f64) -> Duration {
+        Duration::from_secs_f64((self.expires_at - now).max(0.0))
+    }
+
+    fn show(&self, ctx: &egui::Context) {
+        egui::Area::new(egui::Id::new(TOAST_ID))
+            .anchor(
+                egui::Align2::CENTER_BOTTOM,
+                egui::vec2(0.0, -TOAST_BOTTOM_MARGIN),
+            )
+            .order(egui::Order::Foreground)
+            .interactable(false)
+            .show(ctx, |ui| {
+                egui::Frame::popup(ui.style())
+                    .inner_margin(egui::Margin::symmetric(TOAST_MARGIN_X, TOAST_MARGIN_Y))
+                    .show(ui, |ui| {
+                        ui.add(egui::Label::new(self.message.clone()).extend());
+                    });
+            });
+    }
+}
+
+#[derive(Default)]
+struct History {
+    colors: Vec<Okhsl>,
+}
+
+impl History {
+    fn push(&mut self, color: Okhsl) {
+        self.colors
+            .retain(|existing| existing.to_srgb8() != color.to_srgb8());
+        self.colors.insert(0, color);
+        self.colors.truncate(HISTORY_LIMIT);
+    }
+
+    fn clear(&mut self) {
+        self.colors.clear();
+    }
+
+    fn colors(&self) -> &[Okhsl] {
+        &self.colors
+    }
+}
+
 #[derive(Clone, Copy, PartialEq)]
 struct ColorKey {
     hue: f32,
@@ -90,7 +146,7 @@ pub struct MainWindow {
     input: String,
     input_editing: bool,
     input_dirty: bool,
-    history: Vec<Okhsl>,
+    history: History,
     harmony: Harmony,
     toast: Option<Toast>,
     now: f64,
@@ -109,7 +165,7 @@ impl MainWindow {
             input: String::new(),
             input_editing: false,
             input_dirty: false,
-            history: Vec::new(),
+            history: History::default(),
             harmony: Harmony::default(),
             toast: None,
             now: 0.0,
@@ -123,7 +179,7 @@ impl MainWindow {
 
     pub fn with_initial(mut self, color: Okhsl) -> Self {
         self.color = color;
-        self.push_history(color);
+        self.history.push(color);
         let value = self.config.default_format.format(color);
         self.pending_toast = Some(format!("Picked {value}"));
         self
@@ -143,17 +199,7 @@ impl MainWindow {
     }
 
     fn set_toast(&mut self, message: impl Into<String>) {
-        self.toast = Some(Toast {
-            message: message.into(),
-            expires_at: self.now + TOAST_DURATION,
-        });
-    }
-
-    fn push_history(&mut self, color: Okhsl) {
-        self.history
-            .retain(|existing| existing.to_srgb8() != color.to_srgb8());
-        self.history.insert(0, color);
-        self.history.truncate(HISTORY_LIMIT);
+        self.toast = Some(Toast::new(message, self.now));
     }
 
     fn persist_config(&mut self) {
@@ -195,7 +241,7 @@ impl MainWindow {
             Event::ThreadStopped => self.set_toast("Capture thread stopped unexpectedly"),
             Event::Picked(color) => {
                 self.color = color;
-                self.push_history(color);
+                self.history.push(color);
                 let value = self.config.default_format.format(color);
                 match clipboard::set_text(value.clone()) {
                     Ok(()) => self.set_toast(format!("Picked {value}")),
@@ -210,8 +256,6 @@ impl MainWindow {
 impl eframe::App for MainWindow {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        let mut open_picker = false;
-
         self.now = ctx.input(|input| input.time);
 
         if let Some(message) = self.pending_toast.take() {
@@ -220,6 +264,7 @@ impl eframe::App for MainWindow {
 
         ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
         ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
+
         let theme_key = self.theme_key(&ctx);
         if self.applied_theme != Some(theme_key) {
             theme::apply(&ctx, self.config.theme, self.color);
@@ -229,10 +274,31 @@ impl eframe::App for MainWindow {
         let background = color32(self.color);
         let foreground = contrast_color32(self.color);
 
-        let input_font = egui::FontId::proportional(INPUT_FONT_SIZE);
-        let input_height =
-            ctx.fonts_mut(|fonts| fonts.row_height(&input_font)) + 2.0 * f32::from(INPUT_MARGIN_Y);
+        let panel_width = self.show_sliders(ui, background, foreground);
+        self.show_settings(ui, background, foreground);
+        let open_picker = self.show_central(ui, background, foreground, panel_width);
 
+        self.handle_shortcuts(&ctx);
+
+        if open_picker {
+            self.open_picker(&ctx);
+        }
+
+        if let Some(event) = self.picker.update(&ctx) {
+            self.handle_event(event);
+        }
+
+        self.show_toast(&ctx);
+    }
+}
+
+impl MainWindow {
+    fn show_sliders(
+        &mut self,
+        ui: &mut egui::Ui,
+        background: egui::Color32,
+        foreground: egui::Color32,
+    ) -> f32 {
         let mut hue = self.color.hue() / HUE_MAX_DEGREES;
         let mut saturation = self.color.saturation();
         let mut lightness = self.color.lightness();
@@ -294,6 +360,15 @@ impl eframe::App for MainWindow {
             lightness,
         );
 
+        panel_width
+    }
+
+    fn show_settings(
+        &mut self,
+        ui: &mut egui::Ui,
+        background: egui::Color32,
+        foreground: egui::Color32,
+    ) {
         egui::Panel::bottom(SETTINGS_PANEL_ID)
             .resizable(false)
             .frame(
@@ -353,6 +428,21 @@ impl eframe::App for MainWindow {
                     self.persist_config();
                 }
             });
+    }
+
+    fn show_central(
+        &mut self,
+        ui: &mut egui::Ui,
+        background: egui::Color32,
+        foreground: egui::Color32,
+        panel_width: f32,
+    ) -> bool {
+        let ctx = ui.ctx().clone();
+        let mut open_picker = false;
+
+        let input_font = egui::FontId::proportional(INPUT_FONT_SIZE);
+        let input_height =
+            ctx.fonts_mut(|fonts| fonts.row_height(&input_font)) + 2.0 * f32::from(INPUT_MARGIN_Y);
 
         let panel_frame = egui::Frame::central_panel(ui.style())
             .inner_margin(egui::Margin {
@@ -431,7 +521,7 @@ impl eframe::App for MainWindow {
                         self.history.clear();
                     }
                     let mut selected = None;
-                    for &color in &self.history {
+                    for &color in self.history.colors() {
                         if widgets::history_swatch(ui, color, foreground) {
                             selected = Some(color);
                         }
@@ -467,66 +557,41 @@ impl eframe::App for MainWindow {
                 });
             });
 
-        let keyboard_captured = ctx.egui_wants_keyboard_input();
+        open_picker
+    }
 
-        if !keyboard_captured && !self.picker.is_busy() {
-            for (format, key) in ColorFormat::ALL.iter().zip(FORMAT_KEYS) {
-                if ctx.input(|input| input.key_pressed(key)) {
-                    self.copy(*format);
-                }
+    fn handle_shortcuts(&mut self, ctx: &egui::Context) {
+        let keyboard_captured = ctx.egui_wants_keyboard_input();
+        if keyboard_captured || self.picker.is_busy() {
+            return;
+        }
+
+        for (format, key) in ColorFormat::ALL.iter().zip(FORMAT_KEYS) {
+            if ctx.input(|input| input.key_pressed(key)) {
+                self.copy(*format);
             }
         }
 
-        if !keyboard_captured
-            && !self.picker.is_busy()
-            && ctx.input(|input| input.key_pressed(egui::Key::Escape))
-        {
+        if ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
-
-        if open_picker {
-            self.open_picker(&ctx);
-        }
-
-        if let Some(event) = self.picker.update(&ctx) {
-            self.handle_event(event);
-        }
-
-        self.show_toast(&ctx);
     }
-}
 
-impl MainWindow {
     fn show_toast(&mut self, ctx: &egui::Context) {
         if self
             .toast
             .as_ref()
-            .is_some_and(|toast| self.now >= toast.expires_at)
+            .is_some_and(|toast| toast.is_expired(self.now))
         {
             self.toast = None;
+            return;
         }
 
         let Some(toast) = self.toast.as_ref() else {
             return;
         };
-        let remaining = (toast.expires_at - self.now).max(0.0);
-        let message = toast.message.clone();
-        ctx.request_repaint_after(Duration::from_secs_f64(remaining));
-
-        egui::Area::new(egui::Id::new(TOAST_ID))
-            .anchor(
-                egui::Align2::CENTER_BOTTOM,
-                egui::vec2(0.0, -TOAST_BOTTOM_MARGIN),
-            )
-            .order(egui::Order::Foreground)
-            .interactable(false)
-            .show(ctx, |ui| {
-                egui::Frame::popup(ui.style())
-                    .inner_margin(egui::Margin::symmetric(TOAST_MARGIN_X, TOAST_MARGIN_Y))
-                    .show(ui, |ui| {
-                        ui.add(egui::Label::new(message).extend());
-                    });
-            });
+        ctx.request_repaint_after(toast.remaining(self.now));
+        toast.show(ctx);
     }
 }
 
