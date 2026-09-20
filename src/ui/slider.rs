@@ -1,17 +1,14 @@
 use eframe::egui;
 
-const GRADIENT_STEPS: usize = 48;
-const HANDLE_WIDTH: f32 = 2.0;
+const SLIDER_CORNER_RADIUS: u8 = 6;
+const HANDLE_RADIUS: f32 = 6.0;
 const HANDLE_INSET: f32 = 3.0;
+const HANDLE_BORDER_WIDTH: f32 = 2.0;
 const BORDER_WIDTH: f32 = 1.0;
 const LABEL_GAP: f32 = 2.0;
 const LABEL_HEIGHT: f32 = 16.0;
 const LABEL_FONT_SIZE: f32 = 14.0;
 const MIN_HEIGHT: f32 = 80.0;
-const LUMINANCE_RED: f32 = 0.299;
-const LUMINANCE_GREEN: f32 = 0.587;
-const LUMINANCE_BLUE: f32 = 0.114;
-const LUMINANCE_THRESHOLD: f32 = 128.0;
 
 pub fn column(
     ui: &mut egui::Ui,
@@ -53,12 +50,13 @@ pub fn vertical(
         ui.ctx().request_repaint();
     }
 
+    let corner = egui::CornerRadius::same(SLIDER_CORNER_RADIUS);
     let painter = ui.painter().with_clip_rect(rect);
-    paint_gradient(&painter, rect, &gradient);
-    paint_handle(&painter, rect, *value, &gradient);
+    paint_gradient(&painter, rect, f32::from(SLIDER_CORNER_RADIUS), &gradient);
+    paint_handle(&painter, rect, *value, border_color);
     ui.painter().rect_stroke(
         rect,
-        egui::CornerRadius::ZERO,
+        corner,
         egui::Stroke::new(BORDER_WIDTH, border_color),
         egui::StrokeKind::Inside,
     );
@@ -69,19 +67,21 @@ pub fn vertical(
 fn paint_gradient(
     painter: &egui::Painter,
     rect: egui::Rect,
+    radius: f32,
     gradient: &impl Fn(f32) -> egui::Color32,
 ) {
+    let steps = (rect.height().ceil() as usize).max(2);
     let mut mesh = egui::Mesh::default();
-    for step in 0..GRADIENT_STEPS {
-        let fraction = step as f32 / (GRADIENT_STEPS - 1) as f32;
-        let value = 1.0 - fraction;
-        let color = gradient(value);
+    for index in 0..=steps {
+        let fraction = index as f32 / steps as f32;
         let y = rect.top() + fraction * rect.height();
-        mesh.colored_vertex(egui::pos2(rect.left(), y), color);
-        mesh.colored_vertex(egui::pos2(rect.right(), y), color);
+        let inset = corner_inset(radius, y - rect.top(), rect.bottom() - y);
+        let color = gradient(1.0 - fraction);
+        mesh.colored_vertex(egui::pos2(rect.left() + inset, y), color);
+        mesh.colored_vertex(egui::pos2(rect.right() - inset, y), color);
     }
-    for step in 0..(GRADIENT_STEPS as u32 - 1) {
-        let top_left = step * 2;
+    for index in 0..steps as u32 {
+        let top_left = index * 2;
         let top_right = top_left + 1;
         let bottom_left = top_left + 2;
         let bottom_right = top_left + 3;
@@ -91,29 +91,30 @@ fn paint_gradient(
     painter.add(egui::Shape::mesh(mesh));
 }
 
+fn corner_inset(radius: f32, distance_from_top: f32, distance_from_bottom: f32) -> f32 {
+    let distance = distance_from_top.min(distance_from_bottom);
+    if distance >= radius {
+        return 0.0;
+    }
+    radius - (radius * radius - (radius - distance).powi(2)).sqrt()
+}
+
 fn paint_handle(
     painter: &egui::Painter,
     rect: egui::Rect,
     value: f32,
-    gradient: &impl Fn(f32) -> egui::Color32,
+    border_color: egui::Color32,
 ) {
     let y = rect.top() + (1.0 - value) * rect.height();
-    painter.line_segment(
-        [
-            egui::pos2(rect.left() + HANDLE_INSET, y),
-            egui::pos2(rect.right() - HANDLE_INSET, y),
-        ],
-        egui::Stroke::new(HANDLE_WIDTH, contrasting_color(gradient(value))),
+    let half_extent = HANDLE_RADIUS + HANDLE_BORDER_WIDTH / 2.0;
+    let center = egui::pos2(
+        rect.center().x,
+        y.clamp(rect.top() + half_extent, rect.bottom() - half_extent),
     );
-}
-
-fn contrasting_color(color: egui::Color32) -> egui::Color32 {
-    let luminance = LUMINANCE_RED * f32::from(color.r())
-        + LUMINANCE_GREEN * f32::from(color.g())
-        + LUMINANCE_BLUE * f32::from(color.b());
-    if luminance > LUMINANCE_THRESHOLD {
-        egui::Color32::BLACK
-    } else {
-        egui::Color32::WHITE
-    }
+    let radius = egui::vec2((rect.width() / 2.0 - HANDLE_INSET).max(1.0), HANDLE_RADIUS);
+    painter.add(egui::epaint::EllipseShape::stroke(
+        center,
+        radius,
+        egui::Stroke::new(HANDLE_BORDER_WIDTH, border_color),
+    ));
 }
