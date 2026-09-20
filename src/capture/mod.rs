@@ -1,3 +1,4 @@
+pub mod ext_image;
 pub mod kde;
 pub mod wayland;
 pub mod x11;
@@ -24,6 +25,10 @@ pub enum CaptureError {
     Image(#[from] image::ImageError),
     #[error("screenshot URI is not a valid file path: {0}")]
     InvalidUri(String),
+    #[error("ext-image-copy-capture is not available")]
+    ExtImageUnavailable,
+    #[error("ext-image-copy-capture failed: {0}")]
+    ExtImage(String),
 }
 
 pub type CaptureResult<T> = Result<T, CaptureError>;
@@ -44,11 +49,26 @@ pub fn detect() -> CaptureResult<Box<dyn CaptureBackend>> {
                 return Ok(Box::new(backend));
             }
             Err(error) => {
-                tracing::warn!(?error, "KWin ScreenShot2 capture failed; using the portal");
+                tracing::warn!(
+                    ?error,
+                    "KWin ScreenShot2 capture failed; trying the next backend"
+                );
             }
         }
     }
     if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+        match ext_image::ExtImageBackend::new() {
+            Ok(backend) => {
+                tracing::info!("capture: using ext-image-copy-capture");
+                return Ok(Box::new(backend));
+            }
+            Err(error) => {
+                tracing::warn!(
+                    ?error,
+                    "ext-image-copy-capture unavailable; using the portal"
+                );
+            }
+        }
         tracing::info!("capture: using xdg-desktop-portal");
         Ok(Box::new(wayland::WaylandBackend::new()?))
     } else {

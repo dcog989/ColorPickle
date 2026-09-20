@@ -970,6 +970,8 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "wayland-client",
+ "wayland-protocols",
  "wl-clipboard-rs",
  "xcap",
  "zbus",
