@@ -379,7 +379,11 @@ impl eframe::App for MainWindow {
                             .selected_text(self.harmony.label())
                             .show_ui(ui, |ui| {
                                 for harmony in Harmony::ALL {
-                                    ui.selectable_value(&mut self.harmony, harmony, harmony.label());
+                                    ui.selectable_value(
+                                        &mut self.harmony,
+                                        harmony,
+                                        harmony.label(),
+                                    );
                                 }
                             })
                             .response

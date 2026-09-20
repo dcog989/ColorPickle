@@ -433,12 +433,7 @@ const PALETTE_PATHS: [&[(f32, f32)]; 1] = [&[
     (12.000, 22.000),
 ]];
 
-const PALETTE_DOTS: [(f32, f32); 4] = [
-    (13.5, 6.5),
-    (17.5, 10.5),
-    (6.5, 12.5),
-    (8.5, 7.5),
-];
+const PALETTE_DOTS: [(f32, f32); 4] = [(13.5, 6.5), (17.5, 10.5), (6.5, 12.5), (8.5, 7.5)];
 
 fn paint_paths(
     painter: &egui::Painter,
