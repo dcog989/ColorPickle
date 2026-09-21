@@ -1,5 +1,6 @@
 tag_prefix = "v"
 branch_whitelist = ["main"]
+ignore_merge_commits = true
 
 pre_bump_hooks = [
     "cargo set-version {{version}}",
