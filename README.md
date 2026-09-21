@@ -59,7 +59,7 @@ The AppImage needs a working X11 or Wayland session. The XDG desktop portal fall
 
 Run `colorpickle` for the main window, or `colorpickle --launch-mode picker_first` to go straight to the picker. In picker-first mode the main window opens with the picked color once you pick. The launch mode and other defaults can also be set in the config file.
 
-In the main window, click the logo button to open the picker. **Click** copies a single pixel; **drag** selects a region and copies its averaged color. Either way the picker closes and the value is copied to the clipboard. Press `Esc` or right-click to dismiss without copying. `Esc` exits the main window.
+In the main window, click the pipette button to open the picker. **Click** copies a single pixel; **drag** selects a region and copies its averaged color. Either way the picker closes and the value is copied to the clipboard. Press `Esc` or right-click to dismiss without copying. `Esc` exits the main window.
 
 Hover a format button to preview the current color in that format; click it, or press its number key, to copy.
 

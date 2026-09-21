@@ -5,7 +5,7 @@ use crate::color::okhsl::Okhsl;
 use crate::ui::icons;
 use crate::ui::theme::color32;
 
-const LOGO_PADDING: f32 = 8.0;
+const LAUNCHER_PADDING: f32 = 8.0;
 const SWATCH_SIZE: f32 = 24.0;
 const SWATCH_CORNER_RADIUS: u8 = 6;
 const SWATCH_BORDER_WIDTH: f32 = 1.0;
@@ -16,8 +16,8 @@ pub fn picker_launcher(ui: &mut egui::Ui, height: f32) -> bool {
         ui,
         egui::vec2(height, height),
         "Launch screen picker",
-        LOGO_PADDING,
-        icons::logo,
+        LAUNCHER_PADDING,
+        icons::pipette,
     )
 }
 
