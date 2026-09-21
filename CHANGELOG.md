@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.2 - 2026-09-21
+#### Build system
+- ignore merge commits in cog - (b777fd8) - dcog989
+
+- - -
+
 ## v0.2.1 - 2026-09-21
 #### Bug Fixes
 - (**packaging**) use a bare Exec for the AppImage desktop file - (3955d07) - dcog989

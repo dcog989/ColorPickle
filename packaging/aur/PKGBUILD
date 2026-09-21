@@ -1,7 +1,7 @@
 # Maintainer: dcog989 <sirdavidlaws@gmail.com>
 pkgname=colorpickle
 _reponame=ColorPickle
-pkgver=0.2.1
+pkgver=0.2.2
 pkgrel=1
 pkgdesc="Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."
 arch=('x86_64' 'aarch64')

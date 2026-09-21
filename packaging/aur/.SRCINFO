@@ -1,6 +1,6 @@
 pkgbase = colorpickle
 	pkgdesc = Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it.
-	pkgver = 0.2.1
+	pkgver = 0.2.2
 	pkgrel = 1
 	url = https://github.com/dcog989/ColorPickle
 	arch = x86_64
@@ -21,7 +21,7 @@ pkgbase = colorpickle
 	depends = mesa
 	depends = wayland
 	optdepends = xdg-desktop-portal: screenshot fallback
-	source = colorpickle-0.2.1.tar.gz::https://github.com/dcog989/ColorPickle/archive/refs/tags/v0.2.1.tar.gz
+	source = colorpickle-0.2.2.tar.gz::https://github.com/dcog989/ColorPickle/archive/refs/tags/v0.2.2.tar.gz
 	sha256sums = SKIP
 
 pkgname = colorpickle
