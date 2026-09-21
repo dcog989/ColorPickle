@@ -5,7 +5,7 @@ use image::RgbaImage;
 use zbus::blocking::{Connection, Proxy};
 use zbus::zvariant::{DynamicTuple, Fd, OwnedValue};
 
-use crate::capture::{CaptureError, CaptureResult, DesktopRect};
+use crate::capture::{CaptureError, CaptureResult};
 
 const SERVICE: &str = "org.kde.KWin.ScreenShot2";
 const PATH: &str = "/org/kde/KWin/ScreenShot2";
@@ -28,10 +28,8 @@ const FORMAT_RGBX8888: u32 = 16;
 const FORMAT_RGBA8888: u32 = 17;
 const FORMAT_RGBA8888_PREMULTIPLIED: u32 = 18;
 
-pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
-    let image = capture_workspace()?;
-    let rect = DesktopRect::from_image(&image);
-    Ok((image, rect))
+pub fn capture() -> CaptureResult<RgbaImage> {
+    capture_workspace()
 }
 
 fn capture_workspace() -> CaptureResult<RgbaImage> {

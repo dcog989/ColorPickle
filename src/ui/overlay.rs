@@ -39,7 +39,6 @@ pub enum PickOutcome {
 
 pub struct Session {
     image: Arc<egui::ColorImage>,
-    rect: capture::DesktopRect,
     texture: Option<egui::TextureHandle>,
     uses_portal_fallback: bool,
     drag_anchor: Option<egui::Pos2>,
@@ -57,7 +56,6 @@ impl Session {
         ));
         Self {
             image,
-            rect: captured.rect,
             texture: None,
             uses_portal_fallback: captured.source.uses_portal_fallback(),
             drag_anchor: None,
@@ -116,7 +114,7 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
 
     let options = eframe::NativeOptions {
-        viewport: viewport_builder(session.rect),
+        viewport: viewport_builder(),
         persist_window: false,
         ..Default::default()
     };
@@ -143,20 +141,18 @@ pub fn show(
     session: &mut Session,
     viewport: egui::ViewportId,
 ) -> Option<PickOutcome> {
-    ctx.show_viewport_immediate(viewport, viewport_builder(session.rect), |ui, _class| {
+    ctx.show_viewport_immediate(viewport, viewport_builder(), |ui, _class| {
         draw(ui.ctx(), session)
     })
 }
 
-fn viewport_builder(rect: capture::DesktopRect) -> egui::ViewportBuilder {
+fn viewport_builder() -> egui::ViewportBuilder {
     egui::ViewportBuilder::default()
         .with_title(PICKER_TITLE)
         .with_app_id(PICKER_VIEWPORT)
+        .with_fullscreen(true)
         .with_decorations(false)
         .with_always_on_top()
-        .with_clamp_size_to_monitor_size(false)
-        .with_position(egui::pos2(rect.x as f32, rect.y as f32))
-        .with_inner_size(egui::vec2(rect.width as f32, rect.height as f32))
 }
 
 struct StandalonePicker {

@@ -2,9 +2,9 @@ use image::{Rgba, RgbaImage};
 use x11rb::connection::Connection;
 use x11rb::image::{Image, PixelLayout};
 
-use crate::capture::{CaptureError, CaptureResult, DesktopRect};
+use crate::capture::{CaptureError, CaptureResult};
 
-pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
+pub fn capture() -> CaptureResult<RgbaImage> {
     let (connection, screen) = x11rb::connect(None)?;
     let root = &connection.setup().roots[screen];
     let width = root.width_in_pixels;
@@ -31,15 +31,7 @@ pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
         }
     }
 
-    Ok((
-        canvas,
-        DesktopRect {
-            x: 0,
-            y: 0,
-            width: u32::from(width),
-            height: u32::from(height),
-        },
-    ))
+    Ok(canvas)
 }
 
 fn high_byte(component: u16) -> u8 {

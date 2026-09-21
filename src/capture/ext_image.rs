@@ -30,7 +30,7 @@ use ext_image_copy_capture_manager_v1::{ExtImageCopyCaptureManagerV1, Options};
 use ext_image_copy_capture_session_v1::ExtImageCopyCaptureSessionV1;
 use ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
 
-use crate::capture::{CaptureError, CaptureResult, DesktopRect, composite};
+use crate::capture::{CaptureError, CaptureResult, composite};
 
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
@@ -87,7 +87,7 @@ impl State {
     }
 }
 
-pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
+pub fn capture() -> CaptureResult<RgbaImage> {
     let connection = Connection::connect_to_env().map_err(failure)?;
     let (globals, mut queue) = registry_queue_init::<State>(&connection).map_err(failure)?;
     let qh = queue.handle();

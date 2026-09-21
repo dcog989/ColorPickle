@@ -30,7 +30,7 @@ See `README.md` for usage, configuration, install and distribution.
 ### Common Patterns
 
 - Internal color state is always Okhsl; convert via sRGB as the interchange for all copy formats and the picker pipeline.
-- Backends are a function-pointer `Backend` table in `capture/mod.rs`, not a trait; each returns a plain frame + rect, so the picker overlay stays agnostic to X11 vs Wayland.
+- Backends are a function-pointer `Backend` table in `capture/mod.rs`, not a trait; each returns a plain frame, so the picker overlay stays agnostic to X11 vs Wayland.
 - Single-binary, two launch modes via `clap`: UI mode (default) and picker mode.
 - No menus, no settings pane, no tabs — preserve the one-glance model.
 

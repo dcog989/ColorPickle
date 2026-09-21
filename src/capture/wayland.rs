@@ -3,12 +3,10 @@ use std::path::PathBuf;
 use image::RgbaImage;
 use url::Url;
 
-use crate::capture::{CaptureError, CaptureResult, DesktopRect};
+use crate::capture::{CaptureError, CaptureResult};
 
-pub fn capture() -> CaptureResult<(RgbaImage, DesktopRect)> {
-    let image = capture_once()?;
-    let rect = DesktopRect::from_image(&image);
-    Ok((image, rect))
+pub fn capture() -> CaptureResult<RgbaImage> {
+    capture_once()
 }
 
 fn capture_once() -> CaptureResult<RgbaImage> {

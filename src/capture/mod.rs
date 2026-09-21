@@ -42,25 +42,6 @@ pub enum CaptureError {
 pub type CaptureResult<T> = Result<T, CaptureError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DesktopRect {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
-}
-
-impl DesktopRect {
-    pub fn from_image(image: &RgbaImage) -> Self {
-        Self {
-            x: 0,
-            y: 0,
-            width: image.width(),
-            height: image.height(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CaptureSource {
     KWin,
     ExtImage,
@@ -77,16 +58,13 @@ impl CaptureSource {
 #[derive(Debug)]
 pub struct Capture {
     pub image: RgbaImage,
-    pub rect: DesktopRect,
     pub source: CaptureSource,
 }
-
-type BackendCapture = (RgbaImage, DesktopRect);
 
 struct Backend {
     source: CaptureSource,
     available: fn() -> bool,
-    run: fn() -> CaptureResult<BackendCapture>,
+    run: fn() -> CaptureResult<RgbaImage>,
 }
 
 const BACKENDS: &[Backend] = &[
@@ -129,14 +107,13 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
             notify();
         }
         match (backend.run)() {
-            Ok((image, rect)) => {
+            Ok(image) => {
                 if image.width() == 0 || image.height() == 0 {
                     return Err(CaptureError::EmptyFrame);
                 }
                 tracing::info!(source = ?backend.source, "capture: frame ready");
                 return Ok(Capture {
                     image,
-                    rect,
                     source: backend.source,
                 });
             }
@@ -153,7 +130,7 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
     Err(last_error.unwrap_or(CaptureError::NoBackend))
 }
 
-pub fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<(RgbaImage, DesktopRect)> {
+pub fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<RgbaImage> {
     let min_x = captures.iter().map(|(_, x, _)| *x).min().unwrap_or(0);
     let min_y = captures.iter().map(|(_, _, y)| *y).min().unwrap_or(0);
     let max_x = captures
@@ -182,15 +159,7 @@ pub fn composite(captures: Vec<(RgbaImage, i32, i32)>) -> CaptureResult<(RgbaIma
             i64::from(y - min_y),
         );
     }
-    Ok((
-        canvas,
-        DesktopRect {
-            x: min_x,
-            y: min_y,
-            width,
-            height,
-        },
-    ))
+    Ok(canvas)
 }
 
 fn is_kde() -> bool {
