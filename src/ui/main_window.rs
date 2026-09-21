@@ -17,7 +17,7 @@ mod slider_panel;
 mod toast;
 
 use self::history::History;
-use self::keys::{ColorKey, InputKey, ThemeKey};
+use self::keys::{InputKey, ThemeKey};
 use self::toast::Toast;
 
 const PANEL_MARGIN: f32 = 16.0;
@@ -97,7 +97,7 @@ impl MainWindow {
         ThemeKey {
             theme: self.config.theme,
             system: ctx.system_theme(),
-            color: ColorKey::new(self.color),
+            color: self.color,
         }
     }
 
@@ -119,7 +119,7 @@ impl MainWindow {
         self.input = self.config.format(self.color);
         self.applied_input = Some(InputKey {
             format: self.config.default_format,
-            color: ColorKey::new(self.color),
+            color: self.color,
         });
     }
 
@@ -246,7 +246,7 @@ impl MainWindow {
                     if !self.input_editing {
                         let input_key = InputKey {
                             format: self.config.default_format,
-                            color: ColorKey::new(self.color),
+                            color: self.color,
                         };
                         if self.applied_input != Some(input_key) {
                             self.input = self.config.format(self.color);

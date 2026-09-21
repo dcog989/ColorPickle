@@ -11,6 +11,14 @@ pub struct Okhsl {
     inner: palette::Okhsl,
 }
 
+impl PartialEq for Okhsl {
+    fn eq(&self, other: &Self) -> bool {
+        self.hue() == other.hue()
+            && self.saturation() == other.saturation()
+            && self.lightness() == other.lightness()
+    }
+}
+
 impl Okhsl {
     pub fn new(hue_degrees: f32, saturation: f32, lightness: f32) -> Self {
         Self {
