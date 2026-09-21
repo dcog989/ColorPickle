@@ -2,6 +2,8 @@
 
 Linux screen color picker. Pick a pixel or drag-select a region from anywhere on screen, get the color in any common format, copy it. One glance, one click.
 
+![screenshot](assets/screen-1.webp)
+
 ## Features
 
 - Fullscreen picker overlay with a magnified view of the area under the cursor
