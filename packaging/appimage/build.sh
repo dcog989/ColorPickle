@@ -18,10 +18,16 @@ cargo build --release --locked
 rm -rf "$appdir"
 mkdir -p "$outdir"
 
+# linuxdeploy resolves the desktop Exec against the AppDir and only accepts a
+# bare name; the installed desktop file keeps an absolute Exec so KWin can
+# authorise ScreenShot2 from a system install.
+appimage_desktop="$outdir/colorpickle.desktop"
+sed 's#^Exec=/usr/bin/#Exec=#' "$root/packaging/colorpickle.desktop" > "$appimage_desktop"
+
 "$linuxdeploy" \
     --appdir "$appdir" \
     --executable "$root/target/release/colorpickle" \
-    --desktop-file "$root/packaging/colorpickle.desktop" \
+    --desktop-file "$appimage_desktop" \
     --icon-file "$root/packaging/colorpickle.svg" \
     --icon-file "$root/assets/colorpickle.png" \
     --output appimage
