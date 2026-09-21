@@ -1,6 +1,6 @@
 [package]
 name = "colorpickle"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 rust-version = "1.98"
 description = "Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."

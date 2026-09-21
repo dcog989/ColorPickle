@@ -2,6 +2,19 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.1 - 2026-09-21
+#### Bug Fixes
+- (**packaging**) use a bare Exec for the AppImage desktop file - (3955d07) - dcog989
+#### Documentation
+- screenshot - (245bb9a) - dcog989
+#### Build system
+- (**deps**) bump actions/download-artifact from 4 to 8 - (76277c8) - dependabot[bot]
+- (**deps**) bump actions/checkout from 4 to 7 - (eb88596) - dependabot[bot]
+- (**deps**) bump actions/upload-artifact from 4 to 7 - (fe3935e) - dependabot[bot]
+- (**deps**) bump softprops/action-gh-release from 2 to 3 - (9299b47) - dependabot[bot]
+
+- - -
+
 ## v0.2.0 - 2026-09-21
 #### Miscellaneous Chores
 - (**version**) v0.1.0 - (f127dbe) - dcog989
