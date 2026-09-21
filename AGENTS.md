@@ -14,15 +14,8 @@ See `.docs/HLD.md` for architecture, UI, capture backends, color pipeline, and d
 - `src/cli.rs` — `clap` args and `LaunchMode`
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
-- `src/color/mod.rs` — `ColorFormat` and copy-format output (CMYK is manual)
-- `src/color/parse.rs` — typed color and CSS named-color parsing
-- `src/color/harmony.rs` — color-harmony offsets and swatches
 - `src/capture/` — capture backends (KWin D-Bus, `ext-image-copy-capture`, X11, XDG portal) dispatched through a function-pointer `Backend` table in `capture/mod.rs`
-- `src/ui/main_window.rs` — main window (color background); split into `src/ui/main_window/` submodules (`toast`, `history`, `keys`, `slider_panel`, `settings_panel`)
-- `src/ui/overlay.rs` — picker overlay: magnifier, click/drag pick, portal banner
-- `src/ui/picker.rs` — capture/session controller between the main window and the overlay
-- `src/ui/icons.rs` — lucide icon font setup and icon helpers
-- `src/ui/theme.rs` — dynamic contrast theme derived from the current color
+- `src/ui/` — main window (color background), picker overlay, capture/session controller, theme
 - `src/clipboard.rs` — clipboard writes via `arboard`
 
 ### Workflow
