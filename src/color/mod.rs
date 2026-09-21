@@ -1,3 +1,4 @@
+pub mod apca;
 pub mod harmony;
 pub mod okhsl;
 pub mod parse;

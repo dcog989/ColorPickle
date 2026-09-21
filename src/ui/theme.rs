@@ -1,12 +1,12 @@
 use eframe::egui;
-use palette::{FromColor, Xyz};
 
+use crate::color::apca;
 use crate::color::okhsl::Okhsl;
 use crate::config::Theme;
 
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
-const CONTRAST_LUMINANCE_THRESHOLD: f32 = 0.179;
-const CONTRAST_LIGHTNESS_DELTA: f32 = 0.5;
+const TARGET_CONTRAST_LC: f32 = 90.0;
+const CONTRAST_SEARCH_STEPS: u32 = 12;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
 const INACTIVE_FILL_ALPHA: u8 = 32;
 const HOVERED_FILL_ALPHA: u8 = 60;
@@ -23,20 +23,53 @@ pub fn color32(color: Okhsl) -> egui::Color32 {
 }
 
 pub fn contrast_color32(color: Okhsl) -> egui::Color32 {
-    let shifted = if relative_luminance(color) > CONTRAST_LUMINANCE_THRESHOLD {
-        color.lightness() - CONTRAST_LIGHTNESS_DELTA
-    } else {
-        color.lightness() + CONTRAST_LIGHTNESS_DELTA
-    };
-    color32(Okhsl::new(
-        color.hue(),
-        color.saturation(),
-        shifted.clamp(0.0, 1.0),
-    ))
+    color32(foreground(color))
 }
 
-fn relative_luminance(color: Okhsl) -> f32 {
-    Xyz::from_color(color.to_srgb()).y
+fn foreground(background: Okhsl) -> Okhsl {
+    let dark = Okhsl::new(background.hue(), background.saturation(), 0.0);
+    let light = Okhsl::new(background.hue(), background.saturation(), 1.0);
+    let dark_contrast = contrast_against(dark, background);
+    let light_contrast = contrast_against(light, background);
+
+    let (endpoint, best) = if dark_contrast >= light_contrast {
+        (dark, dark_contrast)
+    } else {
+        (light, light_contrast)
+    };
+    if best <= TARGET_CONTRAST_LC {
+        return endpoint;
+    }
+
+    // Contrast is highest at the endpoint and falls to zero at the
+    // background's own lightness, so binary-search the smallest lightness
+    // shift that still meets the target.
+    let background_lightness = background.lightness();
+    let endpoint_lightness = endpoint.lightness();
+    let mut insufficient = 0.0;
+    let mut sufficient = 1.0;
+    for _ in 0..CONTRAST_SEARCH_STEPS {
+        let step = (insufficient + sufficient) / 2.0;
+        let lightness = background_lightness + (endpoint_lightness - background_lightness) * step;
+        let candidate = Okhsl::new(background.hue(), background.saturation(), lightness);
+        if contrast_against(candidate, background) >= TARGET_CONTRAST_LC {
+            sufficient = step;
+        } else {
+            insufficient = step;
+        }
+    }
+
+    let lightness = background_lightness + (endpoint_lightness - background_lightness) * sufficient;
+    let searched = Okhsl::new(background.hue(), background.saturation(), lightness);
+    if contrast_against(searched, background) >= TARGET_CONTRAST_LC {
+        searched
+    } else {
+        endpoint
+    }
+}
+
+fn contrast_against(color: Okhsl, background: Okhsl) -> f32 {
+    apca::contrast(color.to_srgb(), background.to_srgb()).abs()
 }
 
 pub fn apply(ctx: &egui::Context, theme: Theme, color: Okhsl) {
@@ -150,5 +183,19 @@ mod tests {
         let on_white = contrast_color32(Okhsl::new(0.0, 0.0, 1.0));
         assert!(on_black.r() > 16 && on_black.r() < 240);
         assert!(on_white.r() > 16 && on_white.r() < 240);
+    }
+
+    #[test]
+    fn foreground_reaches_the_target_where_possible() {
+        for (lightness, expect_light_text) in [(0.0, true), (1.0, false)] {
+            let background = Okhsl::new(120.0, 0.5, lightness);
+            let foreground = super::foreground(background);
+            assert!(super::contrast_against(foreground, background) >= super::TARGET_CONTRAST_LC);
+            assert_eq!(
+                foreground.lightness() > 0.5,
+                expect_light_text,
+                "lightness {lightness}"
+            );
+        }
     }
 }
