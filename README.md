@@ -16,6 +16,45 @@ Linux screen color picker. Pick a pixel or drag-select a region from anywhere on
 - Launch-mode and default-format selectors, saved to the config file
 - Wayland capture via `ext-image-copy-capture`, falling back to the XDG desktop portal
 
+## Install
+
+Prebuilt `.deb`, `.rpm`, and AppImage packages are attached to each [release](https://github.com/dcog989/ColorPickle/releases).
+
+Arch Linux (AUR):
+
+```sh
+yay -S colorpickle        # or paru -S colorpickle
+```
+
+Debian/Ubuntu (`.deb`):
+
+```sh
+sudo apt install ./colorpickle_*.deb
+```
+
+Fedora/RHEL/openSUSE (`.rpm`):
+
+```sh
+sudo dnf install ./colorpickle-*.rpm   # openSUSE: sudo zypper install ./colorpickle-*.rpm
+```
+
+AppImage (any distro):
+
+```sh
+chmod +x ColorPickle-*.AppImage
+./ColorPickle-*.AppImage
+```
+
+If FUSE is unavailable, run it with `./ColorPickle-*.AppImage --appimage-extract-and-run`.
+
+From source (requires a Rust toolchain), from a clone of this repository:
+
+```sh
+cargo install --path .
+```
+
+The AppImage needs a working X11 or Wayland session. The XDG desktop portal fallback additionally needs `xdg-desktop-portal` installed.
+
 ## Usage
 
 Run `colorpickle` for the main window, or `colorpickle --launch-mode picker_first` to go straight to the picker. In picker-first mode the main window opens with the picked color once you pick. The launch mode and other defaults can also be set in the config file.
