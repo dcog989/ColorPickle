@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.0 - 2026-09-21
+#### Miscellaneous Chores
+- (**version**) v0.1.0 - (f127dbe) - dcog989
+
+- - -
+
 ## v0.1.0 - 2026-09-21
 #### Features
 - (**capture**) add an ext-image-copy-capture Wayland backend on its own connection - (70eff9c) - dcog989
