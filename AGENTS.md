@@ -4,7 +4,7 @@
 
 - Name: ColorPickle
 - Description: Linux screen color picker. Pick a pixel or drag-select a region from anywhere on screen, get the color in any common format, copy it. One glance, one click.
-- Tech: Rust (single binary); `egui`/`eframe` + `winit` GUI; `x11rb`/`ashpd` capture; `arboard`/`wl-clipboard-rs` clipboard; `palette`; `clap`, `serde`, `toml`, `directories`, `anyhow`, `thiserror`, `tracing`, `image`; Lefthook + Cocogitto.
+- Tech: Rust (single binary); `egui`/`eframe` GUI (`winit` via eframe); capture via `x11rb`, `ashpd`, `zbus`, `wayland-client`/`wayland-protocols`; clipboard via `arboard` (with the `wl-clipboard-rs` Wayland backend); `palette`; `lucide-icons`; `clap`, `serde`, `toml`, `directories`, `anyhow`, `thiserror`, `tracing`, `image`; Lefthook + Cocogitto.
 
 See `.docs/HLD.md` for architecture, UI, capture backends, color pipeline, and distribution.
 
@@ -14,8 +14,15 @@ See `.docs/HLD.md` for architecture, UI, capture backends, color pipeline, and d
 - `src/cli.rs` — `clap` args and `LaunchMode`
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
-- `src/capture/` — trait-based X11/Wayland capture backends
-- `src/ui/` — main window (color background), picker overlay, capture/session controller, theme
+- `src/color/mod.rs` — `ColorFormat` and copy-format output (CMYK is manual)
+- `src/color/parse.rs` — typed color and CSS named-color parsing
+- `src/color/harmony.rs` — color-harmony offsets and swatches
+- `src/capture/` — capture backends (KWin D-Bus, `ext-image-copy-capture`, X11, XDG portal) dispatched through a function-pointer `Backend` table in `capture/mod.rs`
+- `src/ui/main_window.rs` — main window (color background); split into `src/ui/main_window/` submodules (`toast`, `history`, `keys`, `slider_panel`, `settings_panel`)
+- `src/ui/overlay.rs` — picker overlay: magnifier, click/drag pick, portal banner
+- `src/ui/picker.rs` — capture/session controller between the main window and the overlay
+- `src/ui/icons.rs` — lucide icon font setup and icon helpers
+- `src/ui/theme.rs` — dynamic contrast theme derived from the current color
 - `src/clipboard.rs` — clipboard writes via `arboard`
 
 ### Workflow
@@ -30,7 +37,7 @@ See `.docs/HLD.md` for architecture, UI, capture backends, color pipeline, and d
 ### Common Patterns
 
 - Internal color state is always Okhsl; convert via sRGB as the interchange for all copy formats and the picker pipeline.
-- Capture goes through the backend trait so the picker overlay is agnostic to X11 vs Wayland.
+- Backends are a function-pointer `Backend` table in `capture/mod.rs`, not a trait; each returns a plain frame + rect, so the picker overlay stays agnostic to X11 vs Wayland.
 - Single-binary, two launch modes via `clap`: UI mode (default) and picker mode.
 - No menus, no settings pane, no tabs — preserve the one-glance model.
 
