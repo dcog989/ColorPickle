@@ -1,6 +1,8 @@
 use eframe::egui;
+use palette::Srgb;
 
 use crate::color::ColorFormat;
+use crate::color::apca;
 use crate::color::okhsl::Okhsl;
 use crate::ui::icons;
 use crate::ui::theme::color32;
@@ -10,6 +12,7 @@ const SWATCH_SIZE: f32 = 24.0;
 const SWATCH_CORNER_RADIUS: u8 = 6;
 const SWATCH_BORDER_WIDTH: f32 = 1.0;
 const CLEAR_HISTORY_PADDING: f32 = 4.0;
+const APCA_FONT_SIZE: f32 = 14.0;
 
 pub fn picker_launcher(ui: &mut egui::Ui, height: f32) -> bool {
     icon_button(
@@ -104,4 +107,19 @@ pub fn clear_history(ui: &mut egui::Ui) -> bool {
         CLEAR_HISTORY_PADDING,
         icons::close,
     )
+}
+
+pub fn apca_scores(ui: &mut egui::Ui, color: Okhsl, foreground: egui::Color32) {
+    let srgb = color.to_srgb();
+    let on_white = apca::contrast(srgb, Srgb::new(1.0, 1.0, 1.0)).abs();
+    let on_black = apca::contrast(srgb, Srgb::new(0.0, 0.0, 0.0)).abs();
+    let text = format!("APCA score: {on_white:.0} (white), {on_black:.0} (black)");
+    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        ui.label(
+            egui::RichText::new(text)
+                .color(foreground)
+                .size(APCA_FONT_SIZE),
+        )
+        .on_hover_text("APCA lightness contrast (Lc) of this colour on white and on black");
+    });
 }

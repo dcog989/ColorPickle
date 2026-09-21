@@ -317,6 +317,7 @@ impl MainWindow {
                                 self.color = swatch;
                             }
                         }
+                        widgets::apca_scores(ui, self.color, foreground);
                     });
                 });
             });
