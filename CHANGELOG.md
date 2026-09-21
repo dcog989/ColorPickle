@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.2.3 - 2026-09-21
+#### Bug Fixes
+- (**ci**) attach package files to the release - (9cfc299) - dcog989
+#### Build system
+- ignore merge commits and push after bump - (bed28b6) - dcog989
+
+- - -
+
 ## v0.2.2 - 2026-09-21
 #### Build system
 - ignore merge commits in cog - (b777fd8) - dcog989
