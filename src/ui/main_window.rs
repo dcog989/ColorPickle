@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use eframe::egui;
 
 use crate::clipboard;
@@ -7,18 +5,21 @@ use crate::color::ColorFormat;
 use crate::color::harmony::Harmony;
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
-use crate::config::{Config, LaunchMode, Theme};
+use crate::config::Config;
 use crate::ui::picker::{Event, PickerController};
-use crate::ui::slider;
 use crate::ui::theme::{self, color32, contrast_color32};
 use crate::ui::widgets;
 
-const SLIDER_WIDTH: f32 = 30.0;
-const SLIDER_PANEL_MARGIN: f32 = 12.0;
-const SLIDER_PANEL_ID: &str = "colorpickle-sliders";
-const SETTINGS_PANEL_ID: &str = "colorpickle-settings";
-const SETTINGS_PANEL_MARGIN_X: i8 = 16;
-const SETTINGS_PANEL_MARGIN_Y: i8 = 10;
+mod history;
+mod keys;
+mod settings_panel;
+mod slider_panel;
+mod toast;
+
+use self::history::History;
+use self::keys::{ColorKey, InputKey, ThemeKey};
+use self::toast::Toast;
+
 const PANEL_MARGIN: f32 = 16.0;
 const ROW_SPACING: f32 = 18.0;
 const ITEM_SPACING: f32 = 10.0;
@@ -26,17 +27,9 @@ const INPUT_FONT_SIZE: f32 = 26.0;
 const INPUT_MARGIN_X: i8 = 12;
 const INPUT_MARGIN_Y: i8 = 10;
 const MIN_WINDOW_HEIGHT: f32 = 420.0;
-const HUE_MAX_DEGREES: f32 = 360.0;
-const HUE_FRACTION_MAX: f32 = 1.0 - f32::EPSILON;
 const DEFAULT_HUE_DEGREES: f32 = 180.0;
 const DEFAULT_SATURATION: f32 = 0.5;
 const DEFAULT_LIGHTNESS: f32 = 0.5;
-const HISTORY_LIMIT: usize = 8;
-const TOAST_DURATION: f64 = 2.5;
-const TOAST_BOTTOM_MARGIN: f32 = 84.0;
-const TOAST_MARGIN_X: i8 = 16;
-const TOAST_MARGIN_Y: i8 = 10;
-const TOAST_ID: &str = "colorpickle-toast";
 const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num1,
     egui::Key::Num2,
@@ -49,97 +42,6 @@ const FORMAT_KEYS: [egui::Key; 8] = [
 ];
 
 const _: () = assert!(FORMAT_KEYS.len() == ColorFormat::ALL.len());
-
-struct Toast {
-    message: String,
-    expires_at: f64,
-}
-
-impl Toast {
-    fn new(message: impl Into<String>, now: f64) -> Self {
-        Self {
-            message: message.into(),
-            expires_at: now + TOAST_DURATION,
-        }
-    }
-
-    fn is_expired(&self, now: f64) -> bool {
-        now >= self.expires_at
-    }
-
-    fn remaining(&self, now: f64) -> Duration {
-        Duration::from_secs_f64((self.expires_at - now).max(0.0))
-    }
-
-    fn show(&self, ctx: &egui::Context) {
-        egui::Area::new(egui::Id::new(TOAST_ID))
-            .anchor(
-                egui::Align2::CENTER_BOTTOM,
-                egui::vec2(0.0, -TOAST_BOTTOM_MARGIN),
-            )
-            .order(egui::Order::Foreground)
-            .interactable(false)
-            .show(ctx, |ui| {
-                egui::Frame::popup(ui.style())
-                    .inner_margin(egui::Margin::symmetric(TOAST_MARGIN_X, TOAST_MARGIN_Y))
-                    .show(ui, |ui| {
-                        ui.add(egui::Label::new(self.message.clone()).extend());
-                    });
-            });
-    }
-}
-
-#[derive(Default)]
-struct History {
-    colors: Vec<Okhsl>,
-}
-
-impl History {
-    fn push(&mut self, color: Okhsl) {
-        self.colors
-            .retain(|existing| existing.to_srgb8() != color.to_srgb8());
-        self.colors.insert(0, color);
-        self.colors.truncate(HISTORY_LIMIT);
-    }
-
-    fn clear(&mut self) {
-        self.colors.clear();
-    }
-
-    fn colors(&self) -> &[Okhsl] {
-        &self.colors
-    }
-}
-
-#[derive(Clone, Copy, PartialEq)]
-struct ColorKey {
-    hue: f32,
-    saturation: f32,
-    lightness: f32,
-}
-
-impl ColorKey {
-    fn new(color: Okhsl) -> Self {
-        Self {
-            hue: color.hue(),
-            saturation: color.saturation(),
-            lightness: color.lightness(),
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq)]
-struct ThemeKey {
-    theme: Theme,
-    system: Option<egui::Theme>,
-    color: ColorKey,
-}
-
-#[derive(Clone, Copy, PartialEq)]
-struct InputKey {
-    format: ColorFormat,
-    color: ColorKey,
-}
 
 pub struct MainWindow {
     config: Config,
@@ -273,8 +175,10 @@ impl eframe::App for MainWindow {
         let background = color32(self.color);
         let foreground = contrast_color32(self.color);
 
-        let panel_width = self.show_sliders(ui, background, foreground);
-        self.show_settings(ui, background, foreground);
+        let panel_width = slider_panel::show(ui, &mut self.color, background, foreground);
+        if settings_panel::show(ui, &mut self.config, background, foreground) {
+            self.persist_config();
+        }
         let open_picker = self.show_central(ui, background, foreground, panel_width);
 
         self.handle_shortcuts(&ctx);
@@ -292,132 +196,6 @@ impl eframe::App for MainWindow {
 }
 
 impl MainWindow {
-    fn show_sliders(
-        &mut self,
-        ui: &mut egui::Ui,
-        background: egui::Color32,
-        foreground: egui::Color32,
-    ) -> f32 {
-        let mut hue = self.color.hue() / HUE_MAX_DEGREES;
-        let mut saturation = self.color.saturation();
-        let mut lightness = self.color.lightness();
-
-        let panel_width =
-            3.0 * SLIDER_WIDTH + 2.0 * ui.spacing().item_spacing.x + 2.0 * SLIDER_PANEL_MARGIN;
-        egui::Panel::right(SLIDER_PANEL_ID)
-            .resizable(false)
-            .exact_size(panel_width)
-            .frame(
-                egui::Frame::NONE
-                    .fill(background)
-                    .inner_margin(SLIDER_PANEL_MARGIN),
-            )
-            .show(ui, |ui| {
-                ui.horizontal_top(|ui| {
-                    let hue_gradient =
-                        channel_gradient(SliderChannel::Hue, hue, saturation, lightness);
-                    slider::column(ui, "H", foreground, &mut hue, SLIDER_WIDTH, hue_gradient);
-
-                    let saturation_gradient =
-                        channel_gradient(SliderChannel::Saturation, hue, saturation, lightness);
-                    slider::column(
-                        ui,
-                        "S",
-                        foreground,
-                        &mut saturation,
-                        SLIDER_WIDTH,
-                        saturation_gradient,
-                    );
-
-                    let lightness_gradient =
-                        channel_gradient(SliderChannel::Lightness, hue, saturation, lightness);
-                    slider::column(
-                        ui,
-                        "L",
-                        foreground,
-                        &mut lightness,
-                        SLIDER_WIDTH,
-                        lightness_gradient,
-                    );
-                });
-            });
-
-        self.color = Okhsl::new(
-            hue.min(HUE_FRACTION_MAX) * HUE_MAX_DEGREES,
-            saturation,
-            lightness,
-        );
-
-        panel_width
-    }
-
-    fn show_settings(
-        &mut self,
-        ui: &mut egui::Ui,
-        background: egui::Color32,
-        foreground: egui::Color32,
-    ) {
-        egui::Panel::bottom(SETTINGS_PANEL_ID)
-            .resizable(false)
-            .frame(
-                egui::Frame::NONE
-                    .fill(background)
-                    .inner_margin(egui::Margin::symmetric(
-                        SETTINGS_PANEL_MARGIN_X,
-                        SETTINGS_PANEL_MARGIN_Y,
-                    )),
-            )
-            .show(ui, |ui| {
-                let mut config_changed = false;
-                let row_height = widgets::row_height(ui);
-                ui.spacing_mut().interact_size.y = row_height;
-                ui.horizontal(|ui| {
-                    widgets::settings_icon(ui, foreground);
-                    egui::ComboBox::from_id_salt("launch-mode")
-                        .selected_text(launch_mode_label(self.config.launch_mode))
-                        .show_ui(ui, |ui| {
-                            for mode in [LaunchMode::UiFirst, LaunchMode::PickerFirst] {
-                                if ui
-                                    .selectable_value(
-                                        &mut self.config.launch_mode,
-                                        mode,
-                                        launch_mode_label(mode),
-                                    )
-                                    .changed()
-                                {
-                                    config_changed = true;
-                                }
-                            }
-                        })
-                        .response
-                        .on_hover_text("Launch mode: open the main window, or start in the picker");
-                    egui::ComboBox::from_id_salt("default-format")
-                        .selected_text(self.config.default_format.label())
-                        .show_ui(ui, |ui| {
-                            for format in ColorFormat::ALL {
-                                if ui
-                                    .selectable_value(
-                                        &mut self.config.default_format,
-                                        format,
-                                        format.label(),
-                                    )
-                                    .changed()
-                                {
-                                    config_changed = true;
-                                }
-                            }
-                        })
-                        .response
-                        .on_hover_text(
-                            "Default format: shown in the input field and copied on pick",
-                        );
-                });
-                if config_changed {
-                    self.persist_config();
-                }
-            });
-    }
-
     fn show_central(
         &mut self,
         ui: &mut egui::Ui,
@@ -437,7 +215,7 @@ impl MainWindow {
                 left: PANEL_MARGIN as i8,
                 right: PANEL_MARGIN as i8,
                 top: PANEL_MARGIN as i8,
-                bottom: SETTINGS_PANEL_MARGIN_Y,
+                bottom: settings_panel::MARGIN_Y,
             })
             .fill(background);
         egui::CentralPanel::default()
@@ -533,7 +311,7 @@ impl MainWindow {
                                 }
                             })
                             .response
-                            .on_hover_text("Color harmony");
+                            .on_hover_text("Colour harmony");
                         for swatch in self.harmony.swatches(self.color) {
                             if widgets::history_swatch(ui, swatch, foreground) {
                                 self.color = swatch;
@@ -578,35 +356,5 @@ impl MainWindow {
         };
         ctx.request_repaint_after(toast.remaining(self.now));
         toast.show(ctx);
-    }
-}
-
-fn launch_mode_label(mode: LaunchMode) -> &'static str {
-    match mode {
-        LaunchMode::UiFirst => "UI first",
-        LaunchMode::PickerFirst => "Picker first",
-    }
-}
-
-#[derive(Clone, Copy)]
-enum SliderChannel {
-    Hue,
-    Saturation,
-    Lightness,
-}
-
-fn channel_gradient(
-    channel: SliderChannel,
-    hue: f32,
-    saturation: f32,
-    lightness: f32,
-) -> impl Fn(f32) -> egui::Color32 {
-    move |value| {
-        let color = match channel {
-            SliderChannel::Hue => Okhsl::new(value * HUE_MAX_DEGREES, saturation, lightness),
-            SliderChannel::Saturation => Okhsl::new(hue * HUE_MAX_DEGREES, value, lightness),
-            SliderChannel::Lightness => Okhsl::new(hue * HUE_MAX_DEGREES, saturation, value),
-        };
-        color32(color)
     }
 }
