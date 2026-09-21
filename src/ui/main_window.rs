@@ -37,7 +37,6 @@ const TOAST_BOTTOM_MARGIN: f32 = 84.0;
 const TOAST_MARGIN_X: i8 = 16;
 const TOAST_MARGIN_Y: i8 = 10;
 const TOAST_ID: &str = "colorpickle-toast";
-const SATURATION_TOOLTIP: &str = "Saturation is perceptual (Okhsl-normalised), so its visual effect varies slightly with lightness.";
 const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num1,
     egui::Key::Num2,
@@ -328,8 +327,7 @@ impl MainWindow {
                         &mut saturation,
                         SLIDER_WIDTH,
                         saturation_gradient,
-                    )
-                    .on_hover_text(SATURATION_TOOLTIP);
+                    );
 
                     let lightness_gradient =
                         channel_gradient(SliderChannel::Lightness, hue, saturation, lightness);
