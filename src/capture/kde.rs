@@ -5,12 +5,12 @@ use image::RgbaImage;
 use zbus::blocking::{Connection, Proxy};
 use zbus::zvariant::{DynamicTuple, Fd, OwnedValue};
 
-use crate::capture::{CaptureError, CaptureResult};
+use crate::capture::{CaptureError, CaptureResult, Point};
 
 const SERVICE: &str = "org.kde.KWin.ScreenShot2";
 const PATH: &str = "/org/kde/KWin/ScreenShot2";
 const INTERFACE: &str = "org.kde.KWin.ScreenShot2";
-const METHOD_WORKSPACE: &str = "CaptureWorkspace";
+const METHOD_ACTIVE_SCREEN: &str = "CaptureActiveScreen";
 
 const OPTION_NATIVE_RESOLUTION: &str = "native-resolution";
 const KEY_WIDTH: &str = "width";
@@ -28,11 +28,11 @@ const FORMAT_RGBX8888: u32 = 16;
 const FORMAT_RGBA8888: u32 = 17;
 const FORMAT_RGBA8888_PREMULTIPLIED: u32 = 18;
 
-pub fn capture() -> CaptureResult<RgbaImage> {
-    capture_workspace()
+pub fn capture(_cursor: Option<Point>) -> CaptureResult<RgbaImage> {
+    capture_active_screen()
 }
 
-fn capture_workspace() -> CaptureResult<RgbaImage> {
+fn capture_active_screen() -> CaptureResult<RgbaImage> {
     tracing::debug!("kwin: connecting to ScreenShot2");
     let connection = Connection::session()?;
     let proxy = Proxy::new(&connection, SERVICE, PATH, INTERFACE)?;
@@ -42,7 +42,7 @@ fn capture_workspace() -> CaptureResult<RgbaImage> {
 
     let (mut reader, writer) = std::io::pipe()?;
     let body = DynamicTuple((&options, Fd::from(&writer)));
-    let reply: HashMap<String, OwnedValue> = proxy.call(METHOD_WORKSPACE, &body)?;
+    let reply: HashMap<String, OwnedValue> = proxy.call(METHOD_ACTIVE_SCREEN, &body)?;
     drop(body);
     drop(writer);
 
@@ -51,7 +51,13 @@ fn capture_workspace() -> CaptureResult<RgbaImage> {
     let stride = get_u32(&reply, KEY_STRIDE)?;
     let format = get_u32(&reply, KEY_FORMAT)?;
 
-    tracing::info!(width, height, stride, format, "kwin: captured workspace");
+    tracing::info!(
+        width,
+        height,
+        stride,
+        format,
+        "kwin: captured active screen"
+    );
     let byte_len = stride as usize * height as usize;
     tracing::debug!(byte_len, "kwin: reading pixels from pipe");
     let mut buffer = vec![0u8; byte_len];

@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use image::RgbaImage;
 use url::Url;
 
-use crate::capture::{CaptureError, CaptureResult};
+use crate::capture::{CaptureError, CaptureResult, Point};
 
-pub fn capture() -> CaptureResult<RgbaImage> {
+pub fn capture(_cursor: Option<Point>) -> CaptureResult<RgbaImage> {
     capture_once()
 }
 

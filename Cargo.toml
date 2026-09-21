@@ -63,7 +63,7 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
-x11rb = { version = "0.14", features = ["image"] }
+x11rb = { version = "0.14", features = ["image", "randr"] }
 zbus = "5.19"
 
 [profile.dev.package."*"]

@@ -30,7 +30,7 @@ use ext_image_copy_capture_manager_v1::{ExtImageCopyCaptureManagerV1, Options};
 use ext_image_copy_capture_session_v1::ExtImageCopyCaptureSessionV1;
 use ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
 
-use crate::capture::{CaptureError, CaptureResult, composite};
+use crate::capture::{CaptureError, CaptureResult, Point};
 
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
@@ -47,6 +47,16 @@ struct OutputState {
     transform: wl_output::Transform,
     scale: i32,
     mode: Option<(i32, i32)>,
+}
+
+impl OutputState {
+    fn contains(&self, point: Point) -> bool {
+        let Some((width, height)) = self.logical_size else {
+            return false;
+        };
+        let (x, y) = self.position;
+        point.x >= x && point.x < x + width as i32 && point.y >= y && point.y < y + height as i32
+    }
 }
 
 struct Managers {
@@ -87,7 +97,7 @@ impl State {
     }
 }
 
-pub fn capture() -> CaptureResult<RgbaImage> {
+pub fn capture(cursor: Option<Point>) -> CaptureResult<RgbaImage> {
     let connection = Connection::connect_to_env().map_err(failure)?;
     let (globals, mut queue) = registry_queue_init::<State>(&connection).map_err(failure)?;
     let qh = queue.handle();
@@ -141,19 +151,27 @@ pub fn capture() -> CaptureResult<RgbaImage> {
         }
     }
 
-    let mut captures = Vec::with_capacity(state.outputs.len());
-    for index in 0..state.outputs.len() {
-        captures.push(capture_output(&mut queue, &mut state, index)?);
-    }
+    let index = select_output(&state.outputs, cursor);
+    capture_output(&mut queue, &mut state, index)
+}
 
-    composite(captures)
+fn select_output(outputs: &[OutputState], cursor: Option<Point>) -> usize {
+    if let Some(point) = cursor
+        && let Some(index) = outputs.iter().position(|output| output.contains(point))
+    {
+        return index;
+    }
+    outputs
+        .iter()
+        .position(|output| output.position == (0, 0))
+        .unwrap_or(0)
 }
 
 fn capture_output(
     queue: &mut EventQueue<State>,
     state: &mut State,
     index: usize,
-) -> CaptureResult<(RgbaImage, i32, i32)> {
+) -> CaptureResult<RgbaImage> {
     let output = state.outputs[index].output.clone();
 
     let source = state
@@ -245,7 +263,7 @@ fn capture_output(
         }
         _ => image,
     };
-    Ok((image, output.position.0, output.position.1))
+    Ok(image)
 }
 
 fn bind<T>(
