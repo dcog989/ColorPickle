@@ -62,7 +62,7 @@ fn glyph(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, icon: 
 }
 
 // Logo mark: the fork-in-circle geometry from packaging/colorpickle.svg. The ring
-// is stroked and the fork is filled in the current foreground colour so the
+// is stroked and the fork is filled in the current foreground color so the
 // launcher follows the dynamic theme like the other icons.
 pub fn logo(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
     let scale = rect.width() / LOGO_VIEWBOX;

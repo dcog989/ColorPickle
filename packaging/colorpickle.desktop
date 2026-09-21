@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=ColorPickle
-Comment=Pick a colour from anywhere on screen
+Comment=Pick a color from anywhere on screen
 Exec=colorpickle
 Icon=colorpickle
 Terminal=false
@@ -11,5 +11,5 @@ Actions=Pick;
 X-KDE-DBUS-Restricted-Interfaces=org.kde.KWin.ScreenShot2
 
 [Desktop Action Pick]
-Name=Pick a colour
+Name=Pick a color
 Exec=colorpickle --launch-mode picker_first

@@ -15,7 +15,7 @@ See `.docs/HLD.md` for architecture, UI, capture backends, color pipeline, and d
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
 - `src/capture/` — trait-based X11/Wayland capture backends
-- `src/ui/` — main window (colour background), picker overlay, capture/session controller, theme
+- `src/ui/` — main window (color background), picker overlay, capture/session controller, theme
 - `src/clipboard.rs` — clipboard writes via `arboard`
 
 ### Workflow
