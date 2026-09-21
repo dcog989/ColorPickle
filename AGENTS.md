@@ -39,7 +39,7 @@ See `README.md` for usage, configuration, install and distribution.
 - Capture happens once, before the overlay is mapped — never per-move, so the always-on-top overlay cannot capture itself or re-trigger permission prompts.
 - Backend preference order: KWin `org.kde.KWin.ScreenShot2` → `ext-image-copy-capture` → X11 `GetImage` → XDG desktop portal.
 - Compositor-native pickers are deliberately not used (KWin `ColorPicker.pick()`, `hyprpicker`): they return a single pixel and expose no frame, so they cannot drive the magnifier or drag-average.
-- KWin allowlists `ScreenShot2` callers by executable via `X-KDE-DBUS-Restricted-Interfaces`; an AppImage runs from a temp mount and is denied, so it falls back to the portal.
+- KWin allowlists `ScreenShot2` callers via `X-KDE-DBUS-Restricted-Interfaces` in a `.desktop`: it canonicalises the entry's first `Exec` token and compares it to `/proc/<pid>/exe`, so `Exec` must be an absolute path (a bare `colorpickle` never matches). An AppImage runs from a temp mount and is denied, falling back to the portal.
 - `ext-image-copy-capture` is a staging protocol; its backend opens its own Wayland connection rather than sharing `winit`'s, and composites per-output frames itself.
 - CMYK output is computed manually; `palette`'s Okhsl reports hue in degrees (0–360), not 0–1 turns.
 - Distribution: AppImage is primary, with `.deb`, `.rpm`, AUR and source installs alongside.
