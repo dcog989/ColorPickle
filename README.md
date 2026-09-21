@@ -1,6 +1,6 @@
 # ColorPickle
 
-Linux screen color picker. Pick a pixel or drag-select a region from anywhere on screen, get the color in any common format, copy it. One glance, one click.
+Linux screen color picker. Pick a pixel or drag-select a region from anywhere on screen with a magnified picker, in any common color format.
 
 ![screenshot](assets/screen-1.webp)
 
@@ -52,7 +52,7 @@ If FUSE is unavailable, run it with `./ColorPickle-*.AppImage --appimage-extract
 From source (requires a Rust toolchain), from a clone of this repository:
 
 ```sh
-cargo install --path .
+cd packaging/aur && makepkg -si
 ```
 
 The AppImage needs a working X11 or Wayland session. The XDG desktop portal fallback additionally needs `xdg-desktop-portal` installed.
