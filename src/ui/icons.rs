@@ -1,122 +1,119 @@
-use std::f32::consts::TAU;
+use std::sync::Arc;
 
 use eframe::egui;
+use lucide_icons::Icon;
 
-const VIEWBOX: f32 = 24.0;
-const STROKE: f32 = 2.0;
-const PALETTE_DOT_RADIUS: f32 = 0.9;
-const PALETTE_DOTS: [(f32, f32); 4] = [(10.0, 9.0), (14.5, 9.5), (15.0, 13.5), (10.5, 13.5)];
+const FONT_FAMILY: &str = "lucide";
+
+const LOGO_VIEWBOX: f32 = 512.0;
+const LOGO_RADIUS: f32 = 256.0;
+const LOGO_CIRCLE_STROKE: f32 = 24.0;
+const LOGO_TINE_X: [f32; 4] = [186.0, 226.0, 266.0, 306.0];
+const LOGO_TINE_WIDTH: f32 = 20.0;
+const LOGO_TINE_TOP: f32 = 100.0;
+const LOGO_TINE_BOTTOM: f32 = 210.0;
+const LOGO_TINE_RADIUS: f32 = 10.0;
+const LOGO_SHOULDER_LEFT: f32 = 186.0;
+const LOGO_SHOULDER_RIGHT: f32 = 326.0;
+const LOGO_SHOULDER_TOP: f32 = 190.0;
+const LOGO_SHOULDER_BOTTOM: f32 = 258.0;
+const LOGO_HANDLE_LEFT: f32 = 239.0;
+const LOGO_HANDLE_RIGHT: f32 = 273.0;
+const LOGO_HANDLE_BOTTOM: f32 = 412.0;
+const LOGO_HANDLE_RADIUS: f32 = 17.0;
+
+pub fn install(ctx: &egui::Context) {
+    let mut fonts = egui::FontDefinitions::default();
+    fonts.font_data.insert(
+        FONT_FAMILY.to_owned(),
+        Arc::new(egui::FontData::from_static(lucide_icons::LUCIDE_FONT_BYTES)),
+    );
+    fonts.families.insert(
+        egui::FontFamily::Name(FONT_FAMILY.into()),
+        vec![FONT_FAMILY.to_owned()],
+    );
+    ctx.set_fonts(fonts);
+}
 
 pub fn settings(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    let paths = [gear(), circle(12.0, 12.0, 3.2)];
-    paint(painter, rect, color, &paths);
+    glyph(painter, rect, color, Icon::Settings);
 }
 
 pub fn palette(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    let paths = [ellipse(12.0, 12.0, 9.0, 7.2), circle(6.5, 14.5, 1.7)];
-    paint(painter, rect, color, &paths);
+    glyph(painter, rect, color, Icon::Palette);
+}
 
-    let scale = rect.width() / VIEWBOX;
-    for &(x, y) in &PALETTE_DOTS {
-        painter.circle_filled(
-            egui::pos2(rect.left() + x * scale, rect.top() + y * scale),
-            PALETTE_DOT_RADIUS * scale,
+pub fn close(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    glyph(painter, rect, color, Icon::X);
+}
+
+pub fn copy(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    glyph(painter, rect, color, Icon::Copy);
+}
+
+fn glyph(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, icon: Icon) {
+    painter.text(
+        rect.center(),
+        egui::Align2::CENTER_CENTER,
+        char::from(icon),
+        egui::FontId::new(rect.height(), egui::FontFamily::Name(FONT_FAMILY.into())),
+        color,
+    );
+}
+
+// Logo mark: the fork-in-circle geometry from packaging/colorpickle.svg. The ring
+// is stroked and the fork is filled in the current foreground colour so the
+// launcher follows the dynamic theme like the other icons.
+pub fn logo(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    let scale = rect.width() / LOGO_VIEWBOX;
+    let map = |x: f32, y: f32| egui::pos2(rect.left() + x * scale, rect.top() + y * scale);
+
+    painter.circle_stroke(
+        map(LOGO_RADIUS, LOGO_RADIUS),
+        (LOGO_RADIUS - LOGO_CIRCLE_STROKE / 2.0) * scale,
+        egui::Stroke::new(LOGO_CIRCLE_STROKE * scale, color),
+    );
+
+    let handle_radius = (LOGO_HANDLE_RADIUS * scale).round() as u8;
+    painter.rect_filled(
+        egui::Rect::from_min_max(
+            map(LOGO_HANDLE_LEFT, LOGO_SHOULDER_BOTTOM),
+            map(LOGO_HANDLE_RIGHT, LOGO_HANDLE_BOTTOM),
+        ),
+        egui::CornerRadius {
+            nw: 0,
+            ne: 0,
+            sw: handle_radius,
+            se: handle_radius,
+        },
+        color,
+    );
+
+    painter.add(egui::Shape::convex_polygon(
+        vec![
+            map(LOGO_SHOULDER_LEFT, LOGO_SHOULDER_TOP),
+            map(LOGO_SHOULDER_RIGHT, LOGO_SHOULDER_TOP),
+            map(LOGO_HANDLE_RIGHT, LOGO_SHOULDER_BOTTOM),
+            map(LOGO_HANDLE_LEFT, LOGO_SHOULDER_BOTTOM),
+        ],
+        color,
+        egui::Stroke::NONE,
+    ));
+
+    let tine_radius = (LOGO_TINE_RADIUS * scale).round() as u8;
+    for x in LOGO_TINE_X {
+        painter.rect_filled(
+            egui::Rect::from_min_max(
+                map(x, LOGO_TINE_TOP),
+                map(x + LOGO_TINE_WIDTH, LOGO_TINE_BOTTOM),
+            ),
+            egui::CornerRadius {
+                nw: tine_radius,
+                ne: tine_radius,
+                sw: 0,
+                se: 0,
+            },
             color,
         );
-    }
-}
-
-pub fn broom(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
-    let paths = [
-        vec![(20.0, 4.0), (11.5, 12.5)],
-        vec![
-            (11.5, 12.5),
-            (6.0, 18.0),
-            (9.0, 21.0),
-            (14.5, 15.5),
-            (11.5, 12.5),
-        ],
-        vec![(6.0, 18.0), (4.0, 20.0)],
-        vec![(7.5, 19.5), (6.0, 21.0)],
-        vec![(9.0, 21.0), (7.5, 22.5)],
-    ];
-    paint(painter, rect, color, &paths);
-}
-
-fn paint(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, paths: &[Vec<(f32, f32)>]) {
-    let paths: Vec<&[(f32, f32)]> = paths.iter().map(|path| path.as_slice()).collect();
-    paint_paths(painter, rect, VIEWBOX, STROKE, color, &paths);
-}
-
-fn gear() -> Vec<(f32, f32)> {
-    const TEETH: usize = 8;
-    const OUTER: f32 = 9.5;
-    const INNER: f32 = 7.0;
-    let step = TAU / TEETH as f32;
-    let tooth = step * 0.18;
-    let slope = step * 0.10;
-
-    let mut points = Vec::with_capacity(TEETH * 4 + 1);
-    for index in 0..TEETH {
-        let base = index as f32 * step;
-        points.push(polar(base - tooth, OUTER));
-        points.push(polar(base + tooth, OUTER));
-        points.push(polar(base + tooth + slope, INNER));
-        points.push(polar(base + step - tooth - slope, INNER));
-    }
-    points.push(points[0]);
-    points
-}
-
-fn circle(center_x: f32, center_y: f32, radius: f32) -> Vec<(f32, f32)> {
-    const SEGMENTS: usize = 32;
-    let mut points: Vec<(f32, f32)> = (0..SEGMENTS)
-        .map(|index| {
-            let angle = index as f32 / SEGMENTS as f32 * TAU;
-            (
-                center_x + radius * angle.cos(),
-                center_y + radius * angle.sin(),
-            )
-        })
-        .collect();
-    points.push(points[0]);
-    points
-}
-
-fn ellipse(center_x: f32, center_y: f32, radius_x: f32, radius_y: f32) -> Vec<(f32, f32)> {
-    const SEGMENTS: usize = 40;
-    let mut points: Vec<(f32, f32)> = (0..SEGMENTS)
-        .map(|index| {
-            let angle = index as f32 / SEGMENTS as f32 * TAU;
-            (
-                center_x + radius_x * angle.cos(),
-                center_y + radius_y * angle.sin(),
-            )
-        })
-        .collect();
-    points.push(points[0]);
-    points
-}
-
-fn polar(angle: f32, radius: f32) -> (f32, f32) {
-    (12.0 + radius * angle.cos(), 12.0 + radius * angle.sin())
-}
-
-fn paint_paths(
-    painter: &egui::Painter,
-    rect: egui::Rect,
-    viewbox: f32,
-    stroke_width: f32,
-    color: egui::Color32,
-    paths: &[&[(f32, f32)]],
-) {
-    let scale = rect.width() / viewbox;
-    let stroke = egui::Stroke::new(stroke_width * scale, color);
-    for path in paths {
-        let points = path
-            .iter()
-            .map(|&(x, y)| egui::pos2(rect.left() + x * scale, rect.top() + y * scale))
-            .collect::<Vec<_>>();
-        painter.add(egui::Shape::line(points, stroke));
     }
 }

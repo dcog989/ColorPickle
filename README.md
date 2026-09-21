@@ -26,7 +26,7 @@ Hover a format button to preview the current color in that format; click it, or 
 
 The text field shows the current color in the default format. Type a replacement — `#ff0000`, `rgb(255, 0, 0)`, `oklch(0.7, 0.1, 120)`, `olive`, and so on — and press Enter to apply it.
 
-Each pick is added to the history row; click a swatch to make it the current color, or the broom button to clear the history. The bottom row selects the launch mode and the default copy format; those changes are saved to the config file.
+Each pick is added to the history row; click a swatch to make it the current color, or the close button to clear the history. The bottom row selects the launch mode and the default copy format; those changes are saved to the config file.
 
 ## Configuration
 

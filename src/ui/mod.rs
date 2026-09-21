@@ -49,6 +49,7 @@ fn run_main(config: Config, initial: Option<Okhsl>) -> Result<()> {
         WINDOW_TITLE,
         options,
         Box::new(move |cc| {
+            icons::install(&cc.egui_ctx);
             let mut window = match initial {
                 Some(color) => MainWindow::new(config).with_initial(color),
                 None => MainWindow::new(config),
