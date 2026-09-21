@@ -47,4 +47,3 @@ fn glyph(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, icon: 
         color,
     );
 }
-

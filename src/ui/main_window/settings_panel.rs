@@ -20,10 +20,7 @@ pub(super) fn show(
         .frame(
             egui::Frame::NONE
                 .fill(background)
-                .inner_margin(egui::Margin::symmetric(
-                    SETTINGS_PANEL_MARGIN_X,
-                    MARGIN_Y,
-                )),
+                .inner_margin(egui::Margin::symmetric(SETTINGS_PANEL_MARGIN_X, MARGIN_Y)),
         )
         .show(ui, |ui| {
             let row_height = widgets::row_height(ui);
@@ -65,9 +62,7 @@ pub(super) fn show(
                         }
                     })
                     .response
-                    .on_hover_text(
-                        "Default format: shown in the input field and copied on pick",
-                    );
+                    .on_hover_text("Default format: shown in the input field and copied on pick");
             });
         });
     config_changed
