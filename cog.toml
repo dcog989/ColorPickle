@@ -7,3 +7,8 @@ pre_bump_hooks = [
     "sed -i 's/^pkgver=.*/pkgver={{version}}/' packaging/aur/PKGBUILD",
     "cd packaging/aur && makepkg --printsrcinfo > .SRCINFO",
 ]
+
+post_bump_hooks = [
+    "git push",
+    "git push origin {{version_tag}}",
+]
