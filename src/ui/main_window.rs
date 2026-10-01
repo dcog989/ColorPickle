@@ -29,7 +29,7 @@ const INPUT_MARGIN_Y: i8 = 10;
 const MIN_WINDOW_HEIGHT: f32 = 420.0;
 const DEFAULT_HUE_DEGREES: f32 = 116.0;
 const DEFAULT_SATURATION: f32 = 0.78;
-const DEFAULT_LIGHTNESS: f32 = 0.63;
+const DEFAULT_LIGHTNESS: f32 = 0.43;
 const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num1,
     egui::Key::Num2,
