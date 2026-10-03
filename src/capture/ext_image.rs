@@ -350,11 +350,15 @@ fn create_shm_file(byte_len: usize) -> CaptureResult<File> {
 }
 
 fn read_shm(file: &mut File, width: u32, height: u32, stride: usize) -> CaptureResult<RgbaImage> {
+    let row_bytes = width as usize * BYTES_PER_PIXEL;
+    if stride < row_bytes {
+        return Err(failure("capture frame has an invalid stride"));
+    }
+
     file.seek(SeekFrom::Start(0)).map_err(failure)?;
     let mut bytes = vec![0u8; stride * height as usize];
     file.read_exact(&mut bytes).map_err(failure)?;
 
-    let row_bytes = width as usize * BYTES_PER_PIXEL;
     if stride != row_bytes {
         for row in 1..height as usize {
             let source = row * stride;
