@@ -56,6 +56,7 @@ pub struct MainWindow {
     pending_toast: Option<String>,
     picker: PickerController,
     applied_theme: Option<ThemeKey>,
+    applied_theme_color: Option<Okhsl>,
     applied_input: Option<InputKey>,
     min_inner_size: Option<egui::Vec2>,
 }
@@ -75,6 +76,7 @@ impl MainWindow {
             pending_toast: None,
             picker: PickerController::new(),
             applied_theme: None,
+            applied_theme_color: None,
             applied_input: None,
             min_inner_size: None,
         }
@@ -91,13 +93,13 @@ impl MainWindow {
     pub fn apply_theme(&mut self, ctx: &egui::Context) {
         theme::apply(ctx, self.config.theme, self.color);
         self.applied_theme = Some(self.theme_key(ctx));
+        self.applied_theme_color = Some(self.color);
     }
 
     fn theme_key(&self, ctx: &egui::Context) -> ThemeKey {
         ThemeKey {
             theme: self.config.theme,
             system: ctx.system_theme(),
-            color: self.color,
         }
     }
 
@@ -170,6 +172,10 @@ impl eframe::App for MainWindow {
         if self.applied_theme != Some(theme_key) {
             theme::apply(&ctx, self.config.theme, self.color);
             self.applied_theme = Some(theme_key);
+            self.applied_theme_color = Some(self.color);
+        } else if self.applied_theme_color != Some(self.color) {
+            theme::apply_color_to_current(&ctx, self.color);
+            self.applied_theme_color = Some(self.color);
         }
 
         let background = color32(self.color);

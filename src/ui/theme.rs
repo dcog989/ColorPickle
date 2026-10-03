@@ -74,9 +74,18 @@ fn contrast_against(color: Okhsl, background: Okhsl) -> f32 {
 
 pub fn apply(ctx: &egui::Context, theme: Theme, color: Okhsl) {
     ctx.set_theme(theme_preference(theme));
-    let visuals = visuals(ctx, theme, color);
+    let mut visuals = base_visuals(ctx, theme);
+    apply_color(&mut visuals, color);
     ctx.set_visuals_of(egui::Theme::Dark, visuals.clone());
     ctx.set_visuals_of(egui::Theme::Light, visuals);
+}
+
+pub fn apply_color_to_current(ctx: &egui::Context, color: Okhsl) {
+    for theme in [egui::Theme::Dark, egui::Theme::Light] {
+        let mut visuals = ctx.style_of(theme).visuals.clone();
+        apply_color(&mut visuals, color);
+        ctx.set_visuals_of(theme, visuals);
+    }
 }
 
 fn theme_preference(theme: Theme) -> egui::ThemePreference {
@@ -87,7 +96,7 @@ fn theme_preference(theme: Theme) -> egui::ThemePreference {
     }
 }
 
-fn visuals(ctx: &egui::Context, theme: Theme, color: Okhsl) -> egui::Visuals {
+fn base_visuals(ctx: &egui::Context, theme: Theme) -> egui::Visuals {
     let mut visuals = match theme {
         Theme::Dark => egui::Visuals::dark(),
         Theme::Light => egui::Visuals::light(),
@@ -97,11 +106,7 @@ fn visuals(ctx: &egui::Context, theme: Theme, color: Okhsl) -> egui::Visuals {
         },
     };
 
-    let foreground = contrast_color32(color);
-    let surface = surface_color32(color);
-    let border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, BORDER_ALPHA));
     let corner = egui::CornerRadius::same(CORNER_RADIUS);
-
     visuals.window_corner_radius = corner;
     visuals.menu_corner_radius = corner;
     visuals.widgets.noninteractive.corner_radius = corner;
@@ -109,6 +114,13 @@ fn visuals(ctx: &egui::Context, theme: Theme, color: Okhsl) -> egui::Visuals {
     visuals.widgets.hovered.corner_radius = corner;
     visuals.widgets.active.corner_radius = corner;
     visuals.widgets.open.corner_radius = corner;
+    visuals
+}
+
+fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
+    let foreground = contrast_color32(color);
+    let surface = surface_color32(color);
+    let border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, BORDER_ALPHA));
 
     visuals.override_text_color = Some(foreground);
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
@@ -124,10 +136,9 @@ fn visuals(ctx: &egui::Context, theme: Theme, color: Okhsl) -> egui::Visuals {
     visuals.widgets.active.bg_fill = fill(foreground, ACTIVE_FILL_ALPHA);
     visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(BORDER_WIDTH, foreground);
     visuals.widgets.inactive.bg_stroke = border;
-    set_surfaces(&mut visuals, surface, border, foreground);
+    set_surfaces(visuals, surface, border, foreground);
     visuals.selection.bg_fill = fill(foreground, SELECTION_FILL_ALPHA);
     visuals.selection.stroke.color = foreground;
-    visuals
 }
 
 fn surface_color32(color: Okhsl) -> egui::Color32 {

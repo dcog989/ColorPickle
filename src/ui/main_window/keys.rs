@@ -8,7 +8,6 @@ use crate::config::Theme;
 pub(super) struct ThemeKey {
     pub(super) theme: Theme,
     pub(super) system: Option<egui::Theme>,
-    pub(super) color: Okhsl,
 }
 
 #[derive(Clone, Copy, PartialEq)]
