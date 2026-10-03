@@ -203,6 +203,11 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         )
     });
 
+    if secondary_clicked || escape_pressed {
+        session.drag_anchor = None;
+        return Some(PickOutcome::Dismissed);
+    }
+
     if primary_pressed && let Some(position) = pointer_pos {
         session.drag_anchor = Some(position);
     }
@@ -249,10 +254,6 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
             }
         };
         return Some(PickOutcome::Picked(color));
-    }
-    if secondary_clicked || escape_pressed {
-        session.drag_anchor = None;
-        return Some(PickOutcome::Dismissed);
     }
     if !primary_down {
         session.drag_anchor = None;
