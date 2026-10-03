@@ -162,6 +162,9 @@ pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> 
     }
 
     let index = select_output(&state.outputs, cursor);
+    if state.outputs[index].logical_size.is_none() {
+        return Err(failure("captured output has no known logical size"));
+    }
     capture_output(&mut queue, &mut state, index)
 }
 
