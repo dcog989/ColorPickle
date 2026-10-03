@@ -109,7 +109,11 @@ pub fn capture() -> CaptureResult<Capture> {
 }
 
 pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
-    let cursor = x11::pointer_position();
+    let cursor = if is_x11() {
+        x11::pointer_position()
+    } else {
+        None
+    };
     let mut last_error = None;
     let mut progress = Some(progress);
     for backend in BACKENDS {
