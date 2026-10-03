@@ -2,6 +2,34 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.3.0 - 2026-10-03
+#### Features
+- (**capture**) target the overlay at the captured output - (24e547e) - dcog989
+- (**ui**) default main window color to okhsl(116 78% 63%) - (3c64de4) - dcog989
+#### Bug Fixes
+- (**capture**) error when the ext-image output's logical size is unknown - (1ba88f3) - dcog989
+- (**capture**) reject a short stride in the ext-image frame reader - (a50681f) - dcog989
+- (**capture**) query the pointer only on X11 - (41f15d1) - dcog989
+- (**packaging**) disable startup notification so the launch-feedback logo is not captured - (d714be9) - dcog989
+- (**ui**) dismiss picker before dereferencing pointer - (dcdddcf) - dcog989
+#### Performance Improvements
+- (**ui**) update only color-derived visuals while dragging - (5a9db62) - dcog989
+#### Documentation
+- readme tidy - (0df5b35) - dcog989
+#### Build system
+- (**dev**) apply the opt-level override to colorpickle itself - (fe27933) - dcog989
+#### Refactoring
+- (**capture**) query the pointer lazily per backend - (62d89dd) - dcog989
+- change default color l - (dd5101f) - dcog989
+#### Miscellaneous Chores
+- updates - (3a65a86) - dcog989
+- updates - (7464ed0) - dcog989
+- readme install instructions - (218da0c) - dcog989
+- updates - (99b67df) - dcog989
+- ignore packaging/aur - (36ae154) - dcog989
+
+- - -
+
 ## v0.2.3 - 2026-09-21
 #### Bug Fixes
 - (**ci**) attach package files to the release - (9cfc299) - dcog989
