@@ -78,6 +78,7 @@ pub struct Capture {
 struct Backend {
     source: CaptureSource,
     available: fn() -> bool,
+    cursor: fn() -> Option<Point>,
     run: fn(Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)>,
 }
 
@@ -85,35 +86,38 @@ const BACKENDS: &[Backend] = &[
     Backend {
         source: CaptureSource::KWin,
         available: is_kde,
+        cursor: no_cursor,
         run: kde::capture,
     },
     Backend {
         source: CaptureSource::ExtImage,
         available: is_wayland,
+        cursor: no_cursor,
         run: ext_image::capture,
     },
     Backend {
         source: CaptureSource::X11,
         available: is_x11,
+        cursor: x11::pointer_position,
         run: x11::capture,
     },
     Backend {
         source: CaptureSource::Portal,
         available: is_wayland,
+        cursor: no_cursor,
         run: wayland::capture,
     },
 ];
+
+fn no_cursor() -> Option<Point> {
+    None
+}
 
 pub fn capture() -> CaptureResult<Capture> {
     capture_with(|| {})
 }
 
 pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
-    let cursor = if is_x11() {
-        x11::pointer_position()
-    } else {
-        None
-    };
     let mut last_error = None;
     let mut progress = Some(progress);
     for backend in BACKENDS {
@@ -125,6 +129,7 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
         {
             notify();
         }
+        let cursor = (backend.cursor)();
         match (backend.run)(cursor) {
             Ok((image, output)) => {
                 if image.width() == 0 || image.height() == 0 {
