@@ -5,6 +5,7 @@ Comment=Pick a color from anywhere on screen
 Exec=/usr/bin/colorpickle
 Icon=colorpickle
 Terminal=false
+StartupNotify=false
 Categories=Graphics;Utility;
 Keywords=color;colour;picker;eyedropper;
 Actions=Pick;
