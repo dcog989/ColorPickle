@@ -155,7 +155,7 @@ impl MainWindow {
 }
 
 impl eframe::App for MainWindow {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.now = ctx.input(|input| input.time);
 
@@ -187,7 +187,7 @@ impl eframe::App for MainWindow {
             self.open_picker(&ctx);
         }
 
-        if let Some(event) = self.picker.update(&ctx) {
+        if let Some(event) = self.picker.update(&ctx, frame) {
             self.handle_event(event);
         }
 

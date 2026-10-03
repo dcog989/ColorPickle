@@ -5,7 +5,7 @@ use image::RgbaImage;
 use zbus::blocking::{Connection, Proxy};
 use zbus::zvariant::{DynamicTuple, Fd, OwnedValue};
 
-use crate::capture::{CaptureError, CaptureResult, Point};
+use crate::capture::{CaptureError, CaptureResult, OutputInfo, Point};
 
 const SERVICE: &str = "org.kde.KWin.ScreenShot2";
 const PATH: &str = "/org/kde/KWin/ScreenShot2";
@@ -17,6 +17,7 @@ const KEY_WIDTH: &str = "width";
 const KEY_HEIGHT: &str = "height";
 const KEY_STRIDE: &str = "stride";
 const KEY_FORMAT: &str = "format";
+const KEY_SCREEN: &str = "screen";
 
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
@@ -28,11 +29,11 @@ const FORMAT_RGBX8888: u32 = 16;
 const FORMAT_RGBA8888: u32 = 17;
 const FORMAT_RGBA8888_PREMULTIPLIED: u32 = 18;
 
-pub fn capture(_cursor: Option<Point>) -> CaptureResult<RgbaImage> {
+pub fn capture(_cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> {
     capture_active_screen()
 }
 
-fn capture_active_screen() -> CaptureResult<RgbaImage> {
+fn capture_active_screen() -> CaptureResult<(RgbaImage, OutputInfo)> {
     tracing::debug!("kwin: connecting to ScreenShot2");
     let connection = Connection::session()?;
     let proxy = Proxy::new(&connection, SERVICE, PATH, INTERFACE)?;
@@ -50,6 +51,11 @@ fn capture_active_screen() -> CaptureResult<RgbaImage> {
     let height = get_u32(&reply, KEY_HEIGHT)?;
     let stride = get_u32(&reply, KEY_STRIDE)?;
     let format = get_u32(&reply, KEY_FORMAT)?;
+    let output = OutputInfo {
+        name: get_string(&reply, KEY_SCREEN),
+        size: Some((width, height)),
+        ..OutputInfo::default()
+    };
 
     tracing::info!(
         width,
@@ -64,13 +70,17 @@ fn capture_active_screen() -> CaptureResult<RgbaImage> {
     reader.read_exact(&mut buffer)?;
     tracing::debug!("kwin: pixel read complete");
 
-    repack(buffer, width, height, stride, format)
+    repack(buffer, width, height, stride, format).map(|image| (image, output))
 }
 
 fn get_u32(map: &HashMap<String, OwnedValue>, key: &str) -> CaptureResult<u32> {
     map.get(key)
         .and_then(|value| value.downcast_ref::<u32>().ok())
         .ok_or_else(|| CaptureError::MalformedReply(key.to_owned()))
+}
+
+fn get_string(map: &HashMap<String, OwnedValue>, key: &str) -> Option<String> {
+    map.get(key).and_then(|value| value.downcast_ref().ok())
 }
 
 #[derive(Clone, Copy)]

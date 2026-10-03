@@ -30,7 +30,7 @@ use ext_image_copy_capture_manager_v1::{ExtImageCopyCaptureManagerV1, Options};
 use ext_image_copy_capture_session_v1::ExtImageCopyCaptureSessionV1;
 use ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
 
-use crate::capture::{CaptureError, CaptureResult, Point};
+use crate::capture::{CaptureError, CaptureResult, OutputInfo, Point};
 
 const BYTES_PER_PIXEL: usize = 4;
 const OPAQUE: u8 = 255;
@@ -42,6 +42,7 @@ const DISPATCH_TIMEOUT: Duration = Duration::from_secs(2);
 struct OutputState {
     output: wl_output::WlOutput,
     xdg_output: Option<ZxdgOutputV1>,
+    name: Option<String>,
     position: (i32, i32),
     logical_size: Option<(u32, u32)>,
     transform: wl_output::Transform,
@@ -56,6 +57,14 @@ impl OutputState {
         };
         let (x, y) = self.position;
         point.x >= x && point.x < x + width as i32 && point.y >= y && point.y < y + height as i32
+    }
+
+    fn info(&self) -> OutputInfo {
+        OutputInfo {
+            name: self.name.clone(),
+            position: Some(self.position),
+            size: self.logical_size,
+        }
     }
 }
 
@@ -97,7 +106,7 @@ impl State {
     }
 }
 
-pub fn capture(cursor: Option<Point>) -> CaptureResult<RgbaImage> {
+pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> {
     let connection = Connection::connect_to_env().map_err(failure)?;
     let (globals, mut queue) = registry_queue_init::<State>(&connection).map_err(failure)?;
     let qh = queue.handle();
@@ -123,6 +132,7 @@ pub fn capture(cursor: Option<Point>) -> CaptureResult<RgbaImage> {
             state.outputs.push(OutputState {
                 output,
                 xdg_output: None,
+                name: None,
                 position: (0, 0),
                 logical_size: None,
                 transform: wl_output::Transform::Normal,
@@ -171,7 +181,7 @@ fn capture_output(
     queue: &mut EventQueue<State>,
     state: &mut State,
     index: usize,
-) -> CaptureResult<RgbaImage> {
+) -> CaptureResult<(RgbaImage, OutputInfo)> {
     let output = state.outputs[index].output.clone();
 
     let source = state
@@ -263,7 +273,7 @@ fn capture_output(
         }
         _ => image,
     };
-    Ok(image)
+    Ok((image, output.info()))
 }
 
 fn bind<T>(
@@ -491,6 +501,7 @@ impl Dispatch<wl_output::WlOutput, ()> for State {
                 output.mode = Some((width, height));
             }
             wl_output::Event::Scale { factor } => output.scale = factor,
+            wl_output::Event::Name { name } => output.name = Some(name),
             _ => {}
         }
     }

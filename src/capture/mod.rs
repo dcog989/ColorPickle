@@ -61,16 +61,24 @@ pub struct Point {
     pub y: i32,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct OutputInfo {
+    pub name: Option<String>,
+    pub position: Option<(i32, i32)>,
+    pub size: Option<(u32, u32)>,
+}
+
 #[derive(Debug)]
 pub struct Capture {
     pub image: RgbaImage,
     pub source: CaptureSource,
+    pub output: OutputInfo,
 }
 
 struct Backend {
     source: CaptureSource,
     available: fn() -> bool,
-    run: fn(Option<Point>) -> CaptureResult<RgbaImage>,
+    run: fn(Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)>,
 }
 
 const BACKENDS: &[Backend] = &[
@@ -114,7 +122,7 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
             notify();
         }
         match (backend.run)(cursor) {
-            Ok(image) => {
+            Ok((image, output)) => {
                 if image.width() == 0 || image.height() == 0 {
                     return Err(CaptureError::EmptyFrame);
                 }
@@ -122,6 +130,7 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
                 return Ok(Capture {
                     image,
                     source: backend.source,
+                    output,
                 });
             }
             Err(error) => {

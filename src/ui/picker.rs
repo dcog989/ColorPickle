@@ -80,7 +80,7 @@ impl PickerController {
         true
     }
 
-    pub fn update(&mut self, ctx: &egui::Context) -> Option<Event> {
+    pub fn update(&mut self, ctx: &egui::Context, frame: &eframe::Frame) -> Option<Event> {
         if let Some(receiver) = self.capture.take() {
             match receiver.try_recv() {
                 Ok(CaptureUpdate::Finished(Ok(captured))) => {
@@ -125,7 +125,7 @@ impl PickerController {
         }
 
         if let Some(mut session) = self.session.take() {
-            match overlay::show(ctx, &mut session, self.viewport) {
+            match overlay::show(ctx, frame, &mut session, self.viewport) {
                 Some(outcome) => {
                     tracing::info!(?outcome, "picker: overlay closed");
                     show_main_window(ctx);

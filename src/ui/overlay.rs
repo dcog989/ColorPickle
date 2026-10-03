@@ -41,6 +41,7 @@ pub struct Session {
     image: Arc<egui::ColorImage>,
     texture: Option<egui::TextureHandle>,
     uses_portal_fallback: bool,
+    output: capture::OutputInfo,
     drag_anchor: Option<egui::Pos2>,
 }
 
@@ -58,6 +59,7 @@ impl Session {
             image,
             texture: None,
             uses_portal_fallback: captured.source.uses_portal_fallback(),
+            output: captured.output,
             drag_anchor: None,
         }
     }
@@ -110,11 +112,13 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 }
 
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
-    let session = Session::new(capture::capture()?);
+    let captured = capture::capture()?;
+    let output = captured.output.clone();
+    let session = Session::new(captured);
     let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
 
     let options = eframe::NativeOptions {
-        viewport: viewport_builder(),
+        viewport: viewport_builder(None),
         persist_window: false,
         ..Default::default()
     };
@@ -123,7 +127,12 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     eframe::run_native(
         PICKER_TITLE,
         options,
-        Box::new(move |_cc| {
+        Box::new(move |cc| {
+            let monitor = cc
+                .winit_window()
+                .and_then(|window| resolve_monitor(window, &output));
+            cc.egui_ctx
+                .send_viewport_cmd(egui::ViewportCommand::SetMonitor(monitor.unwrap_or(0)));
             Ok(Box::new(StandalonePicker {
                 session,
                 config,
@@ -138,21 +147,48 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
 
 pub fn show(
     ctx: &egui::Context,
+    frame: &eframe::Frame,
     session: &mut Session,
     viewport: egui::ViewportId,
 ) -> Option<PickOutcome> {
-    ctx.show_viewport_immediate(viewport, viewport_builder(), |ui, _class| {
+    let output = session.output.clone();
+    let monitor = frame
+        .winit_window()
+        .and_then(|window| resolve_monitor(window, &output));
+    ctx.show_viewport_immediate(viewport, viewport_builder(monitor), |ui, _class| {
         draw(ui.ctx(), session)
     })
 }
 
-fn viewport_builder() -> egui::ViewportBuilder {
-    egui::ViewportBuilder::default()
+fn viewport_builder(monitor: Option<usize>) -> egui::ViewportBuilder {
+    let builder = egui::ViewportBuilder::default()
         .with_title(PICKER_TITLE)
         .with_app_id(PICKER_VIEWPORT)
         .with_fullscreen(true)
         .with_decorations(false)
-        .with_always_on_top()
+        .with_always_on_top();
+    match monitor {
+        Some(index) => builder.with_monitor(index),
+        None => builder,
+    }
+}
+
+fn resolve_monitor(window: &winit::window::Window, output: &capture::OutputInfo) -> Option<usize> {
+    let monitors: Vec<winit::monitor::MonitorHandle> = window.available_monitors().collect();
+    if let Some(name) = &output.name
+        && let Some(index) = monitors
+            .iter()
+            .position(|monitor| monitor.name().as_ref() == Some(name))
+    {
+        return Some(index);
+    }
+    if let Some(position) = output.position {
+        let (x, y) = position;
+        return monitors
+            .iter()
+            .position(|monitor| monitor.position().x == x && monitor.position().y == y);
+    }
+    None
 }
 
 struct StandalonePicker {
