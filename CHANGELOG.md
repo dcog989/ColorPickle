@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.4.0 - 2026-10-06
+#### Features
+- (**history**) persist palette history across restarts - (715abf6) - dcog989
+- (**picker**) show selected color value beside the magnifier - (717f1b4) - dcog989
+#### Documentation
+- readme refined - (b05f1f2) - dcog989
+#### Miscellaneous Chores
+- updates - (f882ec3) - dcog989
+- add logo to root - (d02dc95) - dcog989
+
+- - -
+
 ## v0.3.0 - 2026-10-03
 #### Features
 - (**capture**) target the overlay at the captured output - (24e547e) - dcog989
