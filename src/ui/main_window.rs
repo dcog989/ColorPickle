@@ -63,6 +63,7 @@ pub struct MainWindow {
 
 impl MainWindow {
     pub fn new(config: Config) -> Self {
+        let picker = PickerController::new(config.default_format);
         Self {
             config,
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
@@ -74,7 +75,7 @@ impl MainWindow {
             toast: None,
             now: 0.0,
             pending_toast: None,
-            picker: PickerController::new(),
+            picker,
             applied_theme: None,
             applied_theme_color: None,
             applied_input: None,
@@ -133,7 +134,7 @@ impl MainWindow {
     }
 
     fn open_picker(&mut self, ctx: &egui::Context) {
-        if self.picker.request(ctx) {
+        if self.picker.request(ctx, self.config.default_format) {
             self.set_toast("Capturing screen...");
         }
     }

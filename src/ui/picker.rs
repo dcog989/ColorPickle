@@ -4,6 +4,7 @@ use std::time::Duration;
 use eframe::egui;
 
 use crate::capture;
+use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
 use crate::ui::overlay::{self, PickOutcome};
 
@@ -32,10 +33,11 @@ pub struct PickerController {
     waiting_for_user: bool,
     generation: u64,
     viewport: egui::ViewportId,
+    format: ColorFormat,
 }
 
 impl PickerController {
-    pub fn new() -> Self {
+    pub fn new(format: ColorFormat) -> Self {
         Self {
             session: None,
             capture: None,
@@ -43,6 +45,7 @@ impl PickerController {
             waiting_for_user: false,
             generation: 0,
             viewport: egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, 0_u64)),
+            format,
         }
     }
 
@@ -50,10 +53,11 @@ impl PickerController {
         self.session.is_some() || self.capture.is_some()
     }
 
-    pub fn request(&mut self, ctx: &egui::Context) -> bool {
+    pub fn request(&mut self, ctx: &egui::Context, format: ColorFormat) -> bool {
         if self.is_busy() {
             return false;
         }
+        self.format = format;
         self.generation = self.generation.wrapping_add(1);
         self.viewport = egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, self.generation));
         self.capture_started = ctx.input(|input| input.time);
@@ -85,7 +89,7 @@ impl PickerController {
             match receiver.try_recv() {
                 Ok(CaptureUpdate::Finished(Ok(captured))) => {
                     tracing::info!("picker: frame ready, showing overlay");
-                    self.session = Some(overlay::Session::new(captured));
+                    self.session = Some(overlay::Session::new(captured, self.format));
                     // Run another frame immediately so the overlay is shown.
                     ctx.request_repaint();
                     return Some(Event::Ready);

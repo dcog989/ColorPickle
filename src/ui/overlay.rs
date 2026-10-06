@@ -8,9 +8,11 @@ use palette::Srgb;
 
 use crate::capture;
 use crate::clipboard;
+use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
 use crate::config::Config;
 use crate::ui::pixels::{average_rgb8, pixel_at, pixel_bounds};
+use crate::ui::theme;
 
 const PICKER_TITLE: &str = "ColorPickle";
 const PICKER_VIEWPORT: &str = "colorpickle-picker";
@@ -23,6 +25,15 @@ const CROSSHAIR_WIDTH: f32 = 1.0;
 const DRAG_THRESHOLD: f32 = 4.0;
 const BANNER_FONT_SIZE: f32 = 14.0;
 const BANNER_TOP_MARGIN: f32 = 16.0;
+const VALUE_FONT_SIZE: f32 = 15.0;
+const VALUE_GAP: f32 = 10.0;
+const VALUE_MARGIN: f32 = 8.0;
+const VALUE_PADDING: f32 = 8.0;
+const VALUE_SWATCH_SIZE: f32 = 16.0;
+const VALUE_CORNER_RADIUS: u8 = 6;
+const VALUE_SWATCH_RADIUS: u8 = 2;
+const VALUE_CHIP_FILL: egui::Color32 = egui::Color32::from_rgba_unmultiplied_const(0, 0, 0, 200);
+const VALUE_TEXT_COLOR: egui::Color32 = egui::Color32::WHITE;
 const STROKE_COLOR: egui::Color32 = egui::Color32::WHITE;
 const SHADOW_COLOR: egui::Color32 = egui::Color32::BLACK;
 const SELECTION_FILL: egui::Color32 =
@@ -43,10 +54,11 @@ pub struct Session {
     uses_portal_fallback: bool,
     output: capture::OutputInfo,
     drag_anchor: Option<egui::Pos2>,
+    format: ColorFormat,
 }
 
 impl Session {
-    pub fn new(captured: capture::Capture) -> Self {
+    pub fn new(captured: capture::Capture, format: ColorFormat) -> Self {
         let size = [
             captured.image.width() as usize,
             captured.image.height() as usize,
@@ -61,6 +73,7 @@ impl Session {
             uses_portal_fallback: captured.source.uses_portal_fallback(),
             output: captured.output,
             drag_anchor: None,
+            format,
         }
     }
 
@@ -114,7 +127,7 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     let captured = capture::capture()?;
     let output = captured.output.clone();
-    let session = Session::new(captured);
+    let session = Session::new(captured, config.default_format);
     let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
 
     let options = eframe::NativeOptions {
@@ -256,6 +269,21 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     });
     let dragging = region.is_some();
 
+    let color = match region {
+        Some(rect) => {
+            let bounds = pixel_bounds(
+                &session.image,
+                uv_at(screen, rect.min),
+                uv_at(screen, rect.max),
+            );
+            average_color(&session.image, bounds)
+        }
+        None => {
+            let (pixel_x, pixel_y) = pixel_at(&session.image, uv_at(screen, pointer));
+            average_color(&session.image, (pixel_x, pixel_y, pixel_x, pixel_y))
+        }
+    };
+
     let magnifier_center = magnifier_center(screen, pointer, dragging);
     draw_magnifier(
         &painter,
@@ -264,6 +292,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         uv_at(screen, pointer),
         egui::vec2(session.image.size[0] as f32, session.image.size[1] as f32),
     );
+    draw_value(&painter, screen, magnifier_center, color, session.format);
     if let Some(rect) = region {
         draw_selection(&painter, rect);
     } else {
@@ -275,20 +304,6 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
 
     if primary_released {
         session.drag_anchor = None;
-        let color = match region {
-            Some(rect) => {
-                let bounds = pixel_bounds(
-                    &session.image,
-                    uv_at(screen, rect.min),
-                    uv_at(screen, rect.max),
-                );
-                average_color(&session.image, bounds)
-            }
-            None => {
-                let (pixel_x, pixel_y) = pixel_at(&session.image, uv_at(screen, pointer));
-                average_color(&session.image, (pixel_x, pixel_y, pixel_x, pixel_y))
-            }
-        };
         return Some(PickOutcome::Picked(color));
     }
     if !primary_down {
@@ -358,6 +373,72 @@ fn draw_magnifier(
         egui::Stroke::new(CROSSHAIR_WIDTH, SHADOW_COLOR),
         egui::StrokeKind::Outside,
     );
+}
+
+fn draw_value(
+    painter: &egui::Painter,
+    screen: egui::Rect,
+    magnifier_center: egui::Pos2,
+    color: Okhsl,
+    format: ColorFormat,
+) {
+    let galley = painter.layout_no_wrap(
+        format.format(color),
+        egui::FontId::proportional(VALUE_FONT_SIZE),
+        VALUE_TEXT_COLOR,
+    );
+    let text_size = galley.size();
+    let chip_size = egui::vec2(
+        text_size.x + VALUE_SWATCH_SIZE + VALUE_PADDING * 3.0,
+        text_size.y.max(VALUE_SWATCH_SIZE) + VALUE_PADDING * 2.0,
+    );
+
+    let half = MAGNIFIER_SIZE / 2.0 + VALUE_GAP;
+    let below = magnifier_center.y + half + chip_size.y / 2.0;
+    let above = magnifier_center.y - half - chip_size.y / 2.0;
+    let highest = screen.top() + VALUE_MARGIN + chip_size.y / 2.0;
+    let lowest = screen.bottom() - VALUE_MARGIN - chip_size.y / 2.0;
+    let y = if below <= lowest {
+        below
+    } else {
+        above.max(highest)
+    };
+    let x = magnifier_center.x.clamp(
+        screen.left() + VALUE_MARGIN + chip_size.x / 2.0,
+        screen.right() - VALUE_MARGIN - chip_size.x / 2.0,
+    );
+    let chip = egui::Rect::from_center_size(egui::pos2(x, y), chip_size);
+
+    painter.rect_filled(
+        chip,
+        egui::CornerRadius::same(VALUE_CORNER_RADIUS),
+        VALUE_CHIP_FILL,
+    );
+
+    let swatch = egui::Rect::from_center_size(
+        egui::pos2(
+            chip.left() + VALUE_PADDING + VALUE_SWATCH_SIZE / 2.0,
+            chip.center().y,
+        ),
+        egui::vec2(VALUE_SWATCH_SIZE, VALUE_SWATCH_SIZE),
+    );
+    painter.rect_filled(
+        swatch,
+        egui::CornerRadius::same(VALUE_SWATCH_RADIUS),
+        theme::color32(color),
+    );
+    painter.rect_stroke(
+        swatch,
+        egui::CornerRadius::same(VALUE_SWATCH_RADIUS),
+        egui::Stroke::new(CROSSHAIR_WIDTH, STROKE_COLOR),
+        egui::StrokeKind::Inside,
+    );
+
+    let text_pos = egui::pos2(
+        swatch.right() + VALUE_PADDING,
+        chip.center().y - text_size.y / 2.0,
+    );
+    painter.galley(text_pos, galley, VALUE_TEXT_COLOR);
 }
 
 fn draw_selection(painter: &egui::Painter, rect: egui::Rect) {
