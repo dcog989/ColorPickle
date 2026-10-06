@@ -35,6 +35,7 @@ pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
     pub theme: Theme,
+    pub history: Vec<[u8; 3]>,
 }
 
 impl Config {

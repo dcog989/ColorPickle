@@ -64,13 +64,14 @@ pub struct MainWindow {
 impl MainWindow {
     pub fn new(config: Config) -> Self {
         let picker = PickerController::new(config.default_format);
+        let history = History::from_srgb8(&config.history);
         Self {
             config,
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
             input: String::new(),
             input_editing: false,
             input_dirty: false,
-            history: History::default(),
+            history,
             harmony: Harmony::default(),
             toast: None,
             now: 0.0,
@@ -86,6 +87,7 @@ impl MainWindow {
     pub fn with_initial(mut self, color: Okhsl) -> Self {
         self.color = color;
         self.history.push(color);
+        self.persist_config();
         let value = self.config.format(color);
         self.pending_toast = Some(format!("Picked {value}"));
         self
@@ -109,6 +111,7 @@ impl MainWindow {
     }
 
     fn persist_config(&mut self) {
+        self.config.history = self.history.to_srgb8();
         if let Err(error) = self.config.save() {
             self.set_toast(format!("Could not save settings: {error}"));
         }
@@ -147,6 +150,7 @@ impl MainWindow {
             Event::Picked(color) => {
                 self.color = color;
                 self.history.push(color);
+                self.persist_config();
                 match clipboard::copy_color(self.config.default_format, color) {
                     Ok(value) => self.set_toast(format!("Picked {value}")),
                     Err(error) => self.set_toast(format!("Copy failed: {error}")),
@@ -290,6 +294,7 @@ impl MainWindow {
                 ui.horizontal(|ui| {
                     if widgets::clear_history(ui) {
                         self.history.clear();
+                        self.persist_config();
                     }
                     let mut selected = None;
                     for &color in self.history.colors() {
