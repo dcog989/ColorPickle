@@ -10,6 +10,8 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: -C link-arg=-fuse-ld=mold
 
 jobs:
   packages:
@@ -27,7 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pkg-config libwayland-dev libxkbcommon-dev
+            pkg-config libwayland-dev libxkbcommon-dev mold clang
       - name: Install linuxdeploy
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage

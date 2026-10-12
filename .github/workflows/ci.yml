@@ -7,6 +7,10 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  # Same linker setup as a dev machine's ~/.cargo/config.toml, without committing
+  # clang/mold into the repo where clean-chroot package builds would break on it.
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
+  CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS: -C link-arg=-fuse-ld=mold
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -36,7 +40,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pkg-config libwayland-dev libxkbcommon-dev
+            pkg-config libwayland-dev libxkbcommon-dev mold clang
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   test:
@@ -51,5 +55,5 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pkg-config libwayland-dev libxkbcommon-dev
+            pkg-config libwayland-dev libxkbcommon-dev mold clang
       - run: cargo test --workspace
