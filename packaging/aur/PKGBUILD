@@ -11,7 +11,7 @@ depends=('gcc-libs' 'glibc' 'libx11' 'libxcb' 'libxcursor' 'libxi' 'libxkbcommon
 optdepends=('xdg-desktop-portal: screenshot fallback')
 makedepends=('pkgconf' 'rust')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/dcog989/ColorPickle/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('bf136d41d8f74dbeea849c1b8cbadf0b5bc8fdc0551a808de96c318a8ef9e94c')
 
 prepare() {
     cd "$_reponame-$pkgver"

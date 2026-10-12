@@ -22,6 +22,6 @@ pkgbase = colorpickle
 	depends = wayland
 	optdepends = xdg-desktop-portal: screenshot fallback
 	source = colorpickle-0.4.0.tar.gz::https://github.com/dcog989/ColorPickle/archive/refs/tags/v0.4.0.tar.gz
-	sha256sums = SKIP
+	sha256sums = bf136d41d8f74dbeea849c1b8cbadf0b5bc8fdc0551a808de96c318a8ef9e94c
 
 pkgname = colorpickle
