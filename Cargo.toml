@@ -67,6 +67,14 @@ winit = "0.30"
 x11rb = { version = "0.14", features = ["image", "randr"] }
 zbus = "5.19"
 
+[profile.dev]
+debug = 1  # line tables only: enough for backtraces, cheaper to write and link than full DWARF
+
+# Compile dependencies optimised, keep this crate's builds cheap. Covers the egui/wgpu
+# repaint path, which is unusably slow at opt-level 0.
+[profile.dev.package."*"]
+opt-level = 2
+
 [profile.dev.package.colorpickle]
 opt-level = 2  # the per-pixel loops in overlay.rs and ext_image.rs are painful at opt-level 0
 
