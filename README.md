@@ -46,6 +46,8 @@ sudo update-desktop-database /usr/share/applications
 
 ## Build
 
+Rust 1.99 or newer; `rust-toolchain.toml` pins that version for rustup users.
+
 ```sh
 cargo build                              # debug build
 cargo check                              # type-check only
@@ -70,4 +72,4 @@ packaging/build.sh                           # .deb, .rpm and AppImage into targ
 
 ## License
 
-GPL-3.0-only. See [LICENSE](LICENSE).
+[GNU General Public License v3](LICENSE)
