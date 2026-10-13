@@ -66,7 +66,7 @@ fn capture_once() -> CaptureResult<RgbaImage> {
     if let Err(error) = std::fs::remove_file(&path) {
         tracing::warn!(?error, path = ?path, "failed to remove the portal screenshot");
     }
-    Ok(image?)
+    image
 }
 
 /// The portal does not guarantee a `.png` suffix, so the format is guessed from

@@ -76,7 +76,7 @@ pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> 
     let layout = PixelLayout::from_visual_type(*visual)?;
 
     let mut canvas = RgbaImage::new(u32::from(width), u32::from(height));
-    let (pixels, _) = (&mut *canvas).as_chunks_mut::<BYTES_PER_PIXEL>();
+    let (pixels, _) = canvas.as_chunks_mut::<BYTES_PER_PIXEL>();
     for (row, pixel_y) in pixels.chunks_mut(usize::from(width)).zip(0..height) {
         for (pixel, pixel_x) in row.iter_mut().zip(0..width) {
             let (red, green, blue) = layout.decode(image.get_pixel(pixel_x, pixel_y));
