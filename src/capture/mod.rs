@@ -92,7 +92,9 @@ const BACKENDS: &[Backend] = &[
     Backend {
         source: CaptureSource::ExtImage,
         available: is_wayland,
-        cursor: no_cursor,
+        // Wayland exposes no global pointer, but XWayland does, and its root
+        // coordinates share the compositor's logical output layout.
+        cursor: x11::pointer_position,
         run: ext_image::capture,
     },
     Backend {
