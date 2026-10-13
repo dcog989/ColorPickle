@@ -2,6 +2,58 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.5.0 - 2026-10-13
+#### Features
+- (**config**) add log_level config key with CLI and RUST_LOG override - (ff459d3) - dcog989
+- (**logging**) add rotating file log and --log-level - (d20bf3f) - dcog989
+- (**logging**) add rotating file log and --log-level - (02be175) - dcog989
+- (**logging**) add rotating file log and --log-level - (5c80e7e) - dcog989
+- (**ui**) add-colour to a '+' button beside the input field - (0d5ce24) - dcog989
+- (**ui**) remove palette history swatches via a hover 'x' - (5a50c9e) - dcog989
+- (**ui**) show swatch tooltips in the active color format - (0ff0129) - dcog989
+- (**ui**) double the palette history swatch size - (ba571be) - dcog989
+- (**ui**) add about panel with logo, version and file paths - (693a953) - dcog989
+#### Bug Fixes
+- (**capture**) apply clippy fixes to the portal and X11 paths - (0191e8c) - dcog989
+- (**capture**) try the next backend when one returns an empty frame - (061cc9c) - dcog989
+- (**capture**) guess the portal image format from the file contents - (2f55e38) - dcog989
+- (**capture**) use a named case struct in the orientation test table - (5631428) - dcog989
+- (**capture**) crop the portal frame to the pointer's monitor - (ae29545) - dcog989
+- (**capture**) select the ext-image output from the pointer via XWayland - (9135a1c) - dcog989
+- (**color**) reject non-finite numbers in the color parser - (6808268) - dcog989
+#### Performance Improvements
+- (**build**) trim unused eframe default features and prune the lockfile - (651e0d1) - dcog989
+- (**build**) optimise dependencies and emit line-table debug info in dev profile - (dc2f47a) - dcog989
+- (**capture**) write X11 pixels straight into the RgbaImage buffer - (338417a) - dcog989
+- (**picker**) cache the drag average and repaint only on input while picking - (e8cec30) - dcog989
+#### Documentation
+- agents.md refined - (f866acd) - dcog989
+- agents.md refined - (96a8474) - dcog989
+#### Tests
+- (**capture**) pin orientation against all eight frame transforms - (ab232bb) - dcog989
+- (**config**) pin config round-trip and history de-duplication - (59b8d00) - dcog989
+#### Build system
+- (**aur**) verify the source tarball checksum and narrow the aur ignore rules - (4e200d6) - dcog989
+- (**ci**) link with mold in the ci and release workflows - (081fd77) - dcog989
+- (**ci**) reuse cached cargo registry and target in the release packaging job - (c04f00e) - dcog989
+- (**release**) stop bumping the aur recipe from cog pre-bump hooks - (3d83be2) - dcog989
+- align lefthook with ci commands and mark the package as its own workspace - (a581f8c) - dcog989
+- pin the toolchain to 1.99.0 and verify the msrv in ci - (f6e1024) - dcog989
+#### Continuous Integration
+- cache cargo registry and target in clippy and test jobs - (dbcc7c8) - dcog989
+#### Refactoring
+- (**capture**) call pollster::block_on directly - (272fcf6) - dcog989
+- (**capture**) decode portal file URIs with percent-encoding instead of url - (1ff2d83) - dcog989
+- (**capture**) drop the unused capture entry point - (8894eec) - dcog989
+- (**capture**) share one stride-compaction and swizzle helper between backends - (13cc688) - dcog989
+- (**config**) move pick history to XDG state dir - (fd9053a) - dcog989
+- (**ui**) route picker-first through the window's picker path - (a001c28) - dcog989
+#### Miscellaneous Chores
+- cargo fmt - (a2821a0) - dcog989
+- updates - (2ee000f) - dcog989
+
+- - -
+
 ## v0.4.0 - 2026-10-06
 #### Features
 - (**history**) persist palette history across restarts - (715abf6) - dcog989
