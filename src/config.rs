@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use clap::ValueEnum;
@@ -53,10 +53,14 @@ impl Config {
             tracing::warn!("no config directory available; using defaults");
             return Self::default();
         };
+        Self::load_from(&path)
+    }
+
+    fn load_from(path: &Path) -> Self {
         if !path.exists() {
             return Self::default();
         }
-        let text = match std::fs::read_to_string(&path) {
+        let text = match std::fs::read_to_string(path) {
             Ok(text) => text,
             Err(error) => {
                 tracing::warn!(
@@ -82,6 +86,10 @@ impl Config {
 
     pub fn save(&self) -> Result<()> {
         let path = Self::path().context("no config directory available")?;
+        self.save_to(&path)
+    }
+
+    fn save_to(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create {}", parent.display()))?;
@@ -90,7 +98,45 @@ impl Config {
         let temporary = path.with_file_name(format!("{CONFIG_FILE}.tmp"));
         std::fs::write(&temporary, text)
             .with_context(|| format!("failed to write {}", temporary.display()))?;
-        std::fs::rename(&temporary, &path)
+        std::fs::rename(&temporary, path)
             .with_context(|| format!("failed to replace config at {}", path.display()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CONFIG_FILE, Config, LaunchMode, Theme};
+    use crate::color::ColorFormat;
+
+    fn temporary_directory(name: &str) -> std::path::PathBuf {
+        let directory = std::env::temp_dir().join(format!(
+            "colorpickle-test-{}-{name}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&directory).unwrap();
+        directory
+    }
+
+    #[test]
+    fn saves_and_loads_a_round_trip() {
+        let directory = temporary_directory("round-trip");
+        let path = directory.join(CONFIG_FILE);
+        let config = Config {
+            launch_mode: LaunchMode::PickerFirst,
+            default_format: ColorFormat::Oklch,
+            theme: Theme::Dark,
+            history: vec![[1, 2, 3], [250, 128, 0]],
+        };
+
+        config.save_to(&path).unwrap();
+
+        assert_eq!(Config::load_from(&path), config);
+        assert!(!path.with_file_name(format!("{CONFIG_FILE}.tmp")).exists());
+        assert_eq!(
+            Config::load_from(&directory.join("absent.toml")),
+            Config::default()
+        );
+
+        std::fs::remove_dir_all(&directory).unwrap();
     }
 }
