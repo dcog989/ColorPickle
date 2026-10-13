@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.5.2 - 2026-10-13
+#### Bug Fixes
+- (**ci**) revert the rust-toolchain bump and pin it from dependabot - (e3d0927) - dcog989
+#### Build system
+- (**deps**) bump dtolnay/rust-toolchain from 1.99.0 to 1.120.0 - (92a658f) - dependabot[bot]
+
+- - -
+
 ## v0.5.1 - 2026-10-13
 #### Bug Fixes
 - (**ci**) install mold and clang in the msrv job - (b78e62e) - dcog989
