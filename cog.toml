@@ -2,10 +2,10 @@ tag_prefix = "v"
 branch_whitelist = ["main"]
 ignore_merge_commits = true
 
+# The AUR recipe is bumped by hand after the tag exists: pkgver needs the release
+# tarball's checksum, which cannot be computed before the tag is pushed.
 pre_bump_hooks = [
     "cargo set-version {{version}}",
-    "sed -i 's/^pkgver=.*/pkgver={{version}}/' packaging/aur/PKGBUILD",
-    "cd packaging/aur && makepkg --printsrcinfo > .SRCINFO",
 ]
 
 post_bump_hooks = [
