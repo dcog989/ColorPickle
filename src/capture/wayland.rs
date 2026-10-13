@@ -61,7 +61,7 @@ fn crop_to_monitor(image: RgbaImage, cursor: Option<Point>) -> (RgbaImage, Outpu
 }
 
 fn capture_once() -> CaptureResult<RgbaImage> {
-    let path = block_on(take_screenshot())?;
+    let path = pollster::block_on(take_screenshot())?;
     let image = image::open(&path).map(|image| image.into_rgba8());
     if let Err(error) = std::fs::remove_file(&path) {
         tracing::warn!(?error, path = ?path, "failed to remove the portal screenshot");
@@ -77,10 +77,6 @@ async fn take_screenshot() -> CaptureResult<PathBuf> {
         .await?
         .response()?;
     uri_to_path(response.uri().as_str())
-}
-
-fn block_on<F: std::future::Future>(future: F) -> F::Output {
-    pollster::block_on(future)
 }
 
 fn uri_to_path(uri: &str) -> CaptureResult<PathBuf> {
