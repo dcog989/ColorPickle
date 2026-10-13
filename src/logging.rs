@@ -51,28 +51,31 @@ pub fn init(level: LogLevel) -> Option<WorkerGuard> {
     let stderr_layer = fmt::layer()
         .with_writer(std::io::stderr)
         .with_ansi(std::io::stderr().is_terminal());
-    let subscriber = tracing_subscriber::registry().with(filter);
 
-    let Some(directory) = directory() else {
-        subscriber.with(stderr_layer).init();
-        eprintln!("colorpickle: no state directory available; logging to stderr only");
-        return None;
+    let directory = directory();
+    let (file, guard) = match directory.as_deref().map(appender) {
+        Some(Ok((writer, guard))) => (Some(writer), Some(guard)),
+        Some(Err(error)) => {
+            eprintln!("colorpickle: {error:#}; logging to stderr only");
+            (None, None)
+        }
+        None => {
+            eprintln!("colorpickle: no state directory available; logging to stderr only");
+            (None, None)
+        }
     };
+    let logging_to_file = file.is_some();
 
-    let file = appender(&directory).inspect_err(|error| {
-        eprintln!("colorpickle: {error:#}; logging to stderr only");
-    });
-    let Ok((writer, guard)) = file else {
-        subscriber.with(stderr_layer).init();
-        return None;
-    };
-
-    subscriber
-        .with(fmt::layer().with_writer(writer).with_ansi(false))
+    tracing_subscriber::registry()
+        .with(filter)
+        .with(file.map(|file| fmt::layer().with_writer(file).with_ansi(false)))
         .with(stderr_layer)
         .init();
-    tracing::info!(directory = %directory.display(), "logging to file");
-    Some(guard)
+
+    if logging_to_file && let Some(directory) = directory.as_deref() {
+        tracing::info!(directory = %directory.display(), "logging to file");
+    }
+    guard
 }
 
 /// `$XDG_STATE_HOME/colorpickle/log`, conventionally `~/.local/state/colorpickle/log`.
