@@ -172,3 +172,46 @@ fn is_wayland() -> bool {
 fn is_x11() -> bool {
     !is_wayland()
 }
+
+const BYTES_PER_PIXEL: usize = 4;
+const OPAQUE: u8 = 255;
+
+/// Channel order of a 4-byte source pixel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PixelOrder {
+    Rgba,
+    Bgra,
+}
+
+/// Drop row padding, force opaque alpha, and swizzle a 4-byte-per-pixel buffer
+/// to RGBA. `None` when `buffer` does not hold `stride * height` bytes with at
+/// least `width * BYTES_PER_PIXEL` bytes per row.
+pub fn compact_and_swizzle(
+    mut buffer: Vec<u8>,
+    width: u32,
+    height: u32,
+    stride: usize,
+    order: PixelOrder,
+) -> Option<RgbaImage> {
+    let row_bytes = width as usize * BYTES_PER_PIXEL;
+    if stride < row_bytes || buffer.len() < stride * height as usize {
+        return None;
+    }
+
+    if stride != row_bytes {
+        for row in 1..height as usize {
+            let source = row * stride;
+            buffer.copy_within(source..source + row_bytes, row * row_bytes);
+        }
+        buffer.truncate(height as usize * row_bytes);
+    }
+
+    for pixel in buffer.as_chunks_mut::<BYTES_PER_PIXEL>().0 {
+        if order == PixelOrder::Bgra {
+            pixel.swap(0, 2);
+        }
+        pixel[3] = OPAQUE;
+    }
+
+    RgbaImage::from_raw(width, height, buffer)
+}

@@ -5,7 +5,9 @@ use image::RgbaImage;
 use zbus::blocking::{Connection, Proxy};
 use zbus::zvariant::{DynamicTuple, Fd, OwnedValue};
 
-use crate::capture::{CaptureError, CaptureResult, OutputInfo, Point};
+use crate::capture::{
+    CaptureError, CaptureResult, OutputInfo, PixelOrder, Point, compact_and_swizzle,
+};
 
 const SERVICE: &str = "org.kde.KWin.ScreenShot2";
 const PATH: &str = "/org/kde/KWin/ScreenShot2";
@@ -18,9 +20,6 @@ const KEY_HEIGHT: &str = "height";
 const KEY_STRIDE: &str = "stride";
 const KEY_FORMAT: &str = "format";
 const KEY_SCREEN: &str = "screen";
-
-const BYTES_PER_PIXEL: usize = 4;
-const OPAQUE: u8 = 255;
 
 const FORMAT_RGB32: u32 = 4;
 const FORMAT_ARGB32: u32 = 5;
@@ -83,58 +82,24 @@ fn get_string(map: &HashMap<String, OwnedValue>, key: &str) -> Option<String> {
     map.get(key).and_then(|value| value.downcast_ref().ok())
 }
 
-#[derive(Clone, Copy)]
-enum PixelOrder {
-    Rgba,
-    Bgra,
-}
-
-impl PixelOrder {
-    fn from_qimage_format(format: u32) -> CaptureResult<Self> {
-        match format {
-            FORMAT_RGBX8888 | FORMAT_RGBA8888 | FORMAT_RGBA8888_PREMULTIPLIED => Ok(Self::Rgba),
-            FORMAT_RGB32 | FORMAT_ARGB32 | FORMAT_ARGB32_PREMULTIPLIED => Ok(Self::Bgra),
-            other => Err(CaptureError::UnsupportedFormat(other)),
-        }
-    }
-
-    fn rgb(self, pixel: &[u8]) -> [u8; 3] {
-        match self {
-            Self::Rgba => [pixel[0], pixel[1], pixel[2]],
-            Self::Bgra => [pixel[2], pixel[1], pixel[0]],
-        }
+fn pixel_order(format: u32) -> CaptureResult<PixelOrder> {
+    match format {
+        FORMAT_RGBX8888 | FORMAT_RGBA8888 | FORMAT_RGBA8888_PREMULTIPLIED => Ok(PixelOrder::Rgba),
+        FORMAT_RGB32 | FORMAT_ARGB32 | FORMAT_ARGB32_PREMULTIPLIED => Ok(PixelOrder::Bgra),
+        other => Err(CaptureError::UnsupportedFormat(other)),
     }
 }
 
 fn repack(
-    mut buffer: Vec<u8>,
+    buffer: Vec<u8>,
     width: u32,
     height: u32,
     stride: u32,
     format: u32,
 ) -> CaptureResult<RgbaImage> {
-    let order = PixelOrder::from_qimage_format(format)?;
-    let stride = stride as usize;
-    let row_bytes = width as usize * BYTES_PER_PIXEL;
-    if stride < row_bytes || buffer.len() < stride * height as usize {
-        return Err(CaptureError::MalformedReply("image size".to_owned()));
-    }
-
-    if stride != row_bytes {
-        for row in 1..height as usize {
-            let source = row * stride;
-            buffer.copy_within(source..source + row_bytes, row * row_bytes);
-        }
-        buffer.truncate(height as usize * row_bytes);
-    }
-
-    for pixel in buffer.as_chunks_mut::<BYTES_PER_PIXEL>().0 {
-        let [red, green, blue] = order.rgb(pixel);
-        pixel.copy_from_slice(&[red, green, blue, OPAQUE]);
-    }
-
-    RgbaImage::from_raw(width, height, buffer)
-        .ok_or_else(|| CaptureError::MalformedReply("image dimensions".to_owned()))
+    let order = pixel_order(format)?;
+    compact_and_swizzle(buffer, width, height, stride as usize, order)
+        .ok_or_else(|| CaptureError::MalformedReply("image size".to_owned()))
 }
 
 #[cfg(test)]

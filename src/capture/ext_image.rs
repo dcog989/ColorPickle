@@ -30,10 +30,11 @@ use ext_image_copy_capture_manager_v1::{ExtImageCopyCaptureManagerV1, Options};
 use ext_image_copy_capture_session_v1::ExtImageCopyCaptureSessionV1;
 use ext_output_image_capture_source_manager_v1::ExtOutputImageCaptureSourceManagerV1;
 
-use crate::capture::{CaptureError, CaptureResult, OutputInfo, Point};
+use crate::capture::{
+    CaptureError, CaptureResult, OutputInfo, PixelOrder, Point, compact_and_swizzle,
+};
 
 const BYTES_PER_PIXEL: usize = 4;
-const OPAQUE: u8 = 255;
 const OUTPUT_MAX_VERSION: u32 = 4;
 const XDG_OUTPUT_MANAGER_MAX_VERSION: u32 = 3;
 const PROTOCOL_VERSION: u32 = 1;
@@ -353,30 +354,12 @@ fn create_shm_file(byte_len: usize) -> CaptureResult<File> {
 }
 
 fn read_shm(file: &mut File, width: u32, height: u32, stride: usize) -> CaptureResult<RgbaImage> {
-    let row_bytes = width as usize * BYTES_PER_PIXEL;
-    if stride < row_bytes {
-        return Err(failure("capture frame has an invalid stride"));
-    }
-
     file.seek(SeekFrom::Start(0)).map_err(failure)?;
     let mut bytes = vec![0u8; stride * height as usize];
     file.read_exact(&mut bytes).map_err(failure)?;
 
-    if stride != row_bytes {
-        for row in 1..height as usize {
-            let source = row * stride;
-            bytes.copy_within(source..source + row_bytes, row * row_bytes);
-        }
-        bytes.truncate(height as usize * row_bytes);
-    }
-
-    for pixel in bytes.as_chunks_mut::<BYTES_PER_PIXEL>().0 {
-        pixel.swap(0, 2);
-        pixel[3] = OPAQUE;
-    }
-
-    RgbaImage::from_raw(width, height, bytes)
-        .ok_or_else(|| failure("capture frame has invalid dimensions"))
+    compact_and_swizzle(bytes, width, height, stride, PixelOrder::Bgra)
+        .ok_or_else(|| failure("capture frame has an unusable stride or size"))
 }
 
 fn fallback_logical_size(output: &OutputState) -> Option<(u32, u32)> {
@@ -602,12 +585,13 @@ impl Dispatch<ZxdgOutputV1, ()> for State {
 
 #[cfg(test)]
 mod tests {
-    use super::{OPAQUE, orient};
+    use super::orient;
     use image::{Rgba, RgbaImage};
     use wayland_client::protocol::wl_output::Transform;
 
     const SOURCE_WIDTH: u32 = 3;
     const SOURCE_HEIGHT: u32 = 2;
+    const OPAQUE: u8 = u8::MAX;
 
     /// Pixels carry their own coordinates, so an oriented frame reads as a grid
     /// of source coordinates.
