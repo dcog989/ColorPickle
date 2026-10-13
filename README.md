@@ -44,6 +44,14 @@ sudo install -Dm644 assets/colorpickle.png /usr/share/icons/hicolor/256x256/apps
 sudo update-desktop-database /usr/share/applications
 ```
 
+## Logs
+
+Logs are written to `~/.local/state/colorpickle/log/` (or `$XDG_STATE_HOME/colorpickle/log/`), one file per day named `colorpickle.log.<date>`; the 7 most recent are kept.
+
+- `--log-level error|warn|info|debug|trace` sets the verbosity; the default is `info`
+- `RUST_LOG` overrides the flag, e.g. `RUST_LOG=colorpickle=debug,wgpu=warn`
+- The same lines are mirrored to stderr, with colour when stderr is a terminal
+
 ## Build
 
 Rust 1.99 or newer; `rust-toolchain.toml` pins that version for rustup users.

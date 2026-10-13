@@ -3,6 +3,7 @@ mod cli;
 mod clipboard;
 mod color;
 mod config;
+mod logging;
 mod persistence;
 mod state;
 mod ui;
@@ -13,20 +14,11 @@ use clap::Parser;
 use crate::cli::Cli;
 use crate::config::LaunchMode;
 
-#[cfg(debug_assertions)]
-const DEFAULT_LOG_FILTER: &str = "colorpickle=debug";
-#[cfg(not(debug_assertions))]
-const DEFAULT_LOG_FILTER: &str = "colorpickle=info";
-
 fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(DEFAULT_LOG_FILTER)),
-        )
-        .init();
-
     let cli = Cli::parse();
+    // Kept for the whole run: dropping the guard discards lines still queued for the log file.
+    let _log_guard = logging::init(cli.log_level.unwrap_or_default());
+
     let config = config::Config::load();
     let state = state::State::load();
     let launch_mode = cli.launch_mode.unwrap_or(config.launch_mode);

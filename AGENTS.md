@@ -15,6 +15,7 @@ See `README.md` for usage, configuration, install and distribution.
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
 - `src/state.rs` — `State` (pick history) load/path under `$XDG_STATE_HOME`
 - `src/persistence.rs` — atomic TOML load/save shared by `Config` and `State`
+- `src/logging.rs` — `tracing` subscriber: daily-rotating file log under `$XDG_STATE_HOME/colorpickle/log` plus stderr, level from `RUST_LOG` or `--log-level`
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
 - `src/capture/` — capture backends (KWin D-Bus, `ext-image-copy-capture`, X11, XDG portal) dispatched through a function-pointer `Backend` table in `capture/mod.rs`
 - `src/ui/` — main window (color background), picker overlay, capture/session controller, theme

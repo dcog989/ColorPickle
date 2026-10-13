@@ -16,12 +16,15 @@ pub struct State {
     pub history: Vec<[u8; 3]>,
 }
 
+/// `$XDG_STATE_HOME/colorpickle`, conventionally `~/.local/state/colorpickle`.
+pub fn directory() -> Option<PathBuf> {
+    let dirs = directories::BaseDirs::new()?;
+    Some(dirs.state_dir()?.join(APP_NAME))
+}
+
 impl State {
-    /// `$XDG_STATE_HOME/colorpickle/state.toml`, conventionally
-    /// `~/.local/state/colorpickle/state.toml`.
     pub fn path() -> Option<PathBuf> {
-        let dirs = directories::BaseDirs::new()?;
-        Some(dirs.state_dir()?.join(APP_NAME).join(STATE_FILE))
+        Some(directory()?.join(STATE_FILE))
     }
 
     pub fn load() -> Self {
