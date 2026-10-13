@@ -10,28 +10,22 @@ pub mod widgets;
 use anyhow::Result;
 use eframe::egui;
 
-use crate::color::okhsl::Okhsl;
 use crate::config::Config;
 use crate::ui::main_window::MainWindow;
-use crate::ui::overlay::PickOutcome;
 
 pub const WINDOW_TITLE: &str = "ColorPickle";
 pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 
 pub fn run_ui(config: Config) -> Result<()> {
-    run_main(config, None)
+    run_main(config, false)
 }
 
 pub fn run_picker(config: Config) -> Result<()> {
-    let outcome = overlay::run(config.clone())?;
-    match outcome {
-        Some(PickOutcome::Picked(color)) => run_main(config, Some(color)),
-        _ => Ok(()),
-    }
+    run_main(config, true)
 }
 
-fn run_main(config: Config, initial: Option<Okhsl>) -> Result<()> {
+fn run_main(config: Config, picker_first: bool) -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(WINDOW_TITLE)
         .with_app_id("colorpickle")
@@ -50,9 +44,10 @@ fn run_main(config: Config, initial: Option<Okhsl>) -> Result<()> {
         options,
         Box::new(move |cc| {
             icons::install(&cc.egui_ctx);
-            let mut window = match initial {
-                Some(color) => MainWindow::new(config).with_initial(color),
-                None => MainWindow::new(config),
+            let mut window = if picker_first {
+                MainWindow::new(config).picker_first()
+            } else {
+                MainWindow::new(config)
             };
             window.apply_theme(&cc.egui_ctx);
             Ok(Box::new(window))

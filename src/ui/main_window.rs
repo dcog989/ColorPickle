@@ -53,8 +53,9 @@ pub struct MainWindow {
     harmony: Harmony,
     toast: Option<Toast>,
     now: f64,
-    pending_toast: Option<String>,
     picker: PickerController,
+    picker_first: bool,
+    exit_on_dismiss: bool,
     applied_theme: Option<ThemeKey>,
     applied_theme_color: Option<Okhsl>,
     applied_input: Option<InputKey>,
@@ -75,8 +76,9 @@ impl MainWindow {
             harmony: Harmony::default(),
             toast: None,
             now: 0.0,
-            pending_toast: None,
             picker,
+            picker_first: false,
+            exit_on_dismiss: false,
             applied_theme: None,
             applied_theme_color: None,
             applied_input: None,
@@ -84,12 +86,11 @@ impl MainWindow {
         }
     }
 
-    pub fn with_initial(mut self, color: Okhsl) -> Self {
-        self.color = color;
-        self.history.push(color);
-        self.persist_config();
-        let value = self.config.format(color);
-        self.pending_toast = Some(format!("Picked {value}"));
+    /// Start the picker on the first frame, as `--launch-mode picker_first` asks.
+    /// Cancelling that first run closes the app instead of revealing the window,
+    /// so a desktop action or hotkey leaves nothing behind.
+    pub fn picker_first(mut self) -> Self {
+        self.picker_first = true;
         self
     }
 
@@ -136,13 +137,14 @@ impl MainWindow {
         }
     }
 
-    fn open_picker(&mut self, ctx: &egui::Context) {
+    fn open_picker(&mut self, ctx: &egui::Context, exit_on_dismiss: bool) {
         if self.picker.request(ctx, self.config.default_format) {
+            self.exit_on_dismiss = exit_on_dismiss;
             self.set_toast("Capturing screen...");
         }
     }
 
-    fn handle_event(&mut self, event: Event) {
+    fn handle_event(&mut self, ctx: &egui::Context, event: Event) {
         match event {
             Event::Ready => self.set_toast("Picking from screen..."),
             Event::CaptureFailed(error) => self.set_toast(format!("Capture failed: {error}")),
@@ -156,6 +158,10 @@ impl MainWindow {
                     Err(error) => self.set_toast(format!("Copy failed: {error}")),
                 }
             }
+            Event::Dismissed if self.exit_on_dismiss => {
+                tracing::info!("picker: cancelled on launch; exiting");
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
             Event::Dismissed => self.set_toast("Picking cancelled"),
         }
     }
@@ -165,10 +171,6 @@ impl eframe::App for MainWindow {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
         self.now = ctx.input(|input| input.time);
-
-        if let Some(message) = self.pending_toast.take() {
-            self.set_toast(message);
-        }
 
         ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
         ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
@@ -194,12 +196,14 @@ impl eframe::App for MainWindow {
 
         self.handle_shortcuts(&ctx);
 
-        if open_picker {
-            self.open_picker(&ctx);
+        if std::mem::take(&mut self.picker_first) {
+            self.open_picker(&ctx, true);
+        } else if open_picker {
+            self.open_picker(&ctx, false);
         }
 
         if let Some(event) = self.picker.update(&ctx, frame) {
-            self.handle_event(event);
+            self.handle_event(&ctx, event);
         }
 
         self.show_toast(&ctx);

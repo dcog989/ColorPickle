@@ -1,16 +1,11 @@
-use std::cell::Cell;
-use std::rc::Rc;
 use std::sync::Arc;
 
-use anyhow::Result;
 use eframe::egui;
 use palette::Srgb;
 
 use crate::capture;
-use crate::clipboard;
 use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
-use crate::config::Config;
 use crate::ui::pixels::{average_rgb8, pixel_at, pixel_bounds};
 use crate::ui::theme;
 
@@ -140,40 +135,6 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
     egui::ColorImage::new([new_width, new_height], pixels)
 }
 
-pub fn run(config: Config) -> Result<Option<PickOutcome>> {
-    let captured = capture::capture()?;
-    let output = captured.output.clone();
-    let session = Session::new(captured, config.default_format);
-    let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
-
-    let options = eframe::NativeOptions {
-        viewport: viewport_builder(None),
-        persist_window: false,
-        ..Default::default()
-    };
-
-    let shared = Rc::clone(&outcome);
-    eframe::run_native(
-        PICKER_TITLE,
-        options,
-        Box::new(move |cc| {
-            let monitor = cc
-                .winit_window()
-                .and_then(|window| resolve_monitor(window, &output));
-            cc.egui_ctx
-                .send_viewport_cmd(egui::ViewportCommand::SetMonitor(monitor.unwrap_or(0)));
-            Ok(Box::new(StandalonePicker {
-                session,
-                config,
-                outcome: shared,
-            }))
-        }),
-    )
-    .map_err(|error| anyhow::anyhow!("failed to run the picker: {error}"))?;
-
-    Ok(outcome.get())
-}
-
 pub fn show(
     ctx: &egui::Context,
     frame: &eframe::Frame,
@@ -218,27 +179,6 @@ fn resolve_monitor(window: &winit::window::Window, output: &capture::OutputInfo)
             .position(|monitor| monitor.position().x == x && monitor.position().y == y);
     }
     None
-}
-
-struct StandalonePicker {
-    session: Session,
-    config: Config,
-    outcome: Rc<Cell<Option<PickOutcome>>>,
-}
-
-impl eframe::App for StandalonePicker {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let Some(outcome) = draw(ui.ctx(), &mut self.session) else {
-            return;
-        };
-        if let PickOutcome::Picked(color) = outcome
-            && let Err(error) = clipboard::copy_color(self.config.default_format, color)
-        {
-            tracing::warn!(?error, "clipboard write failed");
-        }
-        self.outcome.set(Some(outcome));
-        ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-    }
 }
 
 fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
