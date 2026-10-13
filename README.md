@@ -16,6 +16,7 @@ Linux screen color picker. Pick a pixel or drag-select a region with a magnified
 - History of the last 8 picks — click one to reuse it, or clear the list
 - Color-harmony swatches (complementary, split complementary, analogous, triadic, tetradic, rectangle) — click a swatch to use it
 - Launch-mode and default-format selectors, saved to the config file
+- About panel with the logo, version, and the config, history and log paths
 - Wayland capture via `ext-image-copy-capture`, falling back to the XDG desktop portal
 
 ## Install

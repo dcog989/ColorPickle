@@ -8,13 +8,21 @@ const SETTINGS_PANEL_ID: &str = "colorpickle-settings";
 const SETTINGS_PANEL_MARGIN_X: i8 = 16;
 pub(super) const MARGIN_Y: i8 = 10;
 
+pub(super) struct Outcome {
+    pub config_changed: bool,
+    pub about_opened: bool,
+}
+
 pub(super) fn show(
     ui: &mut egui::Ui,
     config: &mut Config,
     background: egui::Color32,
     foreground: egui::Color32,
-) -> bool {
-    let mut config_changed = false;
+) -> Outcome {
+    let mut outcome = Outcome {
+        config_changed: false,
+        about_opened: false,
+    };
     egui::Panel::bottom(SETTINGS_PANEL_ID)
         .resizable(false)
         .frame(
@@ -39,7 +47,7 @@ pub(super) fn show(
                                 )
                                 .changed()
                             {
-                                config_changed = true;
+                                outcome.config_changed = true;
                             }
                         }
                     })
@@ -57,15 +65,19 @@ pub(super) fn show(
                                 )
                                 .changed()
                             {
-                                config_changed = true;
+                                outcome.config_changed = true;
                             }
                         }
                     })
                     .response
                     .on_hover_text("Default format: shown in the input field and copied on pick");
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    outcome.about_opened = widgets::about_icon(ui);
+                });
             });
         });
-    config_changed
+    outcome
 }
 
 fn launch_mode_label(mode: LaunchMode) -> &'static str {

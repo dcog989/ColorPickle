@@ -11,12 +11,14 @@ use crate::ui::picker::{Event, PickerController};
 use crate::ui::theme::{self, color32, contrast_color32};
 use crate::ui::widgets;
 
+mod about;
 mod history;
 mod keys;
 mod settings_panel;
 mod slider_panel;
 mod toast;
 
+use self::about::About;
 use self::history::History;
 use self::keys::{InputKey, ThemeKey};
 use self::toast::Toast;
@@ -58,6 +60,7 @@ pub struct MainWindow {
     picker: PickerController,
     picker_first: bool,
     exit_on_dismiss: bool,
+    about: About,
     applied_theme: Option<ThemeKey>,
     applied_theme_color: Option<Okhsl>,
     applied_input: Option<InputKey>,
@@ -82,6 +85,7 @@ impl MainWindow {
             picker,
             picker_first: false,
             exit_on_dismiss: false,
+            about: About::default(),
             applied_theme: None,
             applied_theme_color: None,
             applied_input: None,
@@ -198,8 +202,12 @@ impl eframe::App for MainWindow {
         let foreground = contrast_color32(self.color);
 
         let panel_width = slider_panel::show(ui, &mut self.color, background, foreground);
-        if settings_panel::show(ui, &mut self.config, background, foreground) {
+        let settings = settings_panel::show(ui, &mut self.config, background, foreground);
+        if settings.config_changed {
             self.persist_config();
+        }
+        if settings.about_opened {
+            self.about.open();
         }
         let open_picker = self.show_central(ui, background, foreground, panel_width);
 
@@ -215,6 +223,7 @@ impl eframe::App for MainWindow {
             self.handle_event(&ctx, event);
         }
 
+        self.about.show(&ctx);
         self.show_toast(&ctx);
     }
 }
@@ -363,7 +372,11 @@ impl MainWindow {
         }
 
         if ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            if self.about.is_open() {
+                self.about.close();
+            } else {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
         }
     }
 

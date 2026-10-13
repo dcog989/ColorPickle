@@ -17,6 +17,7 @@ use crate::ui::main_window::MainWindow;
 pub const WINDOW_TITLE: &str = "ColorPickle";
 pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
+pub const ICON_PNG: &[u8] = include_bytes!("../../assets/colorpickle.png");
 
 pub fn run_ui(config: Config, state: State) -> Result<()> {
     run_main(config, state, false)
@@ -58,8 +59,7 @@ fn run_main(config: Config, state: State, picker_first: bool) -> Result<()> {
 }
 
 fn app_icon() -> Option<egui::IconData> {
-    let bytes: &[u8] = include_bytes!("../../assets/colorpickle.png");
-    match image::load_from_memory(bytes) {
+    match image::load_from_memory(ICON_PNG) {
         Ok(image) => {
             let image = image.into_rgba8();
             let width = image.width();

@@ -12,6 +12,7 @@ const SWATCH_SIZE: f32 = 24.0;
 const SWATCH_CORNER_RADIUS: u8 = 6;
 const SWATCH_BORDER_WIDTH: f32 = 1.0;
 const CLEAR_HISTORY_PADDING: f32 = 4.0;
+const ABOUT_PADDING: f32 = 4.0;
 const APCA_FONT_SIZE: f32 = 14.0;
 
 pub fn picker_launcher(ui: &mut egui::Ui, height: f32) -> bool {
@@ -56,6 +57,16 @@ fn icon_button(
 pub fn settings_icon(ui: &mut egui::Ui, color: egui::Color32) {
     let rect = icon_slot(ui);
     icons::settings(ui.painter(), rect, color);
+}
+
+pub fn about_icon(ui: &mut egui::Ui) -> bool {
+    icon_button(
+        ui,
+        egui::vec2(row_height(ui), row_height(ui)),
+        "About ColorPickle",
+        ABOUT_PADDING,
+        icons::info,
+    )
 }
 
 pub fn palette_icon(ui: &mut egui::Ui, color: egui::Color32) {

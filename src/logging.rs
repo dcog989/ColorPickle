@@ -76,7 +76,7 @@ fn env_filter(level: LogLevel) -> EnvFilter {
 }
 
 /// `$XDG_STATE_HOME/colorpickle/log`, conventionally `~/.local/state/colorpickle/log`.
-fn directory() -> Option<PathBuf> {
+pub fn directory() -> Option<PathBuf> {
     Some(state::directory()?.join(LOG_DIRECTORY))
 }
 

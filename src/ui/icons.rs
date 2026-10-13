@@ -38,6 +38,10 @@ pub fn pipette(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) 
     glyph(painter, rect, color, Icon::Pipette);
 }
 
+pub fn info(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    glyph(painter, rect, color, Icon::Info);
+}
+
 fn glyph(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, icon: Icon) {
     painter.text(
         rect.center(),
