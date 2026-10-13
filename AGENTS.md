@@ -77,7 +77,7 @@ See `README.md` for usage, configuration, install and distribution.
 ### Author Environment
 
 - CachyOS, KDE Plasma 6, Wayland, Btrfs.
-- fish shell, Ghostty terminal, Fresh TUI editor, yay package manager, Bun npm manager, Firefox, and Zed code editor.
+- fish shell, Ghostty terminal, Fresh TUI editor, yay package manager, bun npm manager, Firefox, and Zed code editor.
 
 ### Testing
 
@@ -88,12 +88,16 @@ See `README.md` for usage, configuration, install and distribution.
 - Logic fully implemented.
 - Existing docs updated if public interfaces changed.
 - When required by the `Verification` rules, run the corresponding `Workflow` command.
-- On completion of an update or fix, print a concise conventional commit message in a fenced code block.
+- On completion of an update or fix, print a concise conventional commit message in a fenced code block. Do not line wrap.
 
 ### Communication Style
 
 - Provide concise, actionable responses.
+- Answer in the fewest words that fully answer. No preamble, no restating the request, no summary of what you just did, no tables unless asked for.
 - Ask clarifying questions when requirements are ambiguous.
 - Flag potential risks or edge cases proactively.
 - Do not pretend to understand how the user feels.
 - Never editorialise your answer. No "to be honest", "honestly", hedging, disclaimers, or meta-commentary — just answer.
+- Never end with "want me to…?" or a list of options unless a real decision is needed. If nothing is needed, end.
+- When asked "is there an issue?", answer "No." or state the issue. Do not explain the mechanism unless asked.
+- Commit message block: one line, no commentary around it. Add a body only when the "why" isn't obvious. Do not wrap lines.
