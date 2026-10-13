@@ -1,10 +1,13 @@
-use image::{Rgba, RgbaImage};
+use image::RgbaImage;
 use x11rb::connection::Connection;
 use x11rb::image::{Image, PixelLayout};
 use x11rb::protocol::randr;
 use x11rb::protocol::xproto::{self, Window};
 
 use crate::capture::{CaptureError, CaptureResult, OutputInfo, Point};
+
+const BYTES_PER_PIXEL: usize = 4;
+const OPAQUE: u8 = 255;
 
 pub fn pointer_position() -> Option<Point> {
     let (connection, screen) = x11rb::connect(None).ok()?;
@@ -73,14 +76,11 @@ pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> 
     let layout = PixelLayout::from_visual_type(*visual)?;
 
     let mut canvas = RgbaImage::new(u32::from(width), u32::from(height));
-    for pixel_y in 0..height {
-        for pixel_x in 0..width {
+    let (pixels, _) = (&mut *canvas).as_chunks_mut::<BYTES_PER_PIXEL>();
+    for (row, pixel_y) in pixels.chunks_mut(usize::from(width)).zip(0..height) {
+        for (pixel, pixel_x) in row.iter_mut().zip(0..width) {
             let (red, green, blue) = layout.decode(image.get_pixel(pixel_x, pixel_y));
-            canvas.put_pixel(
-                u32::from(pixel_x),
-                u32::from(pixel_y),
-                Rgba([high_byte(red), high_byte(green), high_byte(blue), 255]),
-            );
+            *pixel = [high_byte(red), high_byte(green), high_byte(blue), OPAQUE];
         }
     }
 
