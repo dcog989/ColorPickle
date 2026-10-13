@@ -139,8 +139,9 @@ impl PickerController {
                     });
                 }
                 None => {
+                    // Repaint only on input (pointer motion, clicks, keys) while the
+                    // overlay waits, so an idle picker does not redraw every frame.
                     self.session = Some(session);
-                    ctx.request_repaint();
                 }
             }
         }

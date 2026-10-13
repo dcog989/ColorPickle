@@ -55,7 +55,10 @@ pub struct Session {
     output: capture::OutputInfo,
     drag_anchor: Option<egui::Pos2>,
     format: ColorFormat,
+    cached_average: Option<(Bounds, Okhsl)>,
 }
+
+type Bounds = (u32, u32, u32, u32);
 
 impl Session {
     pub fn new(captured: capture::Capture, format: ColorFormat) -> Self {
@@ -74,7 +77,20 @@ impl Session {
             output: captured.output,
             drag_anchor: None,
             format,
+            cached_average: None,
         }
+    }
+
+    /// The average of `bounds`, recomputed only when the selection changes.
+    fn region_color(&mut self, bounds: Bounds) -> Okhsl {
+        if let Some((cached, color)) = self.cached_average
+            && cached == bounds
+        {
+            return color;
+        }
+        let color = average_color(&self.image, bounds);
+        self.cached_average = Some((bounds, color));
+        color
     }
 
     fn texture_id(&mut self, ctx: &egui::Context) -> egui::TextureId {
@@ -276,11 +292,11 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
                 uv_at(screen, rect.min),
                 uv_at(screen, rect.max),
             );
-            average_color(&session.image, bounds)
+            session.region_color(bounds)
         }
         None => {
             let (pixel_x, pixel_y) = pixel_at(&session.image, uv_at(screen, pointer));
-            average_color(&session.image, (pixel_x, pixel_y, pixel_x, pixel_y))
+            session.region_color((pixel_x, pixel_y, pixel_x, pixel_y))
         }
     };
 
