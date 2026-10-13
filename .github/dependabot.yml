@@ -4,3 +4,6 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
+    ignore:
+      # Pinned per-toolchain ref, not semver; dependabot bumps it to a nonexistent rust version.
+      - dependency-name: "dtolnay/rust-toolchain"
