@@ -49,7 +49,8 @@ sudo update-desktop-database /usr/share/applications
 Logs are written to `~/.local/state/colorpickle/log/` (or `$XDG_STATE_HOME/colorpickle/log/`), one file per day named `colorpickle.log.<date>`; the 7 most recent are kept.
 
 - `--log-level error|warn|info|debug|trace` sets the verbosity; the default is `info`
-- `RUST_LOG` overrides the flag, e.g. `RUST_LOG=colorpickle=debug,wgpu=warn`
+- `log_level` in `config.toml` does the same, and is overridden by the flag
+- `RUST_LOG` overrides both, e.g. `RUST_LOG=colorpickle=debug,wgpu=warn`
 - The same lines are mirrored to stderr, with colour when stderr is a terminal
 
 ## Build

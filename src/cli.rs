@@ -1,7 +1,6 @@
 use clap::Parser;
 
-use crate::config::LaunchMode;
-use crate::logging::LogLevel;
+use crate::config::{LaunchMode, LogLevel};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -14,7 +13,7 @@ pub struct Cli {
     #[arg(long, value_enum)]
     pub launch_mode: Option<LaunchMode>,
 
-    /// Verbosity of the log file and stderr; `RUST_LOG` takes precedence.
+    /// Verbosity of the log file and stderr; overrides the config file's `log_level`.
     #[arg(long, value_enum)]
     pub log_level: Option<LogLevel>,
 }

@@ -17,9 +17,10 @@ use crate::config::LaunchMode;
 fn main() -> Result<()> {
     let cli = Cli::parse();
     // Kept for the whole run: dropping the guard discards lines still queued for the log file.
-    let _log_guard = logging::init(cli.log_level.unwrap_or_default());
-
+    let (logging, _log_guard) = logging::init();
     let config = config::Config::load();
+    logging.set_level(cli.log_level.unwrap_or(config.log_level));
+
     let state = state::State::load();
     let launch_mode = cli.launch_mode.unwrap_or(config.launch_mode);
 

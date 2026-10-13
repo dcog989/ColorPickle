@@ -2,39 +2,30 @@ use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use clap::ValueEnum;
 use tracing_appender::non_blocking::{NonBlocking, WorkerGuard};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{EnvFilter, fmt};
+use tracing_subscriber::{EnvFilter, Registry, fmt, reload};
 
-use crate::config::APP_NAME;
+use crate::config::{APP_NAME, LogLevel};
 use crate::state;
 
 const LOG_DIRECTORY: &str = "log";
 const LOG_FILE: &str = "colorpickle.log";
 const RETAINED_LOG_FILES: usize = 7;
 
-/// Verbosity of the file and stderr logs, unless `RUST_LOG` overrides it.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, ValueEnum)]
-pub enum LogLevel {
-    Error,
-    Warn,
-    #[default]
-    Info,
-    Debug,
-    Trace,
+/// The installed subscriber, whose level can be raised once the config file has
+/// been read.
+pub struct Logging {
+    filter: reload::Handle<EnvFilter, Registry>,
 }
 
-impl LogLevel {
-    fn as_str(self) -> &'static str {
-        match self {
-            Self::Error => "error",
-            Self::Warn => "warn",
-            Self::Info => "info",
-            Self::Debug => "debug",
-            Self::Trace => "trace",
+impl Logging {
+    /// Applies `level`, unless `RUST_LOG` overrides it.
+    pub fn set_level(&self, level: LogLevel) {
+        if let Err(error) = self.filter.reload(env_filter(level)) {
+            eprintln!("colorpickle: failed to apply the log level: {error}");
         }
     }
 }
@@ -45,9 +36,7 @@ impl LogLevel {
 /// The returned guard must stay alive for the whole run; dropping it discards
 /// lines still queued for the file. `None` means the file log could not be
 /// opened, in which case stderr logging still works.
-pub fn init(level: LogLevel) -> Option<WorkerGuard> {
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(format!("{APP_NAME}={}", level.as_str())));
+pub fn init() -> (Logging, Option<WorkerGuard>) {
     let stderr_layer = fmt::layer()
         .with_writer(std::io::stderr)
         .with_ansi(std::io::stderr().is_terminal());
@@ -64,18 +53,26 @@ pub fn init(level: LogLevel) -> Option<WorkerGuard> {
             (None, None)
         }
     };
-    let logging_to_file = file.is_some();
+    let (filter_layer, filter) = reload::Layer::new(env_filter(LogLevel::default()));
 
     tracing_subscriber::registry()
-        .with(filter)
+        .with(filter_layer)
         .with(file.map(|file| fmt::layer().with_writer(file).with_ansi(false)))
         .with(stderr_layer)
         .init();
 
-    if logging_to_file && let Some(directory) = directory.as_deref() {
+    if guard.is_some()
+        && let Some(directory) = directory.as_deref()
+    {
         tracing::info!(directory = %directory.display(), "logging to file");
     }
-    guard
+    (Logging { filter }, guard)
+}
+
+/// `RUST_LOG` wins, then `level`.
+fn env_filter(level: LogLevel) -> EnvFilter {
+    EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new(format!("{APP_NAME}={}", level.as_str())))
 }
 
 /// `$XDG_STATE_HOME/colorpickle/log`, conventionally `~/.local/state/colorpickle/log`.

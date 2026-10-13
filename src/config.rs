@@ -30,12 +30,36 @@ pub enum Theme {
     Dark,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, ValueEnum, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevel {
+    Error,
+    Warn,
+    #[default]
+    Info,
+    Debug,
+    Trace,
+}
+
+impl LogLevel {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Error => "error",
+            Self::Warn => "warn",
+            Self::Info => "info",
+            Self::Debug => "debug",
+            Self::Trace => "trace",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
     pub theme: Theme,
+    pub log_level: LogLevel,
 }
 
 impl Config {
@@ -74,7 +98,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use super::{CONFIG_FILE, Config, LaunchMode, Theme};
+    use super::{CONFIG_FILE, Config, LaunchMode, LogLevel, Theme};
     use crate::color::ColorFormat;
 
     fn temporary_directory(name: &str) -> std::path::PathBuf {
@@ -92,11 +116,14 @@ mod tests {
             launch_mode: LaunchMode::PickerFirst,
             default_format: ColorFormat::Oklch,
             theme: Theme::Dark,
+            log_level: LogLevel::Debug,
         };
 
         config.save_to(&path).unwrap();
 
         assert_eq!(Config::load_from(&path), config);
+        let text = std::fs::read_to_string(&path).unwrap();
+        assert!(text.contains("log_level = \"debug\""), "{text}");
         assert_eq!(
             Config::load_from(&directory.join("absent.toml")),
             Config::default()
