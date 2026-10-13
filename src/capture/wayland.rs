@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use image::RgbaImage;
 use percent_encoding::percent_decode_str;
@@ -62,11 +62,18 @@ fn crop_to_monitor(image: RgbaImage, cursor: Option<Point>) -> (RgbaImage, Outpu
 
 fn capture_once() -> CaptureResult<RgbaImage> {
     let path = pollster::block_on(take_screenshot())?;
-    let image = image::open(&path).map(|image| image.into_rgba8());
+    let image = read_image(&path);
     if let Err(error) = std::fs::remove_file(&path) {
         tracing::warn!(?error, path = ?path, "failed to remove the portal screenshot");
     }
     Ok(image?)
+}
+
+/// The portal does not guarantee a `.png` suffix, so the format is guessed from
+/// the bytes. Only the `png` decoder is enabled, so guessing is exact.
+fn read_image(path: &Path) -> CaptureResult<RgbaImage> {
+    let reader = image::ImageReader::open(path)?.with_guessed_format()?;
+    Ok(reader.decode()?.into_rgba8())
 }
 
 async fn take_screenshot() -> CaptureResult<PathBuf> {
