@@ -109,10 +109,8 @@ mod tests {
     use crate::color::ColorFormat;
 
     fn temporary_directory(name: &str) -> std::path::PathBuf {
-        let directory = std::env::temp_dir().join(format!(
-            "colorpickle-test-{}-{name}",
-            std::process::id()
-        ));
+        let directory =
+            std::env::temp_dir().join(format!("colorpickle-test-{}-{name}", std::process::id()));
         std::fs::create_dir_all(&directory).unwrap();
         directory
     }

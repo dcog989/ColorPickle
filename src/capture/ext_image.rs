@@ -618,14 +618,38 @@ mod tests {
         // counter-clockwise) turns clockwise here. Letters name the source
         // pixels, A B C across the top row and D E F across the bottom.
         let cases = [
-            Case { transform: Transform::Normal, rows: &["ABC", "DEF"] },
-            Case { transform: Transform::_90, rows: &["DA", "EB", "FC"] },
-            Case { transform: Transform::_180, rows: &["FED", "CBA"] },
-            Case { transform: Transform::_270, rows: &["CF", "BE", "AD"] },
-            Case { transform: Transform::Flipped, rows: &["CBA", "FED"] },
-            Case { transform: Transform::Flipped90, rows: &["FC", "EB", "DA"] },
-            Case { transform: Transform::Flipped180, rows: &["DEF", "ABC"] },
-            Case { transform: Transform::Flipped270, rows: &["AD", "BE", "CF"] },
+            Case {
+                transform: Transform::Normal,
+                rows: &["ABC", "DEF"],
+            },
+            Case {
+                transform: Transform::_90,
+                rows: &["DA", "EB", "FC"],
+            },
+            Case {
+                transform: Transform::_180,
+                rows: &["FED", "CBA"],
+            },
+            Case {
+                transform: Transform::_270,
+                rows: &["CF", "BE", "AD"],
+            },
+            Case {
+                transform: Transform::Flipped,
+                rows: &["CBA", "FED"],
+            },
+            Case {
+                transform: Transform::Flipped90,
+                rows: &["FC", "EB", "DA"],
+            },
+            Case {
+                transform: Transform::Flipped180,
+                rows: &["DEF", "ABC"],
+            },
+            Case {
+                transform: Transform::Flipped270,
+                rows: &["AD", "BE", "CF"],
+            },
         ];
 
         for Case { transform, rows } in cases {

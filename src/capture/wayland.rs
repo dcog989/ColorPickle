@@ -30,8 +30,12 @@ fn crop_to_monitor(image: RgbaImage, cursor: Option<Point>) -> (RgbaImage, Outpu
     let scale_y = f64::from(image_height) / f64::from(desktop_height);
     let (monitor_x, monitor_y, monitor_width, monitor_height) = bounds.rect;
 
-    let left = (f64::from(monitor_x) * scale_x).round().clamp(0.0, f64::from(image_width));
-    let top = (f64::from(monitor_y) * scale_y).round().clamp(0.0, f64::from(image_height));
+    let left = (f64::from(monitor_x) * scale_x)
+        .round()
+        .clamp(0.0, f64::from(image_width));
+    let top = (f64::from(monitor_y) * scale_y)
+        .round()
+        .clamp(0.0, f64::from(image_height));
     let right = (f64::from(monitor_x + monitor_width as i32) * scale_x)
         .round()
         .clamp(0.0, f64::from(image_width));
