@@ -170,10 +170,15 @@ fn split_values(args: &str) -> Option<Vec<Value>> {
     args.split(|character: char| character == ',' || character.is_whitespace())
         .filter(|part| !part.is_empty())
         .map(|part| match part.strip_suffix('%') {
-            Some(number) => number.parse::<f32>().ok().map(Value::Percent),
-            None => part.parse::<f32>().ok().map(Value::Number),
+            Some(number) => finite_number(number).map(Value::Percent),
+            None => finite_number(part).map(Value::Number),
         })
         .collect()
+}
+
+// `f32::from_str` accepts `nan`, `inf` and `infinity`, none of which are colors.
+fn finite_number(text: &str) -> Option<f32> {
+    text.parse::<f32>().ok().filter(|value| value.is_finite())
 }
 
 fn three(values: &[Value]) -> Option<[Value; 3]> {
@@ -236,6 +241,10 @@ mod tests {
         assert!(parse("#+f0000").is_none());
         assert!(parse("rgb(255, abc, 0)").is_none());
         assert!(parse("rgb(255, abc, 0, 0)").is_none());
+        assert!(parse("okhsl(nan, 0.5, 0.5)").is_none());
+        assert!(parse("rgb(255, inf, 0)").is_none());
+        assert!(parse("rgb(255, -infinity, 0)").is_none());
+        assert!(parse("hsl(0, 0%, 1e999%)").is_none());
         assert!(parse("").is_none());
     }
 
