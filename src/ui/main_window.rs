@@ -319,14 +319,21 @@ impl MainWindow {
                         self.persist_state();
                     }
                     let mut selected = None;
+                    let mut removed = None;
                     let format = self.config.default_format;
                     for &color in self.history.colors() {
-                        if widgets::history_swatch(ui, color, foreground, format) {
-                            selected = Some(color);
+                        match widgets::history_swatch(ui, color, foreground, format) {
+                            Some(widgets::SwatchAction::Select) => selected = Some(color),
+                            Some(widgets::SwatchAction::Remove) => removed = Some(color),
+                            None => {}
                         }
                     }
                     if let Some(color) = selected {
                         self.color = color;
+                    }
+                    if let Some(color) = removed {
+                        self.history.remove(color);
+                        self.persist_state();
                     }
                 });
 

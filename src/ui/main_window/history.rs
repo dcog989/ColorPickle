@@ -41,6 +41,11 @@ impl History {
         self.colors.clear();
     }
 
+    pub(super) fn remove(&mut self, color: Okhsl) {
+        self.colors
+            .retain(|existing| existing.to_srgb8() != color.to_srgb8());
+    }
+
     pub(super) fn colors(&self) -> &[Okhsl] {
         &self.colors
     }

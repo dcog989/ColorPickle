@@ -5,7 +5,7 @@ use crate::color::ColorFormat;
 use crate::color::apca;
 use crate::color::okhsl::Okhsl;
 use crate::ui::icons;
-use crate::ui::theme::color32;
+use crate::ui::theme::{color32, contrast_color32};
 
 const LAUNCHER_PADDING: f32 = 8.0;
 const SWATCH_SIZE: f32 = 24.0;
@@ -13,9 +13,21 @@ const SWATCH_CORNER_RADIUS: u8 = 6;
 const HISTORY_SWATCH_SIZE: f32 = SWATCH_SIZE * 2.0;
 const HISTORY_SWATCH_CORNER_RADIUS: u8 = SWATCH_CORNER_RADIUS * 2;
 const SWATCH_BORDER_WIDTH: f32 = 1.0;
+const CLOSE_MARK_FRACTION: f32 = 0.35;
+const CLOSE_MARK_MIN: f32 = 10.0;
+const CLOSE_MARK_MARGIN: f32 = 6.0;
+const CLOSE_MARK_PADDING: f32 = 2.0;
+const CLOSE_MARK_CORNER_RADIUS: u8 = 3;
+const CLOSE_MARK_FILL_ALPHA: u8 = 40;
 const CLEAR_HISTORY_PADDING: f32 = 4.0;
 const ABOUT_PADDING: f32 = 4.0;
 const APCA_FONT_SIZE: f32 = 14.0;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SwatchAction {
+    Select,
+    Remove,
+}
 
 pub fn picker_launcher(ui: &mut egui::Ui, height: f32) -> bool {
     icon_button(
@@ -97,7 +109,7 @@ pub fn history_swatch(
     color: Okhsl,
     border: egui::Color32,
     format: ColorFormat,
-) -> bool {
+) -> Option<SwatchAction> {
     swatch(
         ui,
         color,
@@ -105,6 +117,7 @@ pub fn history_swatch(
         format,
         HISTORY_SWATCH_SIZE,
         HISTORY_SWATCH_CORNER_RADIUS,
+        true,
     )
 }
 
@@ -121,7 +134,8 @@ pub fn harmony_swatch(
         format,
         SWATCH_SIZE,
         SWATCH_CORNER_RADIUS,
-    )
+        false,
+    ) == Some(SwatchAction::Select)
 }
 
 fn swatch(
@@ -131,7 +145,8 @@ fn swatch(
     format: ColorFormat,
     size: f32,
     corner_radius: u8,
-) -> bool {
+    closable: bool,
+) -> Option<SwatchAction> {
     let (rect, response) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::click());
     let corner = egui::CornerRadius::same(corner_radius);
     ui.painter().rect_filled(rect, corner, color32(color));
@@ -141,12 +156,55 @@ fn swatch(
         egui::Stroke::new(SWATCH_BORDER_WIDTH, border),
         egui::StrokeKind::Inside,
     );
-    response
+
+    let response = response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
         .on_hover_ui(|ui| {
             ui.label(format.format(color));
-        })
-        .clicked()
+        });
+
+    if closable && ui.rect_contains_pointer(rect) {
+        let mark = close_mark_rect(rect);
+        let close = ui
+            .interact(mark, response.id.with("close"), egui::Sense::click())
+            .on_hover_cursor(egui::CursorIcon::PointingHand);
+        draw_close_mark(ui.painter(), mark, color);
+        if close.clicked() {
+            return Some(SwatchAction::Remove);
+        }
+    }
+
+    response.clicked().then_some(SwatchAction::Select)
+}
+
+fn close_mark_rect(rect: egui::Rect) -> egui::Rect {
+    let size = (rect.width() * CLOSE_MARK_FRACTION).max(CLOSE_MARK_MIN);
+    egui::Rect::from_min_size(
+        egui::pos2(
+            rect.right() - CLOSE_MARK_MARGIN - size,
+            rect.top() + CLOSE_MARK_MARGIN,
+        ),
+        egui::vec2(size, size),
+    )
+}
+
+fn draw_close_mark(painter: &egui::Painter, mark: egui::Rect, color: Okhsl) {
+    let contrast = contrast_color32(color);
+    let corner = egui::CornerRadius::same(CLOSE_MARK_CORNER_RADIUS);
+    let fill = egui::Color32::from_rgba_unmultiplied(
+        contrast.r(),
+        contrast.g(),
+        contrast.b(),
+        CLOSE_MARK_FILL_ALPHA,
+    );
+    painter.rect_filled(mark, corner, fill);
+    painter.rect_stroke(
+        mark,
+        corner,
+        egui::Stroke::new(SWATCH_BORDER_WIDTH, contrast),
+        egui::StrokeKind::Inside,
+    );
+    icons::close(painter, mark.shrink(CLOSE_MARK_PADDING), contrast);
 }
 
 pub fn clear_history(ui: &mut egui::Ui) -> bool {

@@ -13,7 +13,7 @@ Linux screen color picker. Pick a pixel or drag-select a region with a magnified
 - Input any supported format, or a CSS color name to set the color
 - The main window is the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
-- History of the last 8 picks — click one to reuse it, or clear the list
+- History of the last 8 picks — click one to reuse it, hover to remove it, or clear the list
 - Color-harmony swatches (complementary, split complementary, analogous, triadic, tetradic, rectangle) — click a swatch to use it
 - Launch-mode and default-format selectors, saved to the config file
 - About panel with the logo, version, and the config, history and log paths
