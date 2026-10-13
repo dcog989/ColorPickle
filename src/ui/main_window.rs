@@ -256,11 +256,12 @@ impl MainWindow {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     open_picker |= widgets::picker_launcher(ui, input_height);
+                    let reserved = input_height + ui.spacing().item_spacing.x;
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.input)
                             .font(input_font.clone())
                             .margin(egui::Margin::symmetric(INPUT_MARGIN_X, INPUT_MARGIN_Y))
-                            .desired_width(ui.available_width())
+                            .desired_width((ui.available_width() - reserved).max(0.0))
                             .hint_text("color"),
                     );
                     if response.gained_focus() {
@@ -285,6 +286,10 @@ impl MainWindow {
                             self.input = self.config.format(self.color);
                             self.applied_input = Some(input_key);
                         }
+                    }
+                    if widgets::add_button(ui, input_height) {
+                        self.history.push(self.color);
+                        self.persist_state();
                     }
                 });
 

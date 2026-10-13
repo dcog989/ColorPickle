@@ -39,6 +39,16 @@ pub fn picker_launcher(ui: &mut egui::Ui, height: f32) -> bool {
     )
 }
 
+pub fn add_button(ui: &mut egui::Ui, height: f32) -> bool {
+    icon_button(
+        ui,
+        egui::vec2(height, height),
+        "Add the current colour to history",
+        LAUNCHER_PADDING,
+        icons::plus,
+    )
+}
+
 fn icon_button(
     ui: &mut egui::Ui,
     size: egui::Vec2,

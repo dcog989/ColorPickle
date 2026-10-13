@@ -42,6 +42,10 @@ pub fn info(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
     glyph(painter, rect, color, Icon::Info);
 }
 
+pub fn plus(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    glyph(painter, rect, color, Icon::Plus);
+}
+
 fn glyph(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32, icon: Icon) {
     painter.text(
         rect.center(),
