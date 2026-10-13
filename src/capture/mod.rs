@@ -117,10 +117,6 @@ fn no_cursor() -> Option<Point> {
     None
 }
 
-pub fn capture() -> CaptureResult<Capture> {
-    capture_with(|| {})
-}
-
 pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
     let mut last_error = None;
     let mut progress = Some(progress);
