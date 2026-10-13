@@ -106,7 +106,9 @@ const BACKENDS: &[Backend] = &[
     Backend {
         source: CaptureSource::Portal,
         available: is_wayland,
-        cursor: no_cursor,
+        // The portal image spans the whole desktop; the pointer selects which
+        // monitor to crop it to, via XWayland as above.
+        cursor: x11::pointer_position,
         run: wayland::capture,
     },
 ];

@@ -19,6 +19,34 @@ pub fn pointer_position() -> Option<Point> {
     })
 }
 
+#[derive(Debug)]
+pub struct MonitorBounds {
+    pub rect: (i32, i32, u32, u32),
+    pub desktop: (u32, u32),
+    pub output: OutputInfo,
+}
+
+/// Monitor containing `point`, plus the whole-desktop size. Available on
+/// Wayland through XWayland, whose layout mirrors the compositor's.
+pub fn monitor_bounds(point: Point) -> Option<MonitorBounds> {
+    let (connection, screen_num) = x11rb::connect(None).ok()?;
+    let screen = connection.setup().roots.get(screen_num)?;
+    let (rect, output) = monitor_at(&connection, screen.root, point)?;
+    Some(MonitorBounds {
+        rect: (
+            i32::from(rect.0),
+            i32::from(rect.1),
+            u32::from(rect.2),
+            u32::from(rect.3),
+        ),
+        desktop: (
+            u32::from(screen.width_in_pixels),
+            u32::from(screen.height_in_pixels),
+        ),
+        output,
+    })
+}
+
 pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> {
     let (connection, screen_num) = x11rb::connect(None)?;
     let screen = &connection.setup().roots[screen_num];
