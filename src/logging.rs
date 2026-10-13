@@ -84,6 +84,10 @@ fn directory() -> Option<PathBuf> {
 }
 
 fn appender(directory: &Path) -> Result<(NonBlocking, WorkerGuard)> {
+    // tracing-appender prunes before it creates the directory, and complains on
+    // stderr when that directory is missing.
+    std::fs::create_dir_all(directory)
+        .with_context(|| format!("failed to create {}", directory.display()))?;
     let file = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
         .filename_prefix(LOG_FILE)
@@ -125,6 +129,19 @@ mod tests {
         assert!(names[0].starts_with("colorpickle.log."), "{names:?}");
 
         std::fs::remove_dir_all(&directory).unwrap();
+    }
+
+    #[test]
+    fn creates_a_missing_log_directory() {
+        let parent = temporary_directory("missing");
+        let directory = parent.join("log");
+
+        let (_, guard) = appender(&directory).unwrap();
+        drop(guard);
+
+        assert!(directory.is_dir());
+
+        std::fs::remove_dir_all(&parent).unwrap();
     }
 
     #[test]
