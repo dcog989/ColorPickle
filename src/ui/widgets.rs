@@ -92,24 +92,43 @@ pub fn row_height(ui: &egui::Ui) -> f32 {
     (text + 2.0 * ui.spacing().button_padding.y).max(ui.spacing().interact_size.y)
 }
 
-pub fn history_swatch(ui: &mut egui::Ui, color: Okhsl, border: egui::Color32) -> bool {
+pub fn history_swatch(
+    ui: &mut egui::Ui,
+    color: Okhsl,
+    border: egui::Color32,
+    format: ColorFormat,
+) -> bool {
     swatch(
         ui,
         color,
         border,
+        format,
         HISTORY_SWATCH_SIZE,
         HISTORY_SWATCH_CORNER_RADIUS,
     )
 }
 
-pub fn harmony_swatch(ui: &mut egui::Ui, color: Okhsl, border: egui::Color32) -> bool {
-    swatch(ui, color, border, SWATCH_SIZE, SWATCH_CORNER_RADIUS)
+pub fn harmony_swatch(
+    ui: &mut egui::Ui,
+    color: Okhsl,
+    border: egui::Color32,
+    format: ColorFormat,
+) -> bool {
+    swatch(
+        ui,
+        color,
+        border,
+        format,
+        SWATCH_SIZE,
+        SWATCH_CORNER_RADIUS,
+    )
 }
 
 fn swatch(
     ui: &mut egui::Ui,
     color: Okhsl,
     border: egui::Color32,
+    format: ColorFormat,
     size: f32,
     corner_radius: u8,
 ) -> bool {
@@ -125,7 +144,7 @@ fn swatch(
     response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
         .on_hover_ui(|ui| {
-            ui.label(ColorFormat::Hex.format(color));
+            ui.label(format.format(color));
         })
         .clicked()
 }

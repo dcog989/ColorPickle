@@ -319,8 +319,9 @@ impl MainWindow {
                         self.persist_state();
                     }
                     let mut selected = None;
+                    let format = self.config.default_format;
                     for &color in self.history.colors() {
-                        if widgets::history_swatch(ui, color, foreground) {
+                        if widgets::history_swatch(ui, color, foreground, format) {
                             selected = Some(color);
                         }
                     }
@@ -346,8 +347,9 @@ impl MainWindow {
                             })
                             .response
                             .on_hover_text("Colour harmony");
+                        let format = self.config.default_format;
                         for swatch in self.harmony.swatches(self.color) {
-                            if widgets::harmony_swatch(ui, swatch, foreground) {
+                            if widgets::harmony_swatch(ui, swatch, foreground, format) {
                                 self.color = swatch;
                             }
                         }
