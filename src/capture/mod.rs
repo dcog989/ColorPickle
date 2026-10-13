@@ -131,16 +131,17 @@ pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {
         }
         let cursor = (backend.cursor)();
         match (backend.run)(cursor) {
-            Ok((image, output)) => {
-                if image.width() == 0 || image.height() == 0 {
-                    return Err(CaptureError::EmptyFrame);
-                }
+            Ok((image, output)) if image.width() > 0 && image.height() > 0 => {
                 tracing::info!(source = ?backend.source, "capture: frame ready");
                 return Ok(Capture {
                     image,
                     source: backend.source,
                     output,
                 });
+            }
+            Ok(_) => {
+                tracing::warn!(source = ?backend.source, "capture: empty frame; trying the next");
+                last_error = Some(CaptureError::EmptyFrame);
             }
             Err(error) => {
                 tracing::warn!(
