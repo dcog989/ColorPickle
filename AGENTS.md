@@ -14,8 +14,8 @@ See `README.md` for usage, configuration, install and distribution.
 - `src/cli.rs` — `clap` args and `LaunchMode`
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
 - `src/state.rs` — `State` (pick history) load/path under `$XDG_STATE_HOME`
-- `src/persistence.rs` — atomic TOML load/save shared by `Config` and `State`
-- `src/logging.rs` — `tracing` subscriber: daily-rotating file log under `$XDG_STATE_HOME/colorpickle/log` plus stderr, level from `RUST_LOG` or `--log-level`
+- `src/persistence.rs` — atomic toml load/save shared by `Config` and `State`
+- `src/logging.rs` — `tracing` subscriber: daily-rotating file log under `$XDG_STATE_HOME/colorpickle/log` plus stderr; level from `RUST_LOG`, `--log-level` or `config.toml`
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
 - `src/capture/` — capture backends (KWin D-Bus, `ext-image-copy-capture`, X11, XDG portal) dispatched through a function-pointer `Backend` table in `capture/mod.rs`
 - `src/ui/` — main window (color background), picker overlay, capture/session controller, theme
@@ -91,7 +91,7 @@ See `README.md` for usage, configuration, install and distribution.
 - Logic fully implemented.
 - Existing docs updated if public interfaces changed.
 - When required by the `Verification` rules, run the corresponding `Workflow` command.
-- On completion of an update or fix, print a concise conventional commit message in a fenced code block. Do not line wrap.
+- On completion of an update or fix, print a conventional commit message in a fenced code block. Add a body only when the "why" isn't obvious. Do not wrap lines.
 
 ### Communication Style
 
@@ -103,4 +103,3 @@ See `README.md` for usage, configuration, install and distribution.
 - Never editorialise your answer. No "to be honest", "honestly", hedging, disclaimers, or meta-commentary — just answer.
 - Never end with "want me to…?" or a list of options unless a real decision is needed. If nothing is needed, end.
 - When asked "is there an issue?", answer "No." or state the issue. Do not explain the mechanism unless asked.
-- Commit message block: one line, no commentary around it. Add a body only when the "why" isn't obvious. Do not wrap lines.
