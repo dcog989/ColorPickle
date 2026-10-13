@@ -10,9 +10,11 @@ pub mod widgets;
 use anyhow::Result;
 use eframe::egui;
 
+use crate::color::okhsl::Okhsl;
 use crate::config::Config;
 use crate::state::State;
 use crate::ui::main_window::MainWindow;
+use crate::ui::overlay::PickOutcome;
 
 pub const WINDOW_TITLE: &str = "ColorPickle";
 pub const WINDOW_WIDTH: f32 = 760.0;
@@ -20,14 +22,19 @@ pub const WINDOW_HEIGHT: f32 = 600.0;
 pub const ICON_PNG: &[u8] = include_bytes!("../../assets/colorpickle.png");
 
 pub fn run_ui(config: Config, state: State) -> Result<()> {
-    run_main(config, state, false)
+    run_main(config, state, None)
 }
 
+/// Captures before any window exists, so a hotkey launch shows only the picker.
 pub fn run_picker(config: Config, state: State) -> Result<()> {
-    run_main(config, state, true)
+    let outcome = overlay::run(config.clone())?;
+    match outcome {
+        Some(PickOutcome::Picked(color)) => run_main(config, state, Some(color)),
+        _ => Ok(()),
+    }
 }
 
-fn run_main(config: Config, state: State, picker_first: bool) -> Result<()> {
+fn run_main(config: Config, state: State, initial: Option<Okhsl>) -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(WINDOW_TITLE)
         .with_app_id("colorpickle")
@@ -46,10 +53,9 @@ fn run_main(config: Config, state: State, picker_first: bool) -> Result<()> {
         options,
         Box::new(move |cc| {
             icons::install(&cc.egui_ctx);
-            let mut window = if picker_first {
-                MainWindow::new(config, state).picker_first()
-            } else {
-                MainWindow::new(config, state)
+            let mut window = match initial {
+                Some(color) => MainWindow::new(config, state).with_initial(color),
+                None => MainWindow::new(config, state),
             };
             window.apply_theme(&cc.egui_ctx);
             Ok(Box::new(window))
