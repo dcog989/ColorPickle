@@ -347,7 +347,7 @@ impl MainWindow {
                             .response
                             .on_hover_text("Colour harmony");
                         for swatch in self.harmony.swatches(self.color) {
-                            if widgets::history_swatch(ui, swatch, foreground) {
+                            if widgets::harmony_swatch(ui, swatch, foreground) {
                                 self.color = swatch;
                             }
                         }

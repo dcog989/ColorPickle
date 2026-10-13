@@ -10,6 +10,8 @@ use crate::ui::theme::color32;
 const LAUNCHER_PADDING: f32 = 8.0;
 const SWATCH_SIZE: f32 = 24.0;
 const SWATCH_CORNER_RADIUS: u8 = 6;
+const HISTORY_SWATCH_SIZE: f32 = SWATCH_SIZE * 2.0;
+const HISTORY_SWATCH_CORNER_RADIUS: u8 = SWATCH_CORNER_RADIUS * 2;
 const SWATCH_BORDER_WIDTH: f32 = 1.0;
 const CLEAR_HISTORY_PADDING: f32 = 4.0;
 const ABOUT_PADDING: f32 = 4.0;
@@ -91,9 +93,28 @@ pub fn row_height(ui: &egui::Ui) -> f32 {
 }
 
 pub fn history_swatch(ui: &mut egui::Ui, color: Okhsl, border: egui::Color32) -> bool {
-    let (rect, response) =
-        ui.allocate_exact_size(egui::vec2(SWATCH_SIZE, SWATCH_SIZE), egui::Sense::click());
-    let corner = egui::CornerRadius::same(SWATCH_CORNER_RADIUS);
+    swatch(
+        ui,
+        color,
+        border,
+        HISTORY_SWATCH_SIZE,
+        HISTORY_SWATCH_CORNER_RADIUS,
+    )
+}
+
+pub fn harmony_swatch(ui: &mut egui::Ui, color: Okhsl, border: egui::Color32) -> bool {
+    swatch(ui, color, border, SWATCH_SIZE, SWATCH_CORNER_RADIUS)
+}
+
+fn swatch(
+    ui: &mut egui::Ui,
+    color: Okhsl,
+    border: egui::Color32,
+    size: f32,
+    corner_radius: u8,
+) -> bool {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::click());
+    let corner = egui::CornerRadius::same(corner_radius);
     ui.painter().rect_filled(rect, corner, color32(color));
     ui.painter().rect_stroke(
         rect,
