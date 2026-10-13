@@ -67,6 +67,7 @@ eframe = {
 image = { version = "0.25.10", default-features = false, features = ["png"] }
 lucide-icons = "1.55.0"
 palette = "0.7.7"
+percent-encoding = "2.3.2"
 pollster = "1.0.1"
 rustix = { version = "1", features = ["event", "fs"] }
 serde = { version = "1.0.229", features = ["derive"] }
@@ -74,7 +75,6 @@ thiserror = "2.0.21"
 toml = "1.1.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-url = "2.5.8"
 wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
 winit = "0.30"

@@ -1,10 +1,12 @@
 use std::path::PathBuf;
 
 use image::RgbaImage;
-use url::Url;
+use percent_encoding::percent_decode_str;
 
 use crate::capture::x11;
 use crate::capture::{CaptureError, CaptureResult, OutputInfo, Point};
+
+const FILE_URI_PREFIX: &str = "file://";
 
 pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> {
     let image = capture_once()?;
@@ -82,8 +84,37 @@ fn block_on<F: std::future::Future>(future: F) -> F::Output {
 }
 
 fn uri_to_path(uri: &str) -> CaptureResult<PathBuf> {
-    Url::parse(uri)
-        .ok()
-        .and_then(|url| url.to_file_path().ok())
-        .ok_or_else(|| CaptureError::InvalidUri(uri.to_string()))
+    // A `file://` URI with a non-empty authority (`file://host/...`) is not a
+    // local path, so the remainder has to be absolute.
+    let decoded = uri
+        .strip_prefix(FILE_URI_PREFIX)
+        .filter(|path| path.starts_with('/'))
+        .and_then(|path| percent_decode_str(path).decode_utf8().ok())
+        .ok_or_else(|| CaptureError::InvalidUri(uri.to_string()))?;
+    Ok(PathBuf::from(decoded.as_ref()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::uri_to_path;
+    use std::path::PathBuf;
+
+    #[test]
+    fn decodes_file_uris() {
+        assert_eq!(
+            uri_to_path("file:///tmp/My%20Shot.png").unwrap(),
+            PathBuf::from("/tmp/My Shot.png")
+        );
+        assert_eq!(
+            uri_to_path("file:///tmp/K%C3%A9k.png").unwrap(),
+            PathBuf::from("/tmp/Kék.png")
+        );
+    }
+
+    #[test]
+    fn rejects_unusable_uris() {
+        assert!(uri_to_path("https://example.com/shot.png").is_err());
+        assert!(uri_to_path("file://host/tmp/shot.png").is_err());
+        assert!(uri_to_path("file:///tmp/bad%ff.png").is_err());
+    }
 }
