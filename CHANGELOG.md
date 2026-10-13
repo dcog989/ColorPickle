@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.5.3 - 2026-10-13
+#### Bug Fixes
+- (**ui**) capture before opening a window on a picker-first launch - (326be1f) - dcog989
+#### Documentation
+- agents.md refined - (7e002a3) - dcog989
+#### Miscellaneous Chores
+- updates - (665f305) - dcog989
+
+- - -
+
 ## v0.5.0 - 2026-10-13
 #### Features
 - (**config**) add log_level config key with CLI and RUST_LOG override - (ff459d3) - dcog989
