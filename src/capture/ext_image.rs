@@ -599,3 +599,53 @@ impl Dispatch<ZxdgOutputV1, ()> for State {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{OPAQUE, orient};
+    use image::{Rgba, RgbaImage};
+    use wayland_client::protocol::wl_output::Transform;
+
+    const SOURCE_WIDTH: u32 = 3;
+    const SOURCE_HEIGHT: u32 = 2;
+
+    /// Pixels carry their own coordinates, so an oriented frame reads as a grid
+    /// of source coordinates.
+    fn tagged_frame() -> RgbaImage {
+        RgbaImage::from_fn(SOURCE_WIDTH, SOURCE_HEIGHT, |x, y| {
+            Rgba([x as u8, y as u8, 0, OPAQUE])
+        })
+    }
+
+    #[test]
+    fn orientation_undoes_every_frame_transform() {
+        // The frame transform is what the compositor applied to the buffer it
+        // handed back, so orienting reverses it: `90` (90 degrees
+        // counter-clockwise) turns clockwise here. Each case is the size of the
+        // oriented frame and the source coordinate expected at every oriented
+        // pixel, in row-major order.
+        let cases: [(Transform, u32, u32, [(u8, u8); 6]); 8] = [
+            (Transform::Normal, 3, 2, [(0, 0), (1, 0), (2, 0), (0, 1), (1, 1), (2, 1)]),
+            (Transform::_90, 2, 3, [(0, 1), (0, 0), (1, 1), (1, 0), (2, 1), (2, 0)]),
+            (Transform::_180, 3, 2, [(2, 1), (1, 1), (0, 1), (2, 0), (1, 0), (0, 0)]),
+            (Transform::_270, 2, 3, [(2, 0), (2, 1), (1, 0), (1, 1), (0, 0), (0, 1)]),
+            (Transform::Flipped, 3, 2, [(2, 0), (1, 0), (0, 0), (2, 1), (1, 1), (0, 1)]),
+            (Transform::Flipped90, 2, 3, [(2, 1), (2, 0), (1, 1), (1, 0), (0, 1), (0, 0)]),
+            (Transform::Flipped180, 3, 2, [(0, 1), (1, 1), (2, 1), (0, 0), (1, 0), (2, 0)]),
+            (Transform::Flipped270, 2, 3, [(0, 0), (0, 1), (1, 0), (1, 1), (2, 0), (2, 1)]),
+        ];
+
+        for (transform, width, height, expected) in cases {
+            let oriented = orient(tagged_frame(), transform);
+            assert_eq!(oriented.dimensions(), (width, height), "{transform:?}");
+            for (index, (source_x, source_y)) in expected.into_iter().enumerate() {
+                let (x, y) = (index as u32 % width, index as u32 / width);
+                assert_eq!(
+                    *oriented.get_pixel(x, y),
+                    Rgba([source_x, source_y, 0, OPAQUE]),
+                    "{transform:?} at ({x}, {y})"
+                );
+            }
+        }
+    }
+}
