@@ -1,4 +1,4 @@
-# Maintainer: dcog989 <sirdavidlaws@gmail.com>
+# Maintainer: dcog989
 pkgname=colorpickle
 _reponame=ColorPickle
 pkgver=0.4.0

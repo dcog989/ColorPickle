@@ -10,7 +10,7 @@ license = "GPL-3.0-only"
 publish = false
 
 [package.metadata.deb]
-maintainer = "dcog989 <sirdavidlaws@gmail.com>"
+maintainer = "dcog989"
 copyright = "2026, dcog989"
 license-file = ["LICENSE"]
 extended-description = "Pick a pixel or drag-select a region from anywhere on screen and copy the color in any common format."
@@ -43,6 +43,9 @@ assets = [
 [package.metadata.generate-rpm.recommends]
 "xdg-desktop-portal" = "*"
 
+# Without this, Cargo walks up and attaches to any parent directory holding a Cargo.toml.
+[workspace]
+
 [dependencies]
 anyhow = "1.0.104"
 arboard = { version = "3.6.1", default-features = false, features = ["wayland-data-control"] }
@@ -51,12 +54,16 @@ clap = { version = "4.6.7", features = ["derive"] }
 directories = "6.0.0"
 # default-features = false drops accesskit, links and web_screen_reader. winit's own
 # defaults (x11, wayland, rwh_06) still arrive via the direct winit dependency below.
-eframe = { version = "0.36.2", default-features = false, features = [
-  "default_fonts",
-  "wayland",
-  "wgpu",
-  "x11",
-] }
+eframe = {
+  version = "0.36.2",
+  default-features = false,
+  features = [
+    "default_fonts",
+    "wayland",
+    "wgpu",
+    "x11",
+  ]
+}
 image = { version = "0.25.10", default-features = false, features = ["png"] }
 lucide-icons = "1.55.0"
 palette = "0.7.7"
