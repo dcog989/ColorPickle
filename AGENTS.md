@@ -13,6 +13,8 @@ See `README.md` for usage, configuration, install and distribution.
 - `src/main.rs` — entry point, `clap` launch-mode dispatch
 - `src/cli.rs` — `clap` args and `LaunchMode`
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
+- `src/state.rs` — `State` (pick history) load/path under `$XDG_STATE_HOME`
+- `src/persistence.rs` — atomic TOML load/save shared by `Config` and `State`
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
 - `src/capture/` — capture backends (KWin D-Bus, `ext-image-copy-capture`, X11, XDG portal) dispatched through a function-pointer `Backend` table in `capture/mod.rs`
 - `src/ui/` — main window (color background), picker overlay, capture/session controller, theme

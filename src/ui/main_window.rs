@@ -6,6 +6,7 @@ use crate::color::harmony::Harmony;
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
 use crate::config::Config;
+use crate::state::State;
 use crate::ui::picker::{Event, PickerController};
 use crate::ui::theme::{self, color32, contrast_color32};
 use crate::ui::widgets;
@@ -45,6 +46,7 @@ const _: () = assert!(FORMAT_KEYS.len() == ColorFormat::ALL.len());
 
 pub struct MainWindow {
     config: Config,
+    state: State,
     color: Okhsl,
     input: String,
     input_editing: bool,
@@ -63,11 +65,12 @@ pub struct MainWindow {
 }
 
 impl MainWindow {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config, state: State) -> Self {
         let picker = PickerController::new(config.default_format);
-        let history = History::from_srgb8(&config.history);
+        let history = History::from_srgb8(&state.history);
         Self {
             config,
+            state,
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
             input: String::new(),
             input_editing: false,
@@ -112,9 +115,15 @@ impl MainWindow {
     }
 
     fn persist_config(&mut self) {
-        self.config.history = self.history.to_srgb8();
         if let Err(error) = self.config.save() {
             self.set_toast(format!("Could not save settings: {error}"));
+        }
+    }
+
+    fn persist_state(&mut self) {
+        self.state.history = self.history.to_srgb8();
+        if let Err(error) = self.state.save() {
+            self.set_toast(format!("Could not save history: {error}"));
         }
     }
 
@@ -152,7 +161,7 @@ impl MainWindow {
             Event::Picked(color) => {
                 self.color = color;
                 self.history.push(color);
-                self.persist_config();
+                self.persist_state();
                 match clipboard::copy_color(self.config.default_format, color) {
                     Ok(value) => self.set_toast(format!("Picked {value}")),
                     Err(error) => self.set_toast(format!("Copy failed: {error}")),
@@ -298,7 +307,7 @@ impl MainWindow {
                 ui.horizontal(|ui| {
                     if widgets::clear_history(ui) {
                         self.history.clear();
-                        self.persist_config();
+                        self.persist_state();
                     }
                     let mut selected = None;
                     for &color in self.history.colors() {

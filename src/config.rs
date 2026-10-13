@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
+use crate::persistence;
 
 pub const APP_NAME: &str = "colorpickle";
 pub const CONFIG_FILE: &str = "config.toml";
@@ -35,7 +36,6 @@ pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
     pub theme: Theme,
-    pub history: Vec<[u8; 3]>,
 }
 
 impl Config {
@@ -43,9 +43,11 @@ impl Config {
         self.default_format.format(color)
     }
 
+    /// `$XDG_CONFIG_HOME/colorpickle/config.toml`, conventionally
+    /// `~/.config/colorpickle/config.toml`.
     pub fn path() -> Option<PathBuf> {
-        directories::ProjectDirs::from("", "", APP_NAME)
-            .map(|dirs| dirs.config_dir().join(CONFIG_FILE))
+        let dirs = directories::BaseDirs::new()?;
+        Some(dirs.config_dir().join(APP_NAME).join(CONFIG_FILE))
     }
 
     pub fn load() -> Self {
@@ -57,31 +59,7 @@ impl Config {
     }
 
     fn load_from(path: &Path) -> Self {
-        if !path.exists() {
-            return Self::default();
-        }
-        let text = match std::fs::read_to_string(path) {
-            Ok(text) => text,
-            Err(error) => {
-                tracing::warn!(
-                    ?error,
-                    path = %path.display(),
-                    "failed to read config; using defaults"
-                );
-                return Self::default();
-            }
-        };
-        match toml::from_str(&text) {
-            Ok(config) => config,
-            Err(error) => {
-                tracing::warn!(
-                    ?error,
-                    path = %path.display(),
-                    "failed to parse config; using defaults"
-                );
-                Self::default()
-            }
-        }
+        persistence::load(path)
     }
 
     pub fn save(&self) -> Result<()> {
@@ -90,16 +68,7 @@ impl Config {
     }
 
     fn save_to(&self, path: &Path) -> Result<()> {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
-        let text = toml::to_string_pretty(self).context("failed to serialize config")?;
-        let temporary = path.with_file_name(format!("{CONFIG_FILE}.tmp"));
-        std::fs::write(&temporary, text)
-            .with_context(|| format!("failed to write {}", temporary.display()))?;
-        std::fs::rename(&temporary, path)
-            .with_context(|| format!("failed to replace config at {}", path.display()))
+        persistence::save(path, self)
     }
 }
 
@@ -123,13 +92,11 @@ mod tests {
             launch_mode: LaunchMode::PickerFirst,
             default_format: ColorFormat::Oklch,
             theme: Theme::Dark,
-            history: vec![[1, 2, 3], [250, 128, 0]],
         };
 
         config.save_to(&path).unwrap();
 
         assert_eq!(Config::load_from(&path), config);
-        assert!(!path.with_file_name(format!("{CONFIG_FILE}.tmp")).exists());
         assert_eq!(
             Config::load_from(&directory.join("absent.toml")),
             Config::default()

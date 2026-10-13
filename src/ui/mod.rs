@@ -11,21 +11,22 @@ use anyhow::Result;
 use eframe::egui;
 
 use crate::config::Config;
+use crate::state::State;
 use crate::ui::main_window::MainWindow;
 
 pub const WINDOW_TITLE: &str = "ColorPickle";
 pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 
-pub fn run_ui(config: Config) -> Result<()> {
-    run_main(config, false)
+pub fn run_ui(config: Config, state: State) -> Result<()> {
+    run_main(config, state, false)
 }
 
-pub fn run_picker(config: Config) -> Result<()> {
-    run_main(config, true)
+pub fn run_picker(config: Config, state: State) -> Result<()> {
+    run_main(config, state, true)
 }
 
-fn run_main(config: Config, picker_first: bool) -> Result<()> {
+fn run_main(config: Config, state: State, picker_first: bool) -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(WINDOW_TITLE)
         .with_app_id("colorpickle")
@@ -45,9 +46,9 @@ fn run_main(config: Config, picker_first: bool) -> Result<()> {
         Box::new(move |cc| {
             icons::install(&cc.egui_ctx);
             let mut window = if picker_first {
-                MainWindow::new(config).picker_first()
+                MainWindow::new(config, state).picker_first()
             } else {
-                MainWindow::new(config)
+                MainWindow::new(config, state)
             };
             window.apply_theme(&cc.egui_ctx);
             Ok(Box::new(window))

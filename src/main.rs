@@ -3,6 +3,8 @@ mod cli;
 mod clipboard;
 mod color;
 mod config;
+mod persistence;
+mod state;
 mod ui;
 
 use anyhow::Result;
@@ -26,12 +28,13 @@ fn main() -> Result<()> {
 
     let cli = Cli::parse();
     let config = config::Config::load();
+    let state = state::State::load();
     let launch_mode = cli.launch_mode.unwrap_or(config.launch_mode);
 
     tracing::info!(?launch_mode, "starting ColorPickle");
 
     match launch_mode {
-        LaunchMode::UiFirst => ui::run_ui(config),
-        LaunchMode::PickerFirst => ui::run_picker(config),
+        LaunchMode::UiFirst => ui::run_ui(config, state),
+        LaunchMode::PickerFirst => ui::run_picker(config, state),
     }
 }
