@@ -2,6 +2,16 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.6.0 - 2026-10-14
+#### Features
+- (**config**) add Practical/Precise precision selector for copied values - (69837dd) - dcog989
+#### Bug Fixes
+- (**color**) separate colour components with spaces instead of commas - (790d3b4) - dcog989
+#### Miscellaneous Chores
+- updates - (2e6618b) - dcog989
+
+- - -
+
 ## v0.5.3 - 2026-10-13
 #### Bug Fixes
 - (**ui**) capture before opening a window on a picker-first launch - (326be1f) - dcog989
