@@ -2,13 +2,13 @@ use std::sync::{Mutex, OnceLock};
 
 use anyhow::{Context, Result};
 
-use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
+use crate::color::{ColorFormat, Precision};
 
 static CLIPBOARD: OnceLock<Mutex<Option<arboard::Clipboard>>> = OnceLock::new();
 
-pub fn copy_color(format: ColorFormat, color: Okhsl) -> Result<String> {
-    let value = format.format(color);
+pub fn copy_color(format: ColorFormat, color: Okhsl, precision: Precision) -> Result<String> {
+    let value = format.format(color, precision);
     set_text(value.clone())?;
     Ok(value)
 }

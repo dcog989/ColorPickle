@@ -2,6 +2,7 @@ use eframe::egui;
 use palette::Srgb;
 
 use crate::color::ColorFormat;
+use crate::color::Precision;
 use crate::color::apca;
 use crate::color::okhsl::Okhsl;
 use crate::ui::icons;
@@ -114,21 +115,33 @@ pub fn row_height(ui: &egui::Ui) -> f32 {
     (text + 2.0 * ui.spacing().button_padding.y).max(ui.spacing().interact_size.y)
 }
 
+#[derive(Clone, Copy)]
+struct SwatchStyle {
+    size: f32,
+    corner_radius: u8,
+    closable: bool,
+}
+
+const HISTORY_STYLE: SwatchStyle = SwatchStyle {
+    size: HISTORY_SWATCH_SIZE,
+    corner_radius: HISTORY_SWATCH_CORNER_RADIUS,
+    closable: true,
+};
+
+const HARMONY_STYLE: SwatchStyle = SwatchStyle {
+    size: SWATCH_SIZE,
+    corner_radius: SWATCH_CORNER_RADIUS,
+    closable: false,
+};
+
 pub fn history_swatch(
     ui: &mut egui::Ui,
     color: Okhsl,
     border: egui::Color32,
     format: ColorFormat,
+    precision: Precision,
 ) -> Option<SwatchAction> {
-    swatch(
-        ui,
-        color,
-        border,
-        format,
-        HISTORY_SWATCH_SIZE,
-        HISTORY_SWATCH_CORNER_RADIUS,
-        true,
-    )
+    swatch(ui, color, border, format, precision, HISTORY_STYLE)
 }
 
 pub fn harmony_swatch(
@@ -136,16 +149,9 @@ pub fn harmony_swatch(
     color: Okhsl,
     border: egui::Color32,
     format: ColorFormat,
+    precision: Precision,
 ) -> bool {
-    swatch(
-        ui,
-        color,
-        border,
-        format,
-        SWATCH_SIZE,
-        SWATCH_CORNER_RADIUS,
-        false,
-    ) == Some(SwatchAction::Select)
+    swatch(ui, color, border, format, precision, HARMONY_STYLE) == Some(SwatchAction::Select)
 }
 
 fn swatch(
@@ -153,10 +159,10 @@ fn swatch(
     color: Okhsl,
     border: egui::Color32,
     format: ColorFormat,
-    size: f32,
-    corner_radius: u8,
-    closable: bool,
+    precision: Precision,
+    style: SwatchStyle,
 ) -> Option<SwatchAction> {
+    let SwatchStyle { size, corner_radius, closable } = style;
     let (rect, response) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::click());
     let corner = egui::CornerRadius::same(corner_radius);
     ui.painter().rect_filled(rect, corner, color32(color));
@@ -170,7 +176,7 @@ fn swatch(
     let response = response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
         .on_hover_ui(|ui| {
-            ui.label(format.format(color));
+            ui.label(format.format(color, precision));
         });
 
     if closable && ui.rect_contains_pointer(rect) {

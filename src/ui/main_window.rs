@@ -68,7 +68,7 @@ pub struct MainWindow {
 
 impl MainWindow {
     pub fn new(config: Config, state: State) -> Self {
-        let picker = PickerController::new(config.default_format);
+        let picker = PickerController::new(config.default_format, config.precision);
         let history = History::from_srgb8(&state.history);
         Self {
             config,
@@ -145,14 +145,17 @@ impl MainWindow {
     }
 
     fn copy(&mut self, format: ColorFormat) {
-        match clipboard::copy_color(format, self.color) {
+        match clipboard::copy_color(format, self.color, self.config.precision) {
             Ok(value) => self.set_toast(format!("Copied {value}")),
             Err(error) => self.set_toast(format!("Copy failed: {error}")),
         }
     }
 
     fn open_picker(&mut self, ctx: &egui::Context) {
-        if self.picker.request(ctx, self.config.default_format) {
+        if self
+            .picker
+            .request(ctx, self.config.default_format, self.config.precision)
+        {
             self.set_toast("Capturing screen...");
         }
     }
@@ -166,7 +169,11 @@ impl MainWindow {
                 self.color = color;
                 self.history.push(color);
                 self.persist_state();
-                match clipboard::copy_color(self.config.default_format, color) {
+                match clipboard::copy_color(
+                    self.config.default_format,
+                    color,
+                    self.config.precision,
+                ) {
                     Ok(value) => self.set_toast(format!("Picked {value}")),
                     Err(error) => self.set_toast(format!("Copy failed: {error}")),
                 }
@@ -294,11 +301,12 @@ impl MainWindow {
                 ui.add_space(ROW_SPACING);
 
                 let color = self.color;
+                let precision = self.config.precision;
                 let format_row = ui.horizontal(|ui| {
                     widgets::copy_icon(ui, foreground);
                     for format in ColorFormat::ALL {
                         let response = ui.button(format.label()).on_hover_ui(|ui| {
-                            ui.label(format!("Copy {}", format.format(color)));
+                            ui.label(format!("Copy {}", format.format(color, precision)));
                         });
                         if response.clicked() {
                             self.copy(format);
@@ -324,8 +332,9 @@ impl MainWindow {
                     let mut selected = None;
                     let mut removed = None;
                     let format = self.config.default_format;
+                    let precision = self.config.precision;
                     for &color in self.history.colors() {
-                        match widgets::history_swatch(ui, color, foreground, format) {
+                        match widgets::history_swatch(ui, color, foreground, format, precision) {
                             Some(widgets::SwatchAction::Select) => selected = Some(color),
                             Some(widgets::SwatchAction::Remove) => removed = Some(color),
                             None => {}
@@ -358,8 +367,9 @@ impl MainWindow {
                             .response
                             .on_hover_text("Colour harmony");
                         let format = self.config.default_format;
+                        let precision = self.config.precision;
                         for swatch in self.harmony.swatches(self.color) {
-                            if widgets::harmony_swatch(ui, swatch, foreground, format) {
+                            if widgets::harmony_swatch(ui, swatch, foreground, format, precision) {
                                 self.color = swatch;
                             }
                         }

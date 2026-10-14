@@ -9,6 +9,7 @@ use palette::Srgb;
 use crate::capture;
 use crate::clipboard;
 use crate::color::ColorFormat;
+use crate::color::Precision;
 use crate::color::okhsl::Okhsl;
 use crate::config::Config;
 use crate::ui::pixels::{average_rgb8, pixel_at, pixel_bounds};
@@ -55,13 +56,14 @@ pub struct Session {
     output: capture::OutputInfo,
     drag_anchor: Option<egui::Pos2>,
     format: ColorFormat,
+    precision: Precision,
     cached_average: Option<(Bounds, Okhsl)>,
 }
 
 type Bounds = (u32, u32, u32, u32);
 
 impl Session {
-    pub fn new(captured: capture::Capture, format: ColorFormat) -> Self {
+    pub fn new(captured: capture::Capture, format: ColorFormat, precision: Precision) -> Self {
         let size = [
             captured.image.width() as usize,
             captured.image.height() as usize,
@@ -77,6 +79,7 @@ impl Session {
             output: captured.output,
             drag_anchor: None,
             format,
+            precision,
             cached_average: None,
         }
     }
@@ -145,7 +148,7 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     let captured = capture::capture_with(|| {})?;
     let output = captured.output.clone();
-    let session = Session::new(captured, config.default_format);
+    let session = Session::new(captured, config.default_format, config.precision);
     let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
 
     let options = eframe::NativeOptions {
@@ -188,7 +191,8 @@ impl eframe::App for StandalonePicker {
             return;
         };
         if let PickOutcome::Picked(color) = outcome
-            && let Err(error) = clipboard::copy_color(self.config.default_format, color)
+            && let Err(error) =
+                clipboard::copy_color(self.config.default_format, color, self.config.precision)
         {
             tracing::warn!(?error, "clipboard write failed");
         }
@@ -310,7 +314,14 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         uv_at(screen, pointer),
         egui::vec2(session.image.size[0] as f32, session.image.size[1] as f32),
     );
-    draw_value(&painter, screen, magnifier_center, color, session.format);
+    draw_value(
+        &painter,
+        screen,
+        magnifier_center,
+        color,
+        session.format,
+        session.precision,
+    );
     if let Some(rect) = region {
         draw_selection(&painter, rect);
     } else {
@@ -399,9 +410,10 @@ fn draw_value(
     magnifier_center: egui::Pos2,
     color: Okhsl,
     format: ColorFormat,
+    precision: Precision,
 ) {
     let galley = painter.layout_no_wrap(
-        format.format(color),
+        format.format(color, precision),
         egui::FontId::proportional(VALUE_FONT_SIZE),
         VALUE_TEXT_COLOR,
     );

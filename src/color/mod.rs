@@ -22,6 +22,42 @@ pub enum ColorFormat {
     Cielab,
 }
 
+/// How many decimals each format prints. Mirrors Color-Picker-Palette: precise
+/// keeps four decimals, practical rounds to whole numbers (two for the
+/// perceptual channels, whose 0..1 scale would otherwise collapse).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Precision {
+    #[default]
+    Practical,
+    Precise,
+}
+
+impl Precision {
+    pub const ALL: [Self; 2] = [Self::Practical, Self::Precise];
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Practical => "Practical",
+            Self::Precise => "Precise",
+        }
+    }
+
+    const fn hue(self) -> usize {
+        match self {
+            Self::Practical => 0,
+            Self::Precise => 1,
+        }
+    }
+
+    const fn fraction(self) -> usize {
+        match self {
+            Self::Practical => 2,
+            Self::Precise => 4,
+        }
+    }
+}
+
 impl ColorFormat {
     pub const ALL: [Self; 8] = [
         Self::Hex,
@@ -47,7 +83,7 @@ impl ColorFormat {
         }
     }
 
-    pub fn format(self, color: Okhsl) -> String {
+    pub fn format(self, color: Okhsl, precision: Precision) -> String {
         let srgb = color.to_srgb();
         match self {
             Self::Hex => format_hex(srgb),
@@ -66,26 +102,26 @@ impl ColorFormat {
             }
             Self::Okhsl => format!(
                 "okhsl({} {} {})",
-                decimals(color.hue(), 1),
-                decimals(color.saturation(), 3),
-                decimals(color.lightness(), 3)
+                decimals(color.hue(), precision.hue()),
+                decimals(color.saturation(), precision.fraction()),
+                decimals(color.lightness(), precision.fraction())
             ),
             Self::Oklch => {
                 let oklch = Oklch::from_color(Oklab::from_color(srgb));
                 format!(
                     "oklch({} {} {})",
-                    decimals(oklch.l, 3),
-                    decimals(oklch.chroma, 3),
-                    decimals(oklch.hue.into_positive_degrees(), 1)
+                    decimals(oklch.l, precision.fraction()),
+                    decimals(oklch.chroma, precision.fraction()),
+                    decimals(oklch.hue.into_positive_degrees(), precision.hue())
                 )
             }
             Self::Oklab => {
                 let oklab = Oklab::from_color(srgb);
                 format!(
                     "oklab({} {} {})",
-                    decimals(oklab.l, 3),
-                    decimals(oklab.a, 3),
-                    decimals(oklab.b, 3)
+                    decimals(oklab.l, precision.fraction()),
+                    decimals(oklab.a, precision.fraction()),
+                    decimals(oklab.b, precision.fraction())
                 )
             }
             Self::Cmyk => format_cmyk(srgb),
@@ -93,9 +129,9 @@ impl ColorFormat {
                 let lab: Lab = Lab::from_color(srgb);
                 format!(
                     "lab({} {} {})",
-                    decimals(lab.l, 1),
-                    decimals(lab.a, 1),
-                    decimals(lab.b, 1)
+                    decimals(lab.l, precision.fraction()),
+                    decimals(lab.a, precision.fraction()),
+                    decimals(lab.b, precision.fraction())
                 )
             }
         }
@@ -157,7 +193,7 @@ fn format_cmyk(srgb: Srgb) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{ColorFormat, decimals, format_cmyk, format_hex};
+    use super::{ColorFormat, Precision, decimals, format_cmyk, format_hex};
     use crate::color::okhsl::Okhsl;
     use palette::Srgb;
 
@@ -182,18 +218,20 @@ mod tests {
             format_cmyk(Srgb::new(1.0, 0.0, 0.0)),
             "cmyk(0% 100% 100% 0%)"
         );
-        assert_eq!(
-            format_cmyk(Srgb::new(0.0, 0.0, 0.0)),
-            "cmyk(0% 0% 0% 100%)"
-        );
+        assert_eq!(format_cmyk(Srgb::new(0.0, 0.0, 0.0)), "cmyk(0% 0% 0% 100%)");
     }
 
     #[test]
-    fn okhsl_format_is_native() {
-        let color = Okhsl::new(30.0, 0.5, 0.5);
-        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(30 0.5 0.5)");
-        let color = Okhsl::new(180.0, 0.500, 0.500);
-        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(180 0.5 0.5)");
+    fn okhsl_format_honours_precision() {
+        let color = Okhsl::new(336.34, 0.287, 0.4375);
+        assert_eq!(
+            ColorFormat::Okhsl.format(color, Precision::Practical),
+            "okhsl(336 0.29 0.44)"
+        );
+        assert_eq!(
+            ColorFormat::Okhsl.format(color, Precision::Precise),
+            "okhsl(336.3 0.287 0.4375)"
+        );
     }
 
     fn component(text: &str, index: usize) -> f32 {
@@ -216,9 +254,9 @@ mod tests {
             Srgb::new(0.1, 0.8, 0.4),
         ] {
             let color = Okhsl::from_srgb(srgb);
-            let hsl = ColorFormat::Hsl.format(color);
+            let hsl = ColorFormat::Hsl.format(color, Precision::Practical);
             assert!((0.0..360.0).contains(&component(&hsl, 1)), "{hsl}");
-            let oklch = ColorFormat::Oklch.format(color);
+            let oklch = ColorFormat::Oklch.format(color, Precision::Practical);
             assert!((0.0..360.0).contains(&component(&oklch, 3)), "{oklch}");
         }
     }

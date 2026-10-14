@@ -206,7 +206,7 @@ fn from_srgb8(red: u8, green: u8, blue: u8) -> Okhsl {
 #[cfg(test)]
 mod tests {
     use super::parse;
-    use crate::color::ColorFormat;
+    use crate::color::{ColorFormat, Precision};
 
     // 8-bit channels; HSL and CMYK quantise to whole degrees/percent, so a
     // near-lossless round trip is the most these formats can guarantee.
@@ -282,7 +282,7 @@ mod tests {
             let color = parse(text).unwrap();
             let expected = color.to_srgb8();
             for format in ColorFormat::ALL {
-                let formatted = format.format(color);
+                let formatted = format.format(color, Precision::Precise);
                 let parsed = parse(&formatted).unwrap();
                 let actual = parsed.to_srgb8();
                 for (channel, expected_channel) in actual.iter().zip(expected.iter()) {

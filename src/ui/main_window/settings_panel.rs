@@ -1,6 +1,6 @@
 use eframe::egui;
 
-use crate::color::ColorFormat;
+use crate::color::{ColorFormat, Precision};
 use crate::config::{Config, LaunchMode};
 use crate::ui::widgets;
 
@@ -71,6 +71,26 @@ pub(super) fn show(
                     })
                     .response
                     .on_hover_text("Default format: shown in the input field and copied on pick");
+                egui::ComboBox::from_id_salt("precision")
+                    .selected_text(config.precision.label())
+                    .show_ui(ui, |ui| {
+                        for precision in Precision::ALL {
+                            if ui
+                                .selectable_value(
+                                    &mut config.precision,
+                                    precision,
+                                    precision.label(),
+                                )
+                                .changed()
+                            {
+                                outcome.config_changed = true;
+                            }
+                        }
+                    })
+                    .response
+                    .on_hover_text(
+                        "Precision: round values for everyday use, or keep every decimal",
+                    );
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     outcome.about_opened = widgets::about_icon(ui);

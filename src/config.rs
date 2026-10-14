@@ -4,8 +4,8 @@ use anyhow::{Context, Result};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
-use crate::color::ColorFormat;
 use crate::color::okhsl::Okhsl;
+use crate::color::{ColorFormat, Precision};
 use crate::persistence;
 
 pub const APP_NAME: &str = "colorpickle";
@@ -58,13 +58,14 @@ impl LogLevel {
 pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
+    pub precision: Precision,
     pub theme: Theme,
     pub log_level: LogLevel,
 }
 
 impl Config {
     pub fn format(&self, color: Okhsl) -> String {
-        self.default_format.format(color)
+        self.default_format.format(color, self.precision)
     }
 
     /// `$XDG_CONFIG_HOME/colorpickle/config.toml`, conventionally
@@ -99,7 +100,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::{CONFIG_FILE, Config, LaunchMode, LogLevel, Theme};
-    use crate::color::ColorFormat;
+    use crate::color::{ColorFormat, Precision};
 
     fn temporary_directory(name: &str) -> std::path::PathBuf {
         let directory =
@@ -115,6 +116,7 @@ mod tests {
         let config = Config {
             launch_mode: LaunchMode::PickerFirst,
             default_format: ColorFormat::Oklch,
+            precision: Precision::Precise,
             theme: Theme::Dark,
             log_level: LogLevel::Debug,
         };
