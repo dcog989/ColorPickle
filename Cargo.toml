@@ -65,7 +65,7 @@ eframe = {
   ]
 }
 image = { version = "0.25.10", default-features = false, features = ["png"] }
-lucide-icons = "1.56.0"
+lucide-icons = "1.57.0"
 palette = "0.7.7"
 percent-encoding = "2.3.2"
 pollster = "1.0.1"
