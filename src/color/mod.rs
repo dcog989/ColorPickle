@@ -53,19 +53,19 @@ impl ColorFormat {
             Self::Hex => format_hex(srgb),
             Self::Rgb => {
                 let [red, green, blue] = to_srgb8(srgb);
-                format!("rgb({red}, {green}, {blue})")
+                format!("rgb({red} {green} {blue})")
             }
             Self::Hsl => {
                 let hsl = Hsl::from_color(srgb);
                 format!(
-                    "hsl({:.0}, {:.0}%, {:.0}%)",
+                    "hsl({:.0} {:.0}% {:.0}%)",
                     hsl.hue.into_positive_degrees(),
                     hsl.saturation * 100.0,
                     hsl.lightness * 100.0
                 )
             }
             Self::Okhsl => format!(
-                "okhsl({}, {}, {})",
+                "okhsl({} {} {})",
                 decimals(color.hue(), 1),
                 decimals(color.saturation(), 3),
                 decimals(color.lightness(), 3)
@@ -73,7 +73,7 @@ impl ColorFormat {
             Self::Oklch => {
                 let oklch = Oklch::from_color(Oklab::from_color(srgb));
                 format!(
-                    "oklch({}, {}, {})",
+                    "oklch({} {} {})",
                     decimals(oklch.l, 3),
                     decimals(oklch.chroma, 3),
                     decimals(oklch.hue.into_positive_degrees(), 1)
@@ -82,7 +82,7 @@ impl ColorFormat {
             Self::Oklab => {
                 let oklab = Oklab::from_color(srgb);
                 format!(
-                    "oklab({}, {}, {})",
+                    "oklab({} {} {})",
                     decimals(oklab.l, 3),
                     decimals(oklab.a, 3),
                     decimals(oklab.b, 3)
@@ -92,7 +92,7 @@ impl ColorFormat {
             Self::Cielab => {
                 let lab: Lab = Lab::from_color(srgb);
                 format!(
-                    "lab({}, {}, {})",
+                    "lab({} {} {})",
                     decimals(lab.l, 1),
                     decimals(lab.a, 1),
                     decimals(lab.b, 1)
@@ -147,7 +147,7 @@ fn format_cmyk(srgb: Srgb) -> String {
     };
 
     format!(
-        "cmyk({:.0}%, {:.0}%, {:.0}%, {:.0}%)",
+        "cmyk({:.0}% {:.0}% {:.0}% {:.0}%)",
         cyan * 100.0,
         magenta * 100.0,
         yellow * 100.0,
@@ -180,28 +180,30 @@ mod tests {
     fn cmyk_maps_red_and_black() {
         assert_eq!(
             format_cmyk(Srgb::new(1.0, 0.0, 0.0)),
-            "cmyk(0%, 100%, 100%, 0%)"
+            "cmyk(0% 100% 100% 0%)"
         );
         assert_eq!(
             format_cmyk(Srgb::new(0.0, 0.0, 0.0)),
-            "cmyk(0%, 0%, 0%, 100%)"
+            "cmyk(0% 0% 0% 100%)"
         );
     }
 
     #[test]
     fn okhsl_format_is_native() {
         let color = Okhsl::new(30.0, 0.5, 0.5);
-        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(30, 0.5, 0.5)");
+        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(30 0.5 0.5)");
         let color = Okhsl::new(180.0, 0.500, 0.500);
-        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(180, 0.5, 0.5)");
+        assert_eq!(ColorFormat::Okhsl.format(color), "okhsl(180 0.5 0.5)");
     }
 
     fn component(text: &str, index: usize) -> f32 {
-        text.split(['(', ','])
-            .nth(index)
+        text.split_once('(')
+            .unwrap()
+            .1
+            .split_whitespace()
+            .nth(index - 1)
             .unwrap()
             .trim_end_matches([')', '%'])
-            .trim()
             .parse()
             .unwrap()
     }
