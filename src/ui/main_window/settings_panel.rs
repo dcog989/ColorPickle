@@ -52,7 +52,9 @@ pub(super) fn show(
                         }
                     })
                     .response
-                    .on_hover_text("Launch mode: open the main window, or start the screen picker.");
+                    .on_hover_text(
+                        "Launch mode: open the main window, or start the screen picker.",
+                    );
                 egui::ComboBox::from_id_salt("default-format")
                     .selected_text(config.default_format.label())
                     .show_ui(ui, |ui| {
@@ -70,7 +72,9 @@ pub(super) fn show(
                         }
                     })
                     .response
-                    .on_hover_text("Default format: shown in the input field and copied to clipboard.");
+                    .on_hover_text(
+                        "Default format: shown in the input field and copied to clipboard.",
+                    );
                 egui::ComboBox::from_id_salt("precision")
                     .selected_text(config.precision.label())
                     .show_ui(ui, |ui| {

@@ -6,14 +6,16 @@ use crate::config::Theme;
 
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
 const TARGET_CONTRAST_LC: f32 = 90.0;
+const MIN_CONTRAST_LC: f32 = 75.0;
+const MIN_FILL_LIGHTNESS: f32 = 0.2;
 const CONTRAST_SEARCH_STEPS: u32 = 12;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
-const INACTIVE_FILL_ALPHA: u8 = 32;
-const HOVERED_FILL_ALPHA: u8 = 60;
-const ACTIVE_FILL_ALPHA: u8 = 96;
-const OPEN_FILL_ALPHA: u8 = 48;
-const SELECTION_FILL_ALPHA: u8 = 80;
-const FIELD_FILL_ALPHA: u8 = 28;
+const INACTIVE_SHADE: f32 = 32.0 / 255.0;
+const HOVERED_SHADE: f32 = 60.0 / 255.0;
+const ACTIVE_SHADE: f32 = 96.0 / 255.0;
+const OPEN_SHADE: f32 = 48.0 / 255.0;
+const SELECTION_SHADE: f32 = 80.0 / 255.0;
+const FIELD_SHADE: f32 = 28.0 / 255.0;
 const BORDER_ALPHA: u8 = 110;
 const BORDER_WIDTH: f32 = 1.0;
 const CORNER_RADIUS: u8 = 6;
@@ -73,6 +75,65 @@ fn contrast_against(color: Okhsl, background: Okhsl) -> f32 {
     apca::contrast(color.to_srgb(), background.to_srgb()).abs()
 }
 
+/// Clamp a UI fill so text on it keeps at least [`MIN_CONTRAST_LC`], and keep
+/// it off pure black. UI fills only — the colour swatch always shows the picked
+/// colour, so it is never clamped.
+fn clamp_fill(color: Okhsl, foreground: Okhsl) -> Okhsl {
+    let hue = color.hue();
+    let saturation = color.saturation();
+    let lightness = color.lightness().max(MIN_FILL_LIGHTNESS);
+    let lifted = Okhsl::new(hue, saturation, lightness);
+    if contrast_against(foreground, lifted) >= MIN_CONTRAST_LC {
+        return lifted;
+    }
+
+    // Contrast rises monotonically as the fill moves away from the text, so
+    // binary-search the smallest shift that clears the floor.
+    let away = if foreground.lightness() > CONTRAST_LIGHTNESS_THRESHOLD {
+        0.0
+    } else {
+        1.0
+    };
+    let mut below = 0.0;
+    let mut above = 1.0;
+    for _ in 0..CONTRAST_SEARCH_STEPS {
+        let step = (below + above) / 2.0;
+        let sample = (lightness + (away - lightness) * step).clamp(0.0, 1.0);
+        if contrast_against(foreground, Okhsl::new(hue, saturation, sample)) >= MIN_CONTRAST_LC {
+            above = step;
+        } else {
+            below = step;
+        }
+    }
+    let lightness = (lightness + (away - lightness) * above).clamp(0.0, 1.0);
+    Okhsl::new(hue, saturation, lightness)
+}
+
+/// A widget fill: the swatch shifted `fraction` of the way toward the text,
+/// then clamped so text on the fill stays readable.
+fn fill_color(background: Okhsl, foreground: Okhsl, fraction: f32) -> Okhsl {
+    let lightness =
+        background.lightness() + (foreground.lightness() - background.lightness()) * fraction;
+    clamp_fill(
+        Okhsl::new(background.hue(), background.saturation(), lightness),
+        foreground,
+    )
+}
+
+/// A popup/tooltip surface: the swatch nudged toward mid grey, then clamped.
+fn surface_color(color: Okhsl, foreground: Okhsl) -> Okhsl {
+    let lightness = color.lightness();
+    let shifted = if lightness >= CONTRAST_LIGHTNESS_THRESHOLD {
+        (lightness - SURFACE_LIGHTNESS_SHIFT).max(0.0)
+    } else {
+        (lightness + SURFACE_LIGHTNESS_SHIFT).min(1.0)
+    };
+    clamp_fill(
+        Okhsl::new(color.hue(), color.saturation(), shifted),
+        foreground,
+    )
+}
+
 pub fn apply(ctx: &egui::Context, theme: Theme, color: Okhsl) {
     ctx.set_theme(theme_preference(theme));
     let mut visuals = base_visuals(ctx, theme);
@@ -119,9 +180,11 @@ fn base_visuals(ctx: &egui::Context, theme: Theme) -> egui::Visuals {
 }
 
 fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
-    let foreground = contrast_color32(color);
-    let surface = surface_color32(color);
+    let foreground_okhsl = foreground(color);
+    let foreground = color32(foreground_okhsl);
+    let surface = color32(surface_color(color, foreground_okhsl));
     let border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, BORDER_ALPHA));
+    let shade = |fraction: f32| color32(fill_color(color, foreground_okhsl, fraction));
 
     visuals.override_text_color = Some(foreground);
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
@@ -129,52 +192,43 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     visuals.widgets.hovered.fg_stroke.color = foreground;
     visuals.widgets.active.fg_stroke.color = foreground;
     visuals.widgets.open.fg_stroke.color = foreground;
-    visuals.widgets.inactive.weak_bg_fill = fill(foreground, INACTIVE_FILL_ALPHA);
-    visuals.widgets.hovered.weak_bg_fill = fill(foreground, HOVERED_FILL_ALPHA);
-    visuals.widgets.active.weak_bg_fill = fill(foreground, ACTIVE_FILL_ALPHA);
-    visuals.widgets.open.weak_bg_fill = fill(foreground, OPEN_FILL_ALPHA);
-    visuals.widgets.inactive.bg_fill = fill(foreground, INACTIVE_FILL_ALPHA);
-    visuals.widgets.hovered.bg_fill = fill(foreground, HOVERED_FILL_ALPHA);
-    visuals.widgets.active.bg_fill = fill(foreground, ACTIVE_FILL_ALPHA);
-    visuals.widgets.open.bg_fill = fill(foreground, OPEN_FILL_ALPHA);
+    visuals.widgets.inactive.weak_bg_fill = shade(INACTIVE_SHADE);
+    visuals.widgets.hovered.weak_bg_fill = shade(HOVERED_SHADE);
+    visuals.widgets.active.weak_bg_fill = shade(ACTIVE_SHADE);
+    visuals.widgets.open.weak_bg_fill = shade(OPEN_SHADE);
+    visuals.widgets.inactive.bg_fill = shade(INACTIVE_SHADE);
+    visuals.widgets.hovered.bg_fill = shade(HOVERED_SHADE);
+    visuals.widgets.active.bg_fill = shade(ACTIVE_SHADE);
+    visuals.widgets.open.bg_fill = shade(OPEN_SHADE);
     visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(BORDER_WIDTH, foreground);
     visuals.widgets.inactive.bg_stroke = border;
-    set_surfaces(visuals, surface, border, foreground);
-    visuals.selection.bg_fill = fill(foreground, SELECTION_FILL_ALPHA);
+    set_surfaces(visuals, surface, border, shade(FIELD_SHADE));
+    visuals.selection.bg_fill = shade(SELECTION_SHADE);
     visuals.selection.stroke.color = foreground;
-}
-
-fn surface_color32(color: Okhsl) -> egui::Color32 {
-    let lightness = color.lightness();
-    let shifted = if lightness >= CONTRAST_LIGHTNESS_THRESHOLD {
-        (lightness - SURFACE_LIGHTNESS_SHIFT).max(0.0)
-    } else {
-        (lightness + SURFACE_LIGHTNESS_SHIFT).min(1.0)
-    };
-    color32(Okhsl::new(color.hue(), color.saturation(), shifted))
 }
 
 fn set_surfaces(
     visuals: &mut egui::Visuals,
     surface: egui::Color32,
     border: egui::Stroke,
-    foreground: egui::Color32,
+    field: egui::Color32,
 ) {
     visuals.window_fill = surface;
     visuals.panel_fill = surface;
     visuals.window_stroke = border;
-    visuals.extreme_bg_color = fill(foreground, FIELD_FILL_ALPHA);
+    visuals.extreme_bg_color = field;
 }
 
-fn fill(foreground: egui::Color32, alpha: u8) -> egui::Color32 {
-    egui::Color32::from_rgba_unmultiplied(foreground.r(), foreground.g(), foreground.b(), alpha)
+fn fill(color: egui::Color32, alpha: u8) -> egui::Color32 {
+    egui::Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), alpha)
 }
 
 #[cfg(test)]
 mod tests {
+    use palette::Srgb;
+
     use super::contrast_color32;
     use crate::color::okhsl::Okhsl;
-    use palette::Srgb;
 
     fn round_trip(color: Okhsl) -> Okhsl {
         let [red, green, blue] = color.to_srgb8();
@@ -210,6 +264,51 @@ mod tests {
                 expect_light_text,
                 "lightness {lightness}"
             );
+        }
+    }
+
+    #[test]
+    fn fills_clear_the_floor_for_dead_band_colours() {
+        for lightness in [0.55, 0.65, 0.70, 0.75] {
+            let color = Okhsl::new(116.0, 0.78, lightness);
+            let foreground = super::foreground(color);
+            for fraction in [
+                super::FIELD_SHADE,
+                super::INACTIVE_SHADE,
+                super::HOVERED_SHADE,
+                super::ACTIVE_SHADE,
+                super::OPEN_SHADE,
+                super::SELECTION_SHADE,
+            ] {
+                let fill = super::fill_color(color, foreground, fraction);
+                assert!(
+                    super::contrast_against(foreground, fill) >= super::MIN_CONTRAST_LC,
+                    "lightness {lightness} fraction {fraction}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn surfaces_keep_contrast_against_the_text() {
+        for lightness in [0.0, 0.15, 0.43, 0.65, 0.80, 0.95] {
+            let color = Okhsl::new(116.0, 0.78, lightness);
+            let foreground = super::foreground(color);
+            let surface = super::surface_color(color, foreground);
+            assert!(
+                super::contrast_against(foreground, surface) >= super::MIN_CONTRAST_LC,
+                "lightness {lightness}"
+            );
+        }
+    }
+
+    #[test]
+    fn fills_stay_off_black() {
+        let color = Okhsl::new(116.0, 0.78, 0.0);
+        let foreground = super::foreground(color);
+        for fraction in [super::FIELD_SHADE, super::ACTIVE_SHADE] {
+            let fill = super::fill_color(color, foreground, fraction);
+            assert!(fill.lightness() >= super::MIN_FILL_LIGHTNESS);
         }
     }
 }
