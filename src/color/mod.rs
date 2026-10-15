@@ -23,8 +23,9 @@ pub enum ColorFormat {
 }
 
 /// How many decimals each format prints. Mirrors Color-Picker-Palette: precise
-/// keeps four decimals, practical rounds to whole numbers (two for the
-/// perceptual channels, whose 0..1 scale would otherwise collapse).
+/// keeps four decimals (two for the hue channel, in degrees), practical rounds
+/// to whole numbers (two for the perceptual channels, whose 0..1 scale would
+/// otherwise collapse).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Precision {
@@ -46,7 +47,7 @@ impl Precision {
     const fn hue(self) -> usize {
         match self {
             Self::Practical => 0,
-            Self::Precise => 1,
+            Self::Precise => 2,
         }
     }
 
@@ -230,7 +231,7 @@ mod tests {
         );
         assert_eq!(
             ColorFormat::Okhsl.format(color, Precision::Precise),
-            "okhsl(336.3 0.287 0.4375)"
+            "okhsl(336.34 0.287 0.4375)"
         );
     }
 
