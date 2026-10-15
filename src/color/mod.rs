@@ -23,8 +23,9 @@ pub enum ColorFormat {
 }
 
 /// How many decimals each format prints. Mirrors Color-Picker-Palette: precise
-/// keeps four decimals (two for the hue channel, in degrees), practical rounds
-/// to whole numbers (two for the perceptual channels, whose 0..1 scale would
+/// keeps decimals (two for the percentage and 8-bit channels, one for the hue
+/// in degrees, four for the 0..1 perceptual channels), practical rounds to
+/// whole numbers (two for the perceptual channels, whose 0..1 scale would
 /// otherwise collapse).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -47,7 +48,7 @@ impl Precision {
     const fn hue(self) -> usize {
         match self {
             Self::Practical => 0,
-            Self::Precise => 2,
+            Self::Precise => 1,
         }
     }
 
@@ -55,6 +56,13 @@ impl Precision {
         match self {
             Self::Practical => 2,
             Self::Precise => 4,
+        }
+    }
+
+    const fn channel(self) -> usize {
+        match self {
+            Self::Practical => 0,
+            Self::Precise => 2,
         }
     }
 }
@@ -88,17 +96,19 @@ impl ColorFormat {
         let srgb = color.to_srgb();
         match self {
             Self::Hex => format_hex(srgb),
-            Self::Rgb => {
-                let [red, green, blue] = to_srgb8(srgb);
-                format!("rgb({red} {green} {blue})")
-            }
+            Self::Rgb => format!(
+                "rgb({} {} {})",
+                srgb_channel(srgb.red, precision.channel()),
+                srgb_channel(srgb.green, precision.channel()),
+                srgb_channel(srgb.blue, precision.channel())
+            ),
             Self::Hsl => {
                 let hsl = Hsl::from_color(srgb);
                 format!(
-                    "hsl({:.0} {:.0}% {:.0}%)",
-                    hsl.hue.into_positive_degrees(),
-                    hsl.saturation * 100.0,
-                    hsl.lightness * 100.0
+                    "hsl({} {}% {}%)",
+                    decimals(hsl.hue.into_positive_degrees(), precision.hue()),
+                    decimals(hsl.saturation * 100.0, precision.channel()),
+                    decimals(hsl.lightness * 100.0, precision.channel())
                 )
             }
             Self::Okhsl => format!(
@@ -125,7 +135,7 @@ impl ColorFormat {
                     decimals(oklab.b, precision.fraction())
                 )
             }
-            Self::Cmyk => format_cmyk(srgb),
+            Self::Cmyk => format_cmyk(srgb, precision.channel()),
             Self::Cielab => {
                 let lab: Lab = Lab::from_color(srgb);
                 format!(
@@ -160,16 +170,21 @@ fn to_srgb8(srgb: Srgb) -> [u8; 3] {
     [color.red, color.green, color.blue]
 }
 
+const CHANNEL_MAX: f32 = 255.0;
+
+fn srgb_channel(value: f32, places: usize) -> String {
+    decimals(value.clamp(0.0, 1.0) * CHANNEL_MAX, places)
+}
+
 fn format_hex(srgb: Srgb) -> String {
     let [red, green, blue] = to_srgb8(srgb);
     format!("#{red:02X}{green:02X}{blue:02X}")
 }
 
-fn format_cmyk(srgb: Srgb) -> String {
-    let [red, green, blue] = to_srgb8(srgb);
-    let red = f32::from(red) / 255.0;
-    let green = f32::from(green) / 255.0;
-    let blue = f32::from(blue) / 255.0;
+fn format_cmyk(srgb: Srgb, places: usize) -> String {
+    let red = srgb.red.clamp(0.0, 1.0);
+    let green = srgb.green.clamp(0.0, 1.0);
+    let blue = srgb.blue.clamp(0.0, 1.0);
 
     let black = 1.0 - red.max(green).max(blue);
     let denominator = 1.0 - black;
@@ -184,17 +199,17 @@ fn format_cmyk(srgb: Srgb) -> String {
     };
 
     format!(
-        "cmyk({:.0}% {:.0}% {:.0}% {:.0}%)",
-        cyan * 100.0,
-        magenta * 100.0,
-        yellow * 100.0,
-        black * 100.0
+        "cmyk({}% {}% {}% {}%)",
+        decimals(cyan * 100.0, places),
+        decimals(magenta * 100.0, places),
+        decimals(yellow * 100.0, places),
+        decimals(black * 100.0, places)
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{ColorFormat, Precision, decimals, format_cmyk, format_hex};
+    use super::{ColorFormat, Precision, decimals, format_cmyk, format_hex, srgb_channel};
     use crate::color::okhsl::Okhsl;
     use palette::Srgb;
 
@@ -216,10 +231,36 @@ mod tests {
     #[test]
     fn cmyk_maps_red_and_black() {
         assert_eq!(
-            format_cmyk(Srgb::new(1.0, 0.0, 0.0)),
+            format_cmyk(Srgb::new(1.0, 0.0, 0.0), 0),
             "cmyk(0% 100% 100% 0%)"
         );
-        assert_eq!(format_cmyk(Srgb::new(0.0, 0.0, 0.0)), "cmyk(0% 0% 0% 100%)");
+        assert_eq!(
+            format_cmyk(Srgb::new(0.0, 0.0, 0.0), 0),
+            "cmyk(0% 0% 0% 100%)"
+        );
+    }
+
+    #[test]
+    fn srgb_channel_honours_places_and_clamps() {
+        assert_eq!(srgb_channel(0.5, 2), "127.5");
+        assert_eq!(srgb_channel(0.5, 0), "128");
+        assert_eq!(srgb_channel(1.2, 2), "255");
+        assert_eq!(srgb_channel(-0.1, 2), "0");
+    }
+
+    #[test]
+    fn channel_formats_honour_precision() {
+        let color = Okhsl::from_srgb(Srgb::new(0.123, 0.456, 0.789));
+        for format in [ColorFormat::Rgb, ColorFormat::Hsl, ColorFormat::Cmyk] {
+            assert!(
+                !format.format(color, Precision::Practical).contains('.'),
+                "{format:?} practical"
+            );
+            assert!(
+                format.format(color, Precision::Precise).contains('.'),
+                "{format:?} precise"
+            );
+        }
     }
 
     #[test]
@@ -231,7 +272,7 @@ mod tests {
         );
         assert_eq!(
             ColorFormat::Okhsl.format(color, Precision::Precise),
-            "okhsl(336.34 0.287 0.4375)"
+            "okhsl(336.3 0.287 0.4375)"
         );
     }
 
