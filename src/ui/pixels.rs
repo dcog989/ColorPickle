@@ -1,5 +1,7 @@
 use eframe::egui;
 
+const CHANNEL_MAX: f32 = 255.0;
+
 pub fn pixel_at(image: &egui::ColorImage, uv: egui::Pos2) -> (u32, u32) {
     let width = image.size[0] as f32;
     let height = image.size[1] as f32;
@@ -18,7 +20,9 @@ pub fn pixel_bounds(
     (x0.min(x1), y0.min(y1), x0.max(x1), y0.max(y1))
 }
 
-pub fn average_rgb8(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> [u8; 3] {
+/// Mean of the sRGB channels over `bounds`, in `0.0..=1.0`. Kept in `f32` so a
+/// region average keeps the sub-byte detail a whole channel would drop.
+pub fn average_srgb(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> [f32; 3] {
     let width = image.size[0];
     let (start_x, start_y, end_x, end_y) = bounds;
     let mut sums = [0u64; 3];
@@ -34,19 +38,27 @@ pub fn average_rgb8(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> [
     }
 
     if count == 0 {
-        return [0, 0, 0];
+        return [0.0; 3];
     }
-    [
-        (sums[0] / count) as u8,
-        (sums[1] / count) as u8,
-        (sums[2] / count) as u8,
-    ]
+    let count = count as f32;
+    sums.map(|sum| sum as f32 / count / CHANNEL_MAX)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::average_rgb8;
+    use super::average_srgb;
     use eframe::egui::{self, Color32};
+
+    const EPSILON: f32 = 1e-6;
+
+    fn assert_close(actual: [f32; 3], expected: [f32; 3]) {
+        for (actual, expected) in actual.iter().zip(expected.iter()) {
+            assert!(
+                (actual - expected).abs() < EPSILON,
+                "{actual} vs {expected}"
+            );
+        }
+    }
 
     #[test]
     fn averages_a_region_block() {
@@ -57,7 +69,7 @@ mod tests {
             }
         }
         let image = egui::ColorImage::new([4, 4], pixels);
-        assert_eq!(average_rgb8(&image, (0, 0, 1, 1)), [255, 0, 0]);
+        assert_close(average_srgb(&image, (0, 0, 1, 1)), [1.0, 0.0, 0.0]);
     }
 
     #[test]
@@ -65,7 +77,7 @@ mod tests {
         let mut pixels = vec![Color32::TRANSPARENT; 2 * 2];
         pixels[0] = Color32::WHITE;
         let image = egui::ColorImage::new([2, 2], pixels);
-        assert_eq!(average_rgb8(&image, (0, 0, 1, 1)), [63, 63, 63]);
+        assert_close(average_srgb(&image, (0, 0, 1, 1)), [0.25, 0.25, 0.25]);
     }
 
     #[test]
@@ -73,6 +85,9 @@ mod tests {
         let mut pixels = vec![Color32::TRANSPARENT; 2 * 2];
         pixels[3] = Color32::from_rgb(10, 20, 30);
         let image = egui::ColorImage::new([2, 2], pixels);
-        assert_eq!(average_rgb8(&image, (1, 1, 1, 1)), [10, 20, 30]);
+        assert_close(
+            average_srgb(&image, (1, 1, 1, 1)),
+            [10.0 / 255.0, 20.0 / 255.0, 30.0 / 255.0],
+        );
     }
 }

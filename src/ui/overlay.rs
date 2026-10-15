@@ -12,7 +12,7 @@ use crate::color::ColorFormat;
 use crate::color::Precision;
 use crate::color::okhsl::Okhsl;
 use crate::config::Config;
-use crate::ui::pixels::{average_rgb8, pixel_at, pixel_bounds};
+use crate::ui::pixels::{average_srgb, pixel_at, pixel_bounds};
 use crate::ui::theme;
 
 const PICKER_TITLE: &str = "ColorPickle";
@@ -39,7 +39,6 @@ const STROKE_COLOR: egui::Color32 = egui::Color32::WHITE;
 const SHADOW_COLOR: egui::Color32 = egui::Color32::BLACK;
 const SELECTION_FILL: egui::Color32 =
     egui::Color32::from_rgba_unmultiplied_const(255, 255, 255, 40);
-const RGB_MAX: f32 = 255.0;
 const FRAME_TEXTURE: &str = "picker-frame";
 const FULL_UV: egui::Rect = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
 
@@ -510,10 +509,6 @@ fn draw_banner(painter: &egui::Painter, screen: egui::Rect) {
 }
 
 fn average_color(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> Okhsl {
-    let [red, green, blue] = average_rgb8(image, bounds);
-    Okhsl::from_srgb(Srgb::new(
-        f32::from(red) / RGB_MAX,
-        f32::from(green) / RGB_MAX,
-        f32::from(blue) / RGB_MAX,
-    ))
+    let [red, green, blue] = average_srgb(image, bounds);
+    Okhsl::from_srgb(Srgb::new(red, green, blue))
 }
