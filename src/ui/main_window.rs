@@ -230,7 +230,7 @@ impl eframe::App for MainWindow {
             self.handle_event(event);
         }
 
-        self.about.show(&ctx);
+        self.about.show(&ctx, self.config.log_level);
         self.show_toast(&ctx);
     }
 }

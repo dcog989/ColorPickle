@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use eframe::egui;
 
-use crate::config::Config;
+use crate::config::{Config, LogLevel};
 use crate::logging;
 use crate::state::State;
 use crate::ui::{ICON_PNG, WINDOW_TITLE};
@@ -35,7 +35,7 @@ impl About {
         self.open = false;
     }
 
-    pub fn show(&mut self, ctx: &egui::Context) {
+    pub fn show(&mut self, ctx: &egui::Context, level: LogLevel) {
         if !self.open {
             return;
         }
@@ -50,11 +50,11 @@ impl About {
             .resizable(false)
             .default_width(WINDOW_WIDTH)
             .open(&mut open)
-            .show(ctx, |ui| self.contents(ui));
+            .show(ctx, |ui| self.contents(ui, level));
         self.open = open;
     }
 
-    fn contents(&self, ui: &mut egui::Ui) {
+    fn contents(&self, ui: &mut egui::Ui, level: LogLevel) {
         ui.vertical_centered(|ui| {
             if let Some(logo) = &self.logo {
                 ui.add(egui::Image::new(logo).fit_to_exact_size(egui::vec2(LOGO_SIZE, LOGO_SIZE)));
@@ -72,7 +72,7 @@ impl About {
         ui.separator();
         ui.add_space(SECTION_SPACING);
 
-        for (label, path) in paths() {
+        for (label, path) in paths(level) {
             ui.label(egui::RichText::new(label).strong());
             path_value(ui, path);
             ui.add_space(ROW_SPACING);
@@ -80,12 +80,15 @@ impl About {
     }
 }
 
-fn paths() -> [(&'static str, Option<PathBuf>); 4] {
+fn paths(level: LogLevel) -> [(String, Option<PathBuf>); 4] {
     [
-        ("Config", Config::path()),
-        ("History", State::path()),
-        ("Logs", logging::directory()),
-        ("Binary", std::env::current_exe().ok()),
+        ("Config".to_string(), Config::path()),
+        ("History".to_string(), State::path()),
+        (
+            format!("Logs - level = {}", level.as_str()),
+            logging::directory(),
+        ),
+        ("Binary".to_string(), std::env::current_exe().ok()),
     ]
 }
 
