@@ -69,7 +69,7 @@ pub struct MainWindow {
 impl MainWindow {
     pub fn new(config: Config, state: State) -> Self {
         let picker = PickerController::new(config.default_format, config.precision);
-        let history = History::from_srgb8(&state.history);
+        let history = History::from_stored(&state.history);
         Self {
             config,
             state,
@@ -126,7 +126,7 @@ impl MainWindow {
     }
 
     fn persist_state(&mut self) {
-        self.state.history = self.history.to_srgb8();
+        self.state.history = self.history.to_stored();
         if let Err(error) = self.state.save() {
             self.set_toast(format!("Could not save history: {error}"));
         }
@@ -140,6 +140,7 @@ impl MainWindow {
         self.input = self.config.format(self.color);
         self.applied_input = Some(InputKey {
             format: self.config.default_format,
+            precision: self.config.precision,
             color: self.color,
         });
     }
@@ -285,6 +286,7 @@ impl MainWindow {
                     if !self.input_editing {
                         let input_key = InputKey {
                             format: self.config.default_format,
+                            precision: self.config.precision,
                             color: self.color,
                         };
                         if self.applied_input != Some(input_key) {

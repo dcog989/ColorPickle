@@ -162,7 +162,11 @@ fn swatch(
     precision: Precision,
     style: SwatchStyle,
 ) -> Option<SwatchAction> {
-    let SwatchStyle { size, corner_radius, closable } = style;
+    let SwatchStyle {
+        size,
+        corner_radius,
+        closable,
+    } = style;
     let (rect, response) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::click());
     let corner = egui::CornerRadius::same(corner_radius);
     ui.painter().rect_filled(rect, corner, color32(color));
