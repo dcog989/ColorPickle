@@ -2,6 +2,20 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.7.0 - 2026-10-15
+#### Features
+- (**state**) persist history at full precision, switch current color on precision toggle - (2096040) - dcog989
+- (**ui**) keep full precision on picked pixel and region averages - (efa4268) - dcog989
+#### Bug Fixes
+- (**color**) show precise hue to two decimals for Okhsl and Oklch - (0d1e3ca) - dcog989
+- (**ui**) hold widget fills and popups above the APCA contrast floor - (658bd3d) - dcog989
+#### Refactoring
+- more better words - (a738dfc) - dcog989
+#### Miscellaneous Chores
+- update screenshot - (85451b4) - dcog989
+
+- - -
+
 ## v0.6.0 - 2026-10-14
 #### Features
 - (**config**) add Practical/Precise precision selector for copied values - (69837dd) - dcog989
