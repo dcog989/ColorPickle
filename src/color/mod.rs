@@ -3,7 +3,8 @@ pub mod harmony;
 pub mod okhsl;
 pub mod parse;
 
-use palette::{FromColor, Hsl, Lab, Oklab, Oklch, Srgb};
+use palette::rgb::DisplayP3;
+use palette::{FromColor, Hsl, Hsv, Oklab, Oklch, Srgb};
 use serde::{Deserialize, Serialize};
 
 use self::okhsl::Okhsl;
@@ -15,11 +16,12 @@ pub enum ColorFormat {
     Hex,
     Rgb,
     Hsl,
-    Okhsl,
+    Hsv,
     Oklch,
     Oklab,
+    Okhsl,
+    P3,
     Cmyk,
-    Cielab,
 }
 
 /// How many decimals each format prints. Mirrors Color-Picker-Palette: precise
@@ -68,15 +70,16 @@ impl Precision {
 }
 
 impl ColorFormat {
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 9] = [
         Self::Hex,
         Self::Rgb,
         Self::Hsl,
-        Self::Okhsl,
+        Self::Hsv,
         Self::Oklch,
         Self::Oklab,
+        Self::Okhsl,
+        Self::P3,
         Self::Cmyk,
-        Self::Cielab,
     ];
 
     pub const fn label(self) -> &'static str {
@@ -84,11 +87,12 @@ impl ColorFormat {
             Self::Hex => "HEX",
             Self::Rgb => "RGB",
             Self::Hsl => "HSL",
+            Self::Hsv => "HSV",
             Self::Okhsl => "Okhsl",
             Self::Oklch => "Oklch",
             Self::Oklab => "Oklab",
+            Self::P3 => "P3",
             Self::Cmyk => "CMYK",
-            Self::Cielab => "CIELAB",
         }
     }
 
@@ -109,6 +113,15 @@ impl ColorFormat {
                     decimals(hsl.hue.into_positive_degrees(), precision.hue()),
                     decimals(hsl.saturation * 100.0, precision.channel()),
                     decimals(hsl.lightness * 100.0, precision.channel())
+                )
+            }
+            Self::Hsv => {
+                let hsv = Hsv::from_color(srgb);
+                format!(
+                    "hsv({} {}% {}%)",
+                    decimals(hsv.hue.into_positive_degrees(), precision.hue()),
+                    decimals(hsv.saturation * 100.0, precision.channel()),
+                    decimals(hsv.value * 100.0, precision.channel())
                 )
             }
             Self::Okhsl => format!(
@@ -135,16 +148,16 @@ impl ColorFormat {
                     decimals(oklab.b, precision.fraction())
                 )
             }
-            Self::Cmyk => format_cmyk(srgb, precision.channel()),
-            Self::Cielab => {
-                let lab: Lab = Lab::from_color(srgb);
+            Self::P3 => {
+                let p3 = DisplayP3::from_color(srgb);
                 format!(
-                    "lab({} {} {})",
-                    decimals(lab.l, precision.fraction()),
-                    decimals(lab.a, precision.fraction()),
-                    decimals(lab.b, precision.fraction())
+                    "color(display-p3 {} {} {})",
+                    decimals(p3.red, precision.fraction()),
+                    decimals(p3.green, precision.fraction()),
+                    decimals(p3.blue, precision.fraction())
                 )
             }
+            Self::Cmyk => format_cmyk(srgb, precision.channel()),
         }
     }
 }
@@ -251,7 +264,12 @@ mod tests {
     #[test]
     fn channel_formats_honour_precision() {
         let color = Okhsl::from_srgb(Srgb::new(0.123, 0.456, 0.789));
-        for format in [ColorFormat::Rgb, ColorFormat::Hsl, ColorFormat::Cmyk] {
+        for format in [
+            ColorFormat::Rgb,
+            ColorFormat::Hsl,
+            ColorFormat::Hsv,
+            ColorFormat::Cmyk,
+        ] {
             assert!(
                 !format.format(color, Precision::Practical).contains('.'),
                 "{format:?} practical"

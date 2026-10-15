@@ -33,7 +33,7 @@ const MIN_WINDOW_HEIGHT: f32 = 420.0;
 const DEFAULT_HUE_DEGREES: f32 = 116.0;
 const DEFAULT_SATURATION: f32 = 0.78;
 const DEFAULT_LIGHTNESS: f32 = 0.43;
-const FORMAT_KEYS: [egui::Key; 8] = [
+const FORMAT_KEYS: [egui::Key; 9] = [
     egui::Key::Num1,
     egui::Key::Num2,
     egui::Key::Num3,
@@ -42,6 +42,7 @@ const FORMAT_KEYS: [egui::Key; 8] = [
     egui::Key::Num6,
     egui::Key::Num7,
     egui::Key::Num8,
+    egui::Key::Num9,
 ];
 
 const _: () = assert!(FORMAT_KEYS.len() == ColorFormat::ALL.len());

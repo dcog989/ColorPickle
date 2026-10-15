@@ -1,4 +1,5 @@
-use palette::{FromColor, Hsl, Lab, Oklab, OklabHue, Oklch, RgbHue, Srgb};
+use palette::rgb::DisplayP3;
+use palette::{FromColor, Hsl, Hsv, Oklab, OklabHue, Oklch, RgbHue, Srgb};
 
 use crate::color::okhsl::Okhsl;
 
@@ -7,6 +8,8 @@ const HEX_FULL_LEN: usize = 6;
 const HEX_SHORTHAND_SCALE: u8 = 17;
 const CHANNEL_MAX: f32 = 255.0;
 const PERCENT: f32 = 100.0;
+const COLOR_FUNCTION: &str = "color";
+const DISPLAY_P3_SPACE: &str = "display-p3";
 
 #[derive(Clone, Copy)]
 enum Value {
@@ -91,15 +94,18 @@ fn hex_byte(text: &str) -> Option<u8> {
 }
 
 fn parse_function(name: &str, args: &str) -> Option<Okhsl> {
+    if name == COLOR_FUNCTION {
+        return parse_display_p3(args);
+    }
     let values = split_values(args)?;
     match name {
         "rgb" => parse_rgb(&values),
         "hsl" => parse_hsl(&values),
+        "hsv" => parse_hsv(&values),
         "okhsl" => parse_okhsl(&values),
         "oklch" => parse_oklch(&values),
         "oklab" => parse_oklab(&values),
         "cmyk" => parse_cmyk(&values),
-        "lab" => parse_cielab(&values),
         _ => None,
     }
 }
@@ -117,6 +123,16 @@ fn parse_hsl(values: &[Value]) -> Option<Okhsl> {
         lightness.percentage(),
     );
     Some(Okhsl::from_srgb(Srgb::from_color(hsl)))
+}
+
+fn parse_hsv(values: &[Value]) -> Option<Okhsl> {
+    let [hue, saturation, value] = three(values)?;
+    let hsv = Hsv::new(
+        RgbHue::from_degrees(hue.number()),
+        saturation.percentage(),
+        value.percentage(),
+    );
+    Some(Okhsl::from_srgb(Srgb::from_color(hsv)))
 }
 
 fn parse_okhsl(values: &[Value]) -> Option<Okhsl> {
@@ -160,20 +176,31 @@ fn parse_cmyk(values: &[Value]) -> Option<Okhsl> {
     )))
 }
 
-fn parse_cielab(values: &[Value]) -> Option<Okhsl> {
-    let [lightness, a, b] = three(values)?;
-    let lab: Lab = Lab::new(lightness.number(), a.number(), b.number());
-    Some(Okhsl::from_srgb(Srgb::from_color(lab)))
+fn parse_display_p3(args: &str) -> Option<Okhsl> {
+    let mut parts = split_parts(args);
+    if parts.next()? != DISPLAY_P3_SPACE {
+        return None;
+    }
+    let values = parts.map(parse_value).collect::<Option<Vec<Value>>>()?;
+    let [red, green, blue] = three(&values)?;
+    let p3 = DisplayP3::new(red.fraction(), green.fraction(), blue.fraction());
+    Some(Okhsl::from_srgb(Srgb::from_color(p3)))
 }
 
 fn split_values(args: &str) -> Option<Vec<Value>> {
+    split_parts(args).map(parse_value).collect()
+}
+
+fn split_parts(args: &str) -> impl Iterator<Item = &str> {
     args.split(|character: char| character == ',' || character.is_whitespace())
         .filter(|part| !part.is_empty())
-        .map(|part| match part.strip_suffix('%') {
-            Some(number) => finite_number(number).map(Value::Percent),
-            None => finite_number(part).map(Value::Number),
-        })
-        .collect()
+}
+
+fn parse_value(part: &str) -> Option<Value> {
+    match part.strip_suffix('%') {
+        Some(number) => finite_number(number).map(Value::Percent),
+        None => finite_number(part).map(Value::Number),
+    }
 }
 
 // `f32::from_str` accepts `nan`, `inf` and `infinity`, none of which are colors.
@@ -208,8 +235,8 @@ mod tests {
     use super::parse;
     use crate::color::{ColorFormat, Precision};
 
-    // 8-bit channels; HSL and CMYK quantise to whole degrees/percent, so a
-    // near-lossless round trip is the most these formats can guarantee.
+    // 8-bit channels; the string formats round some channels, so a
+    // near-lossless round trip is the most they can guarantee.
     const ROUND_TRIP_TOLERANCE: u8 = 6;
 
     #[test]
@@ -231,6 +258,17 @@ mod tests {
         assert_eq!(parse("rgb(0, 128, 255)").unwrap().to_srgb8(), [0, 128, 255]);
         let hue = parse("okhsl(210, 0.5, 0.5)").unwrap().hue();
         assert!((hue - 210.0).abs() < 1.0, "hue was {hue}");
+        assert_eq!(parse("hsv(0, 100%, 100%)").unwrap().to_srgb8(), [255, 0, 0]);
+    }
+
+    #[test]
+    fn parses_display_p3() {
+        assert_eq!(
+            parse("color(display-p3 1 0 0)").unwrap().to_srgb8(),
+            [255, 0, 0]
+        );
+        assert!(parse("color(srgb 1 0 0)").is_none());
+        assert!(parse("color(display-p3 1 0)").is_none());
     }
 
     #[test]
