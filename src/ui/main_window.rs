@@ -367,7 +367,7 @@ impl MainWindow {
                                 }
                             })
                             .response
-                            .on_hover_text("Colour harmony");
+                            .on_hover_text("Colour harmony.");
                         let format = self.config.default_format;
                         let precision = self.config.precision;
                         for swatch in self.harmony.swatches(self.color) {

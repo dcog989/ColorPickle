@@ -52,7 +52,7 @@ pub(super) fn show(
                         }
                     })
                     .response
-                    .on_hover_text("Launch mode: open the main window, or start in the picker");
+                    .on_hover_text("Launch mode: open the main window, or start the screen picker.");
                 egui::ComboBox::from_id_salt("default-format")
                     .selected_text(config.default_format.label())
                     .show_ui(ui, |ui| {
@@ -70,7 +70,7 @@ pub(super) fn show(
                         }
                     })
                     .response
-                    .on_hover_text("Default format: shown in the input field and copied on pick");
+                    .on_hover_text("Default format: shown in the input field and copied to clipboard.");
                 egui::ComboBox::from_id_salt("precision")
                     .selected_text(config.precision.label())
                     .show_ui(ui, |ui| {
@@ -89,7 +89,7 @@ pub(super) fn show(
                     })
                     .response
                     .on_hover_text(
-                        "Precision: round values for everyday use, or keep every decimal",
+                        "Precision: round values for general use, or keep decimals for accuracy.",
                     );
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {

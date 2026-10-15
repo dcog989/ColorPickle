@@ -249,6 +249,6 @@ pub fn apca_scores(ui: &mut egui::Ui, color: Okhsl, foreground: egui::Color32) {
                 .color(foreground)
                 .size(APCA_FONT_SIZE),
         )
-        .on_hover_text("APCA lightness contrast (Lc) of this colour on white and on black");
+        .on_hover_text("APCA contrast (Lc) of this colour on white and on black.");
     });
 }

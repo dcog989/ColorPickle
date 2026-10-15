@@ -106,7 +106,7 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
         .selectable(false)
         .sense(egui::Sense::click()),
     );
-    if response.on_hover_text("Click to copy path").clicked() {
+    if response.on_hover_text("Click to copy path.").clicked() {
         ui.ctx().copy_text(text);
     }
 }
