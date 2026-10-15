@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.8.0 - 2026-10-15
+#### Features
+- (**color**) reorder copy formats and swap CIELAB for HSV and P3 - (cff3edd) - dcog989
+- (**color**) widen precise-mode decimals for RGB, HSL and CMYK - (7bedf6c) - dcog989
+- (**ui**) show the log level beside the Logs path in About - (e6d73f9) - dcog989
+
+- - -
+
 ## v0.7.0 - 2026-10-15
 #### Features
 - (**state**) persist history at full precision, switch current color on precision toggle - (2096040) - dcog989
