@@ -4,6 +4,10 @@ Linux screen color picker. Pick a pixel or drag-select a region with a magnified
 
 ![screenshot](assets/screen-1.webp)
 
+Assign shortcut to launch the GUI or screen picker:
+
+![screenshot](assets/screen-2.webp)
+
 ## Features
 
 - Fullscreen picker overlay with a magnified view of the area under the cursor
