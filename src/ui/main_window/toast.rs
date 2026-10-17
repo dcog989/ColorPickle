@@ -30,7 +30,7 @@ impl Toast {
     }
 
     pub(super) fn show(&self, ctx: &egui::Context) {
-        egui::Area::new(egui::Id::new(TOAST_ID))
+        egui::Area::new(egui::Id::unique(TOAST_ID))
             .anchor(
                 egui::Align2::CENTER_BOTTOM,
                 egui::vec2(0.0, -TOAST_BOTTOM_MARGIN),

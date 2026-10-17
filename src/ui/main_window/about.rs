@@ -45,7 +45,7 @@ impl About {
 
         let mut open = self.open;
         egui::Window::new(format!("About {WINDOW_TITLE}"))
-            .id(egui::Id::new(WINDOW_ID))
+            .id(egui::Id::unique(WINDOW_ID))
             .collapsible(false)
             .resizable(false)
             .default_width(WINDOW_WIDTH)

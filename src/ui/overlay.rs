@@ -251,7 +251,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     let screen = ctx.input(|input| input.viewport_rect());
     let painter = ctx.layer_painter(egui::LayerId::new(
         egui::Order::Foreground,
-        egui::Id::new(PICKER_VIEWPORT),
+        egui::Id::unique(PICKER_VIEWPORT),
     ));
     painter.image(texture_id, screen, FULL_UV, egui::Color32::WHITE);
 
