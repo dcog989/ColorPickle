@@ -41,14 +41,10 @@ Assign shortcut to launch the GUI or screen picker:
 Clone this repository:
 
 ```sh
-cargo build --release
-
-sudo install -Dm755 target/release/colorpickle /usr/bin/colorpickle
-sudo install -Dm644 packaging/colorpickle.desktop /usr/share/applications/colorpickle.desktop
-sudo install -Dm644 packaging/colorpickle.svg /usr/share/icons/hicolor/scalable/apps/colorpickle.svg
-sudo install -Dm644 assets/colorpickle.png /usr/share/icons/hicolor/256x256/apps/colorpickle.png
-sudo update-desktop-database /usr/share/applications
+just install   # release build, then install to /usr (prompts for sudo)
 ```
+
+`just` is required for this; the recipes are thin wrappers over `cargo`.
 
 ## Logs
 
@@ -64,15 +60,15 @@ Logs are written to `~/.local/state/colorpickle/log/` (or `$XDG_STATE_HOME/color
 Rust 1.99 or newer; `rust-toolchain.toml` pins that version for rustup users.
 
 ```sh
+just build                               # release build
+just check                               # clippy (deny warnings), then tests
+just lint                                # clippy only
+just --list                              # all recipes
 cargo build                              # debug build
-cargo check                              # type-check only
-cargo clippy --workspace --all-targets -- -D warnings
 cargo fetch && cargo outdated -w         # check for updates above semver range
 cargo fmt --check                        # formatting check
 cargo fmt                                # format all files
 cargo run                                # build and run
-cargo test                               # run test suite
-cargo build --release                    # release build
 cargo upgrade && cargo update --verbose  # update Cargo.lock and dependencies to latest with semver ranges
 
 cargo clean && rm -rf target/            # clean build artifacts
@@ -82,7 +78,7 @@ cargo clean && rm -rf target/            # clean build artifacts
 
 ```sh
 cargo install cargo-deb cargo-generate-rpm   # once
-packaging/build.sh                           # .deb, .rpm and AppImage into target/
+just package                                 # .deb, .rpm and AppImage into target/
 ```
 
 ## License
