@@ -150,9 +150,13 @@ mod tests {
 
     /// Left half red, right half green.
     fn split_image(width: u32, height: u32) -> RgbaImage {
-        RgbaImage::from_fn(width, height, |x, _| {
-            if x < width / 2 { RED } else { GREEN }
-        })
+        RgbaImage::from_fn(
+            width,
+            height,
+            |x, _| {
+                if x < width / 2 { RED } else { GREEN }
+            },
+        )
     }
 
     #[test]
@@ -197,7 +201,9 @@ mod tests {
     fn screenshots_are_only_removed_from_temporary_storage() {
         assert!(is_temporary(&std::env::temp_dir().join("shot.png")));
         assert!(!is_temporary(Path::new("/etc/passwd")));
-        assert!(!is_temporary(Path::new("/home/somebody/.config/state.toml")));
+        assert!(!is_temporary(Path::new(
+            "/home/somebody/.config/state.toml"
+        )));
     }
 
     #[test]

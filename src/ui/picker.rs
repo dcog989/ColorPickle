@@ -123,9 +123,7 @@ impl PickerController {
                             "picker: waiting for the user to answer the permission prompt"
                         );
                         self.waiting_for_user = true;
-                        ctx.request_repaint_after(Duration::from_millis(
-                            CAPTURE_WATCHDOG_MILLIS,
-                        ));
+                        ctx.request_repaint_after(Duration::from_millis(CAPTURE_WATCHDOG_MILLIS));
                     }
                     self.capture = Some(receiver);
                 }

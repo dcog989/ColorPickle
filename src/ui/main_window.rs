@@ -2,9 +2,9 @@ use eframe::egui;
 
 use crate::clipboard;
 use crate::color::harmony::Harmony;
-use crate::color::{ColorFormat, Precision};
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
+use crate::color::{ColorFormat, Precision};
 use crate::config::Config;
 use crate::state::State;
 use crate::ui::picker::{Event, PickerController};
