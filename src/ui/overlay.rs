@@ -1,6 +1,8 @@
 use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::sync::mpsc;
+use std::time::Duration;
 
 use anyhow::Result;
 use eframe::egui;
@@ -40,6 +42,9 @@ const SHADOW_COLOR: egui::Color32 = egui::Color32::BLACK;
 const SELECTION_FILL: egui::Color32 =
     egui::Color32::from_rgba_unmultiplied_const(255, 255, 255, 40);
 const FRAME_TEXTURE: &str = "picker-frame";
+/// A hotkey launch has no window in which to explain itself, so a capture that
+/// never answers (a portal prompt nobody sees) must not leave a process behind.
+const CAPTURE_TIMEOUT: Duration = Duration::from_secs(60);
 const FULL_UV: egui::Rect = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
 
 #[derive(Debug, Clone, Copy)]
@@ -145,7 +150,7 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 /// Pick from a hotkey launch: capture happens before eframe opens any window,
 /// because a Wayland compositor cannot hide one once it is mapped.
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
-    let captured = capture::capture_with(|| {})?;
+    let captured = capture_frame()?;
     let output = captured.output.clone();
     let session = Session::new(captured, config.default_format, config.precision);
     let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
@@ -176,6 +181,18 @@ pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     .map_err(|error| anyhow::anyhow!("failed to run the picker: {error}"))?;
 
     Ok(outcome.get())
+}
+
+fn capture_frame() -> Result<capture::Capture> {
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = sender.send(capture::capture_with(|| {}));
+    });
+    match receiver.recv_timeout(CAPTURE_TIMEOUT) {
+        Ok(result) => Ok(result?),
+        Err(mpsc::RecvTimeoutError::Timeout) => anyhow::bail!("capture timed out"),
+        Err(mpsc::RecvTimeoutError::Disconnected) => anyhow::bail!("the capture thread stopped"),
+    }
 }
 
 struct StandalonePicker {

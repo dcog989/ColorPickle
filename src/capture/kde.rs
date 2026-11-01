@@ -52,7 +52,6 @@ fn capture_active_screen() -> CaptureResult<(RgbaImage, OutputInfo)> {
     let format = get_u32(&reply, KEY_FORMAT)?;
     let output = OutputInfo {
         name: get_string(&reply, KEY_SCREEN),
-        size: Some((width, height)),
         ..OutputInfo::default()
     };
 

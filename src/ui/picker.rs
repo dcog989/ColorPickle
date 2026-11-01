@@ -32,6 +32,9 @@ pub struct PickerController {
     capture: Option<Receiver<CaptureUpdate>>,
     capture_started: f64,
     waiting_for_user: bool,
+    /// Set when `capture` outlived the timeout: its result is discarded, but the
+    /// handle stays so a second capture cannot stack on top of the stuck one.
+    abandoned: bool,
     generation: u64,
     viewport: egui::ViewportId,
     format: ColorFormat,
@@ -45,6 +48,7 @@ impl PickerController {
             capture: None,
             capture_started: 0.0,
             waiting_for_user: false,
+            abandoned: false,
             generation: 0,
             viewport: egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, 0_u64)),
             format,
@@ -96,6 +100,10 @@ impl PickerController {
     pub fn update(&mut self, ctx: &egui::Context, frame: &eframe::Frame) -> Option<Event> {
         if let Some(receiver) = self.capture.take() {
             match receiver.try_recv() {
+                Ok(CaptureUpdate::Finished(_)) if self.abandoned => {
+                    tracing::info!("picker: discarded a capture that finished after its timeout");
+                    self.abandoned = false;
+                }
                 Ok(CaptureUpdate::Finished(Ok(captured))) => {
                     tracing::info!("picker: frame ready, showing overlay");
                     self.session =
@@ -110,20 +118,29 @@ impl PickerController {
                     return Some(Event::CaptureFailed(error.to_string()));
                 }
                 Ok(CaptureUpdate::WaitingForUser) => {
-                    tracing::info!("picker: waiting for the user to answer the permission prompt");
-                    self.waiting_for_user = true;
+                    if !self.abandoned {
+                        tracing::info!(
+                            "picker: waiting for the user to answer the permission prompt"
+                        );
+                        self.waiting_for_user = true;
+                        ctx.request_repaint_after(Duration::from_millis(
+                            CAPTURE_WATCHDOG_MILLIS,
+                        ));
+                    }
                     self.capture = Some(receiver);
-                    ctx.request_repaint_after(Duration::from_millis(CAPTURE_WATCHDOG_MILLIS));
                 }
                 Err(TryRecvError::Empty) => {
                     let now = ctx.input(|input| input.time);
-                    if !self.waiting_for_user
+                    if !self.abandoned
+                        && !self.waiting_for_user
                         && now - self.capture_started > CAPTURE_TIMEOUT_SECONDS
                     {
                         tracing::warn!(
                             elapsed = now - self.capture_started,
                             "picker: capture timed out"
                         );
+                        self.abandoned = true;
+                        self.capture = Some(receiver);
                         show_main_window(ctx);
                         return Some(Event::CaptureFailed("timed out".to_owned()));
                     }
@@ -131,9 +148,14 @@ impl PickerController {
                     ctx.request_repaint_after(Duration::from_millis(CAPTURE_WATCHDOG_MILLIS));
                 }
                 Err(TryRecvError::Disconnected) => {
-                    tracing::warn!("picker: capture thread disconnected");
-                    show_main_window(ctx);
-                    return Some(Event::ThreadStopped);
+                    let abandoned = std::mem::replace(&mut self.abandoned, false);
+                    if abandoned {
+                        tracing::info!("picker: the abandoned capture thread ended");
+                    } else {
+                        tracing::warn!("picker: capture thread disconnected");
+                        show_main_window(ctx);
+                        return Some(Event::ThreadStopped);
+                    }
                 }
             }
         }

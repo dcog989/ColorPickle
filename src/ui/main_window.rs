@@ -162,6 +162,9 @@ impl MainWindow {
             .request(ctx, self.config.default_format, self.config.precision)
         {
             self.set_toast("Capturing screen...");
+        } else if self.picker.is_busy() {
+            // Only reachable when an earlier capture outlived its timeout.
+            self.set_toast("Still waiting for the previous capture");
         }
     }
 

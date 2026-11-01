@@ -65,7 +65,6 @@ pub struct Point {
 pub struct OutputInfo {
     pub name: Option<String>,
     pub position: Option<(i32, i32)>,
-    pub size: Option<(u32, u32)>,
 }
 
 #[derive(Debug)]

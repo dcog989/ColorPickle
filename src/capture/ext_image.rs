@@ -3,10 +3,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::os::fd::AsFd;
 use std::time::{Duration, Instant};
 
-use image::{
-    RgbaImage,
-    imageops::{self, FilterType},
-};
+use image::RgbaImage;
 use rustix::event::{PollFd, PollFlags, Timespec, poll};
 use rustix::fs::{MemfdFlags, memfd_create};
 use wayland_client::globals::{GlobalListContents, registry_queue_init};
@@ -64,7 +61,6 @@ impl OutputState {
         OutputInfo {
             name: self.name.clone(),
             position: Some(self.position),
-            size: self.logical_size,
         }
     }
 }
@@ -163,9 +159,6 @@ pub fn capture(cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)> 
     }
 
     let index = select_output(&state.outputs, cursor);
-    if state.outputs[index].logical_size.is_none() {
-        return Err(failure("captured output has no known logical size"));
-    }
     capture_output(&mut queue, &mut state, index)
 }
 
@@ -268,16 +261,11 @@ fn capture_output(
         return Err(failure("capture frame was never ready"));
     }
 
+    // Left at buffer resolution: the overlay maps the texture by UV, so scaling
+    // it to the logical size would only average away the pixels being picked.
     let image = read_shm(&mut file, width, height, stride)?;
     let image = orient(image, state.frame_transform);
-    let output = &state.outputs[index];
-    let image = match output.logical_size {
-        Some(size) if image.dimensions() != size => {
-            imageops::resize(&image, size.0, size.1, FilterType::Triangle)
-        }
-        _ => image,
-    };
-    Ok((image, output.info()))
+    Ok((image, state.outputs[index].info()))
 }
 
 fn bind<T>(

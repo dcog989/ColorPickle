@@ -105,7 +105,6 @@ fn monitor_at(
     let output = OutputInfo {
         name: atom_name(connection, monitor.name),
         position: Some((i32::from(monitor.x), i32::from(monitor.y))),
-        size: Some((u32::from(monitor.width), u32::from(monitor.height))),
     };
     Some((
         (monitor.x, monitor.y, monitor.width, monitor.height),
