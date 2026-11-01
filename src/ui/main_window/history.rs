@@ -46,12 +46,20 @@ impl History {
     /// Merges the file another instance may have written. Picks this window
     /// made since the last save are the newest, so they stay in front; then
     /// come the file's entries in file order, so a newer pick from the other
-    /// instance still lands before the older ones.
+    /// instance still lands before the older ones. A colour this window showed
+    /// at the last save and no longer does was removed here, so the file must
+    /// not bring it back.
     pub(super) fn merge_missing(&mut self, entries: &[StoredColor]) {
         let on_disk: Vec<Okhsl> = entries
             .iter()
             .take(HISTORY_LIMIT)
             .map(|entry| entry.to_okhsl())
+            .collect();
+        let removed: Vec<Okhsl> = self
+            .saved
+            .iter()
+            .copied()
+            .filter(|color| !self.colors.contains(color))
             .collect();
         let mut merged: Vec<Okhsl> = self
             .colors
@@ -60,7 +68,7 @@ impl History {
             .filter(|color| !self.saved.contains(color))
             .collect();
         for color in &on_disk {
-            if !merged.contains(color) {
+            if !merged.contains(color) && !removed.contains(color) {
                 merged.push(*color);
             }
         }
@@ -134,6 +142,20 @@ mod tests {
         history.merge_missing(&on_disk);
 
         assert_eq!(history.colors(), [mine, theirs, old].as_slice());
+    }
+
+    #[test]
+    fn does_not_restore_a_colour_removed_here() {
+        let colors = distinct_colors(3);
+        let stored: Vec<StoredColor> = colors.iter().map(|&c| StoredColor::from_okhsl(c)).collect();
+        let mut history = History::from_stored(&stored);
+        history.remove(colors[1]);
+        history.merge_missing(&stored);
+        assert_eq!(history.colors(), [colors[0], colors[2]].as_slice());
+
+        history.clear();
+        history.merge_missing(&stored);
+        assert!(history.colors().is_empty());
     }
 
     #[test]
