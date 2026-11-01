@@ -28,8 +28,8 @@ pub fn average_srgb(image: &egui::ColorImage, bounds: (u32, u32, u32, u32)) -> [
     let mut sums = [0u64; 3];
     let mut count = 0u64;
     for y in start_y..=end_y {
-        for x in start_x..=end_x {
-            let pixel = image.pixels[y as usize * width + x as usize];
+        let row = y as usize * width;
+        for pixel in &image.pixels[row + start_x as usize..=row + end_x as usize] {
             sums[0] += u64::from(pixel.r());
             sums[1] += u64::from(pixel.g());
             sums[2] += u64::from(pixel.b());
