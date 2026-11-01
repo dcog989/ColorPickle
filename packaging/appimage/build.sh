@@ -28,7 +28,7 @@ sed 's#^Exec=/usr/bin/#Exec=#' "$root/packaging/colorpickle.desktop" > "$appimag
     --appdir "$appdir" \
     --executable "$root/target/release/colorpickle" \
     --desktop-file "$appimage_desktop" \
-    --icon-file "$root/packaging/colorpickle.svg" \
+    --icon-file "$root/colorpickle.svg" \
     --icon-file "$root/assets/colorpickle.png" \
     --output appimage
 
