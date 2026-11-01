@@ -5,17 +5,20 @@ use crate::color::okhsl::Okhsl;
 
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
 const TARGET_CONTRAST_LC: f32 = 90.0;
-const MIN_CONTRAST_LC: f32 = 75.0;
+/// Text on a resting surface.
+const MIN_TEXT_CONTRAST_LC: f32 = 75.0;
 const MIN_FILL_LIGHTNESS: f32 = 0.2;
 const CONTRAST_SEARCH_STEPS: u32 = 12;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
-const INACTIVE_SHADE: f32 = 32.0 / 255.0;
-const HOVERED_SHADE: f32 = 60.0 / 255.0;
-const ACTIVE_SHADE: f32 = 96.0 / 255.0;
-const OPEN_SHADE: f32 = 48.0 / 255.0;
+const INACTIVE_SHADE: f32 = 30.0 / 255.0;
+const HOVERED_SHADE: f32 = 77.0 / 255.0;
+const ACTIVE_SHADE: f32 = 115.0 / 255.0;
+const OPEN_SHADE: f32 = 64.0 / 255.0;
 const SELECTION_SHADE: f32 = 80.0 / 255.0;
 const FIELD_SHADE: f32 = 28.0 / 255.0;
 const BORDER_ALPHA: u8 = 110;
+const HOVERED_BORDER_ALPHA: u8 = 200;
+const ACTIVE_BORDER_ALPHA: u8 = 255;
 const BORDER_WIDTH: f32 = 1.0;
 const CORNER_RADIUS: u8 = 6;
 
@@ -74,15 +77,15 @@ fn contrast_against(color: Okhsl, background: Okhsl) -> f32 {
     apca::contrast(color.to_srgb(), background.to_srgb()).abs()
 }
 
-/// Clamp a UI fill so text on it keeps at least [`MIN_CONTRAST_LC`], and keep
-/// it off pure black. UI fills only — the colour swatch always shows the picked
+/// Clamp a UI fill so text on it keeps at least `floor` contrast, and keep it
+/// off pure black. UI fills only — the colour swatch always shows the picked
 /// colour, so it is never clamped.
-fn clamp_fill(color: Okhsl, foreground: Okhsl) -> Okhsl {
+fn clamp_fill(color: Okhsl, foreground: Okhsl, floor: f32) -> Okhsl {
     let hue = color.hue();
     let saturation = color.saturation();
     let lightness = color.lightness().max(MIN_FILL_LIGHTNESS);
     let lifted = Okhsl::new(hue, saturation, lightness);
-    if contrast_against(foreground, lifted) >= MIN_CONTRAST_LC {
+    if contrast_against(foreground, lifted) >= floor {
         return lifted;
     }
 
@@ -98,7 +101,7 @@ fn clamp_fill(color: Okhsl, foreground: Okhsl) -> Okhsl {
     for _ in 0..CONTRAST_SEARCH_STEPS {
         let step = (below + above) / 2.0;
         let sample = (lightness + (away - lightness) * step).clamp(0.0, 1.0);
-        if contrast_against(foreground, Okhsl::new(hue, saturation, sample)) >= MIN_CONTRAST_LC {
+        if contrast_against(foreground, Okhsl::new(hue, saturation, sample)) >= floor {
             above = step;
         } else {
             below = step;
@@ -108,14 +111,28 @@ fn clamp_fill(color: Okhsl, foreground: Okhsl) -> Okhsl {
     Okhsl::new(hue, saturation, lightness)
 }
 
-/// A widget fill: the swatch shifted `fraction` of the way toward the text,
-/// then clamped so text on the fill stays readable.
-fn fill_color(background: Okhsl, foreground: Okhsl, fraction: f32) -> Okhsl {
-    let lightness =
-        background.lightness() + (foreground.lightness() - background.lightness()) * fraction;
+/// An interactive fill: the surface pulled `fraction` of the way *away* from the
+/// text, so every state adds separation instead of spending it. The opposite
+/// direction has no room: a surface that meets the text floor loses contrast as
+/// soon as it moves toward the text, which flattened hover and active into idle.
+fn shade_color(surface: Okhsl, foreground: Okhsl, fraction: f32) -> Okhsl {
+    let away = if foreground.lightness() > CONTRAST_LIGHTNESS_THRESHOLD {
+        0.0
+    } else {
+        1.0
+    };
+    let lightness = surface.lightness() + (away - surface.lightness()) * fraction;
+    Okhsl::new(surface.hue(), surface.saturation(), lightness)
+}
+
+/// A fill that sits behind text for longer than a hover: the surface shifted
+/// `fraction` of the way toward the text, clamped so the text stays readable.
+fn fill_color(surface: Okhsl, foreground: Okhsl, fraction: f32, floor: f32) -> Okhsl {
+    let lightness = surface.lightness() + (foreground.lightness() - surface.lightness()) * fraction;
     clamp_fill(
-        Okhsl::new(background.hue(), background.saturation(), lightness),
+        Okhsl::new(surface.hue(), surface.saturation(), lightness),
         foreground,
+        floor,
     )
 }
 
@@ -130,6 +147,7 @@ fn surface_color(color: Okhsl, foreground: Okhsl) -> Okhsl {
     clamp_fill(
         Okhsl::new(color.hue(), color.saturation(), shifted),
         foreground,
+        MIN_TEXT_CONTRAST_LC,
     )
 }
 
@@ -168,9 +186,20 @@ fn base_visuals() -> egui::Visuals {
 fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     let foreground_okhsl = foreground(color);
     let foreground = color32(foreground_okhsl);
-    let surface = color32(surface_color(color, foreground_okhsl));
+    let surface_okhsl = surface_color(color, foreground_okhsl);
+    let surface = color32(surface_okhsl);
     let border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, BORDER_ALPHA));
-    let shade = |fraction: f32| color32(fill_color(color, foreground_okhsl, fraction));
+    let hovered_border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, HOVERED_BORDER_ALPHA));
+    let active_border = egui::Stroke::new(BORDER_WIDTH, fill(foreground, ACTIVE_BORDER_ALPHA));
+    let shade = |fraction: f32| color32(shade_color(surface_okhsl, foreground_okhsl, fraction));
+    let readable = |fraction: f32| {
+        color32(fill_color(
+            surface_okhsl,
+            foreground_okhsl,
+            fraction,
+            MIN_TEXT_CONTRAST_LC,
+        ))
+    };
 
     visuals.override_text_color = Some(foreground);
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
@@ -188,8 +217,11 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     visuals.widgets.open.bg_fill = shade(OPEN_SHADE);
     visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(BORDER_WIDTH, foreground);
     visuals.widgets.inactive.bg_stroke = border;
-    set_surfaces(visuals, surface, border, shade(FIELD_SHADE));
-    visuals.selection.bg_fill = shade(SELECTION_SHADE);
+    visuals.widgets.hovered.bg_stroke = hovered_border;
+    visuals.widgets.active.bg_stroke = active_border;
+    visuals.widgets.open.bg_stroke = hovered_border;
+    set_surfaces(visuals, surface, border, readable(FIELD_SHADE));
+    visuals.selection.bg_fill = readable(SELECTION_SHADE);
     visuals.selection.stroke.color = foreground;
 }
 
@@ -211,10 +243,36 @@ fn fill(color: egui::Color32, alpha: u8) -> egui::Color32 {
 
 #[cfg(test)]
 mod tests {
+    use eframe::egui;
     use palette::Srgb;
 
     use super::contrast_color32;
     use crate::color::okhsl::Okhsl;
+
+    /// Smallest sRGB channel step that still reads as a distinct fill.
+    const MIN_HIGHLIGHT_DELTA: u8 = 10;
+
+    /// Straight alpha composite; precise enough for a "is it visible" check.
+    fn over(top: egui::Color32, bottom: egui::Color32) -> egui::Color32 {
+        let alpha = f32::from(top.a()) / 255.0;
+        let mix = |top: u8, bottom: u8| -> u8 {
+            (f32::from(top) * alpha + f32::from(bottom) * (1.0 - alpha)).round() as u8
+        };
+        egui::Color32::from_rgb(
+            mix(top.r(), bottom.r()),
+            mix(top.g(), bottom.g()),
+            mix(top.b(), bottom.b()),
+        )
+    }
+
+    fn channel_delta(a: egui::Color32, b: egui::Color32) -> u8 {
+        [a.r(), a.g(), a.b()]
+            .into_iter()
+            .zip([b.r(), b.g(), b.b()])
+            .map(|(left, right)| left.abs_diff(right))
+            .max()
+            .unwrap()
+    }
 
     fn round_trip(color: Okhsl) -> Okhsl {
         let [red, green, blue] = color.to_srgb8();
@@ -258,17 +316,27 @@ mod tests {
         for lightness in [0.55, 0.65, 0.70, 0.75] {
             let color = Okhsl::new(116.0, 0.78, lightness);
             let foreground = super::foreground(color);
+            let surface = super::surface_color(color, foreground);
             for fraction in [
-                super::FIELD_SHADE,
                 super::INACTIVE_SHADE,
                 super::HOVERED_SHADE,
                 super::ACTIVE_SHADE,
                 super::OPEN_SHADE,
-                super::SELECTION_SHADE,
             ] {
-                let fill = super::fill_color(color, foreground, fraction);
+                let fill = super::shade_color(surface, foreground, fraction);
                 assert!(
-                    super::contrast_against(foreground, fill) >= super::MIN_CONTRAST_LC,
+                    super::contrast_against(foreground, fill)
+                        >= super::contrast_against(foreground, surface),
+                    "lightness {lightness} fraction {fraction}"
+                );
+            }
+            for fraction in [super::FIELD_SHADE, super::SELECTION_SHADE] {
+                let fill =
+                    super::fill_color(surface, foreground, fraction, super::MIN_TEXT_CONTRAST_LC);
+                let floor =
+                    super::MIN_TEXT_CONTRAST_LC.min(super::contrast_against(foreground, surface));
+                assert!(
+                    super::contrast_against(foreground, fill) >= floor,
                     "lightness {lightness} fraction {fraction}"
                 );
             }
@@ -282,9 +350,49 @@ mod tests {
             let foreground = super::foreground(color);
             let surface = super::surface_color(color, foreground);
             assert!(
-                super::contrast_against(foreground, surface) >= super::MIN_CONTRAST_LC,
+                super::contrast_against(foreground, surface) >= super::MIN_TEXT_CONTRAST_LC,
                 "lightness {lightness}"
             );
+        }
+    }
+
+    #[test]
+    fn hover_and_active_stand_out_from_the_surface() {
+        for lightness in [0.0, 0.05, 0.2, 0.35, 0.5, 0.65, 0.8, 0.95, 1.0] {
+            for saturation in [0.0, 0.78] {
+                let color = Okhsl::new(116.0, saturation, lightness);
+                let mut visuals = egui::Visuals::dark();
+                super::apply_color(&mut visuals, color);
+                let surface = visuals.window_fill;
+                let steps = [
+                    visuals.widgets.inactive.weak_bg_fill,
+                    visuals.widgets.hovered.weak_bg_fill,
+                    visuals.widgets.active.weak_bg_fill,
+                ]
+                .map(|fill| channel_delta(surface, fill));
+                assert!(
+                    steps[0] < steps[1] && steps[1] < steps[2],
+                    "lightness {lightness} saturation {saturation}: steps {steps:?}"
+                );
+
+                let borders = [
+                    visuals.widgets.inactive.bg_stroke.color,
+                    visuals.widgets.hovered.bg_stroke.color,
+                    visuals.widgets.active.bg_stroke.color,
+                ];
+                let composited =
+                    borders.map(|border| channel_delta(surface, over(border, surface)));
+                assert!(
+                    composited[1] > composited[0] && composited[2] > composited[1],
+                    "lightness {lightness} saturation {saturation}: borders {borders:?}"
+                );
+                // Near white or black the fill has almost no room left, so the
+                // border has to carry the state on its own.
+                assert!(
+                    steps[1].max(composited[1]) >= MIN_HIGHLIGHT_DELTA,
+                    "visible lightness {lightness} saturation {saturation}: surface {surface:?} steps {steps:?} composite {composited:?}"
+                );
+            }
         }
     }
 
@@ -292,9 +400,16 @@ mod tests {
     fn fills_stay_off_black() {
         let color = Okhsl::new(116.0, 0.78, 0.0);
         let foreground = super::foreground(color);
-        for fraction in [super::FIELD_SHADE, super::ACTIVE_SHADE] {
-            let fill = super::fill_color(color, foreground, fraction);
-            assert!(fill.lightness() >= super::MIN_FILL_LIGHTNESS);
-        }
+        let surface = super::surface_color(color, foreground);
+        let fill = super::fill_color(
+            surface,
+            foreground,
+            super::FIELD_SHADE,
+            super::MIN_TEXT_CONTRAST_LC,
+        );
+        assert!(fill.lightness() >= super::MIN_FILL_LIGHTNESS);
+
+        let widget = super::shade_color(surface, foreground, super::ACTIVE_SHADE);
+        assert!(widget.lightness() >= super::MIN_FILL_LIGHTNESS / 2.0);
     }
 }

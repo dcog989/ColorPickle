@@ -14,8 +14,12 @@ const SECTION_SPACING: f32 = 14.0;
 const ROW_SPACING: f32 = 14.0;
 const NAME_FONT_SIZE: f32 = 22.0;
 const PATH_FONT_SIZE: f32 = 13.0;
+const SECTION_TITLE_FONT_SIZE: f32 = 15.0;
 const WINDOW_WIDTH: f32 = 480.0;
 const LOG_ROW_LABEL: &str = "Logs";
+const PATH_PADDING: f32 = 2.0;
+/// egui bundles no bold font, so titles are overpainted by this much to gain weight.
+const BOLD_SMUDGE: f32 = 0.5;
 
 #[derive(Default)]
 pub struct About {
@@ -78,7 +82,7 @@ impl About {
 
         let mut changed = false;
         for (label, path) in paths() {
-            ui.label(egui::RichText::new(label).strong());
+            section_title(ui, label);
             path_value(ui, path);
             if label == LOG_ROW_LABEL {
                 changed = log_level_combo(ui, level);
@@ -87,6 +91,20 @@ impl About {
         }
         changed
     }
+}
+
+fn section_title(ui: &mut egui::Ui, text: &str) {
+    let font = egui::FontId::proportional(SECTION_TITLE_FONT_SIZE);
+    let color = ui.visuals().strong_text_color();
+    let galley = ui.painter().layout_no_wrap(text.to_owned(), font, color);
+    let (rect, _) = ui.allocate_exact_size(galley.size(), egui::Sense::hover());
+    let painter = ui.painter();
+    painter.galley(rect.left_top(), galley.clone(), color);
+    painter.galley(
+        rect.left_top() + egui::vec2(BOLD_SMUDGE, 0.0),
+        galley,
+        color,
+    );
 }
 
 fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
@@ -127,17 +145,36 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
     };
 
     let text = path.display().to_string();
-    let response = ui.add(
-        egui::Label::new(
-            egui::RichText::new(text.clone())
-                .monospace()
-                .size(PATH_FONT_SIZE),
-        )
-        .truncate()
-        .selectable(false)
-        .sense(egui::Sense::click()),
+    let font = egui::FontId::monospace(PATH_FONT_SIZE);
+    let color = ui.visuals().text_color();
+    let mut job = egui::text::LayoutJob::simple(text.clone(), font, color, f32::INFINITY);
+    job.wrap =
+        egui::text::TextWrapping::truncate_at_width(ui.available_width() - 2.0 * PATH_PADDING);
+    let galley = ui.painter().layout_job(job);
+
+    // The row is hard to hit at glyph height, so pad the hit area vertically.
+    let size = galley.size() + egui::vec2(2.0, 2.0) * PATH_PADDING;
+    let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
+    let response = response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .on_hover_text("Click to copy path.");
+    if response.hovered() {
+        let visuals = ui.style().interact(&response);
+        ui.painter()
+            .rect_filled(rect, visuals.corner_radius, visuals.weak_bg_fill);
+        ui.painter().rect_stroke(
+            rect,
+            visuals.corner_radius,
+            visuals.bg_stroke,
+            egui::StrokeKind::Inside,
+        );
+    }
+    ui.painter().galley(
+        rect.left_top() + egui::vec2(PATH_PADDING, PATH_PADDING),
+        galley,
+        color,
     );
-    if response.on_hover_text("Click to copy path.").clicked() {
+    if response.clicked() {
         ui.ctx().copy_text(text);
     }
 }
