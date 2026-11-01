@@ -9,7 +9,6 @@ const LABEL_GAP: f32 = 2.0;
 const LABEL_HEIGHT: f32 = 16.0;
 const LABEL_FONT_SIZE: f32 = 14.0;
 const MIN_HEIGHT: f32 = 80.0;
-const GRADIENT_STOPS: usize = 64;
 
 pub fn column(
     ui: &mut egui::Ui,
@@ -71,7 +70,9 @@ fn paint_gradient(
     radius: f32,
     gradient: &impl Fn(f32) -> egui::Color32,
 ) {
-    let rows = GRADIENT_STOPS;
+    // One row per pixel keeps the rounded end caps following the arc; at
+    // coarser spacing the mesh cuts the corner and the background shows through.
+    let rows = (rect.height().ceil() as usize).max(2);
     let mut mesh = egui::Mesh::default();
     for index in 0..=rows {
         let fraction = index as f32 / rows as f32;
