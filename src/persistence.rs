@@ -1,11 +1,14 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use anyhow::{Context, Result};
 use serde::{Serialize, de::DeserializeOwned};
 
 const BROKEN_SUFFIX: &str = ".broken";
 const TMP_SUFFIX: &str = ".tmp";
+
+static TEMPORARY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 /// Reads a TOML document from `path`, falling back to `T::default()` when the
 /// file is absent, unreadable or malformed. A malformed file is moved aside
@@ -41,7 +44,13 @@ pub fn load<T: Default + DeserializeOwned>(path: &Path) -> T {
 }
 
 fn set_aside(path: &Path) -> PathBuf {
-    let aside = with_suffix(path, BROKEN_SUFFIX);
+    // A second corruption must not replace the first backup.
+    let mut aside = with_suffix(path, BROKEN_SUFFIX);
+    let mut sequence = 0_u32;
+    while aside.exists() {
+        sequence += 1;
+        aside = with_suffix(path, &format!("{BROKEN_SUFFIX}.{sequence}"));
+    }
     if let Err(error) = std::fs::rename(path, &aside) {
         tracing::warn!(?error, path = %path.display(), "failed to move the file aside");
     }
@@ -57,7 +66,7 @@ pub fn save<T: Serialize>(path: &Path, value: &T) -> Result<()> {
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
     let text = toml::to_string_pretty(value).context("failed to serialize")?;
-    let temporary = with_suffix(path, TMP_SUFFIX);
+    let temporary = temporary_file_path(path);
     let mut file = std::fs::File::create(&temporary)
         .with_context(|| format!("failed to write {}", temporary.display()))?;
     file.write_all(text.as_bytes())
@@ -67,6 +76,14 @@ pub fn save<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     drop(file);
     std::fs::rename(&temporary, path)
         .with_context(|| format!("failed to replace {}", path.display()))
+}
+
+/// A temp path unique to this write, so two processes saving at once never
+/// truncate or rename each other's file.
+fn temporary_file_path(path: &Path) -> PathBuf {
+    let sequence = TEMPORARY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let suffix = format!(".{}.{sequence}{TMP_SUFFIX}", std::process::id());
+    with_suffix(path, &suffix)
 }
 
 fn with_suffix(path: &Path, suffix: &str) -> PathBuf {
@@ -119,6 +136,36 @@ mod tests {
         assert!(!path.exists());
         let aside = path.with_extension("toml.broken");
         assert_eq!(std::fs::read_to_string(&aside).unwrap(), "value = ");
+
+        std::fs::remove_dir_all(path.parent().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn gives_every_write_its_own_temporary_file() {
+        let path = temporary_path("unique");
+        let first = super::temporary_file_path(&path);
+        let second = super::temporary_file_path(&path);
+
+        assert_ne!(first, second);
+        assert!(
+            first
+                .to_string_lossy()
+                .contains(&std::process::id().to_string())
+        );
+    }
+
+    #[test]
+    fn a_second_corruption_keeps_the_first_backup() {
+        let path = temporary_path("broken-twice");
+        std::fs::write(&path, "value = ").unwrap();
+        assert_eq!(load::<Document>(&path), Document::default());
+        std::fs::write(&path, "value = ").unwrap();
+        assert_eq!(load::<Document>(&path), Document::default());
+
+        let first = path.with_extension("toml.broken");
+        let second = path.with_extension("toml.broken.1");
+        assert_eq!(std::fs::read_to_string(&first).unwrap(), "value = ");
+        assert_eq!(std::fs::read_to_string(&second).unwrap(), "value = ");
 
         std::fs::remove_dir_all(path.parent().unwrap()).unwrap();
     }
