@@ -7,10 +7,10 @@ pre-commit:
   parallel: true
   commands:
     fmt:
-      glob: "*.rs"
+      glob: "*.{rs,toml,lock}"
       run: cargo fmt --all -- --check
     clippy:
-      glob: "*.rs"
+      glob: "*.{rs,toml,lock}"
       run: cargo clippy --workspace --all-targets -- -D warnings
 
 pre-push:
