@@ -2,6 +2,60 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.9.0 - 2026-11-01
+#### Features
+- (**ui**) add log level dropdown to the about window - (6f3142d) - dcog989
+#### Bug Fixes
+- (**capture**) pick from the full-resolution frame and never stack or hang captures - (e201cd1) - dcog989
+- (**clipboard**) keep the selection alive after the window closes - (147a96f) - dcog989
+- (**history**) keep removed swatches from coming back on save - (3bcc4f7) - dcog989
+- (**history**) keep picks another instance wrote before this one loaded - (b3ad58f) - dcog989
+- (**icons**) resolve the folder icon by theme name - (abbfcc4) - dcog989
+- (**persistence**) stop concurrent saves from clobbering each other - (87289d3) - dcog989
+- (**persistence**) move a malformed file aside and flush the temp file before replacing it - (859b4b5) - dcog989
+- (**ui**) make hover and active states legible on any picked colour - (480c8c4) - dcog989
+- (**ui**) size the format dropdown to show every format without scrolling - (063a366) - dcog989
+- (**ui**) sample slider gradient per pixel row so rounded caps follow the arc - (8a9bef6) - dcog989
+- (**ui**) keep text that does not parse - (7ce20e3) - dcog989
+- (**ui**) keep history newest-first across instances - (32eaaec) - dcog989
+- (**ui**) stop Ctrl, Alt and Shift + digit from copying a colour - (ceaf2a1) - dcog989
+#### Performance Improvements
+- (**pixels**) sum a selection row by row instead of per pixel - (5032b61) - dcog989
+- (**ui**) throttle the live region average - (eee2cf4) - dcog989
+#### Documentation
+- (**changelog**) fold v0.8.1 into the 0.9.0 release - (0c3faf2) - dcog989
+- (**readme**) document the development tooling - (685426c) - dcog989
+- document configuration, CLI flags and clipboard helper - (54feb97) - dcog989
+- agents.md refined - (1acac70) - dcog989
+- add new screenshot to readme - (98d3458) - dcog989
+#### Build system
+- (**just**) check formatting in just check - (814ffa1) - dcog989
+- add justfile for build, check, install and package - (f3b2048) - dcog989
+#### Continuous Integration
+- (**release**) publish the changelog section as the release body and asset - (da951fa) - dcog989
+- test and package what ships - (0b802a1) - dcog989
+#### Refactoring
+- (**color**) keep one 8-bit sRGB conversion instead of four - (8cdc803) - dcog989
+- (**logging**) keep info to one line per pick, move capture detail to debug - (6b3cbbf) - dcog989
+- (**theme**) drop the theme setting that every colour override cancelled out - (6411a3a) - dcog989
+#### Miscellaneous Chores
+- (**deps**) remove cargo from dependabot - (96d9b96) - dcog989
+- (**deps**) let dependabot update cargo crates - (ae8d244) - dcog989
+- (**hooks**) run the hooks on manifest changes - (a33a75d) - dcog989
+- (**icons**) keep the svg with the other assets - (5bc0b2b) - dcog989
+- (**icons**) make the root svg the icon source - (96780dc) - dcog989
+- (**packaging**) remove the in-tree AUR recipe that tracked 0.4.0 - (b9c40e3) - dcog989
+- (**ui**) replace deprecated egui Id::new with Id::unique - (b16d144) - dcog989
+- (**version**) v0.8.1 - (f5ece9a) - dcog989
+- package updates - (213a167) - dcog989
+- delete stale duplicate files - (0c7c142) - dcog989
+- updates - (f5b3a23) - dcog989
+- updates - (1a845f5) - dcog989
+#### Style
+- apply rustfmt - (2fc01cc) - dcog989
+
+- - -
+
 
 ## v0.8.0 - 2026-10-15
 #### Features
