@@ -45,6 +45,9 @@ const FRAME_TEXTURE: &str = "picker-frame";
 /// A hotkey launch has no window in which to explain itself, so a capture that
 /// never answers (a portal prompt nobody sees) must not leave a process behind.
 const CAPTURE_TIMEOUT: Duration = Duration::from_secs(60);
+/// A full-screen region is millions of pixels, so averaging it on every
+/// repaint makes a drag crawl. The release frame forces the exact value.
+const AVERAGE_MIN_INTERVAL_SECONDS: f64 = 0.05;
 const FULL_UV: egui::Rect = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
 
 #[derive(Debug, Clone, Copy)]
@@ -62,6 +65,7 @@ pub struct Session {
     format: ColorFormat,
     precision: Precision,
     cached_average: Option<(Bounds, Okhsl)>,
+    average_updated: f64,
 }
 
 type Bounds = (u32, u32, u32, u32);
@@ -85,18 +89,24 @@ impl Session {
             format,
             precision,
             cached_average: None,
+            average_updated: 0.0,
         }
     }
 
-    /// The average of `bounds`, recomputed only when the selection changes.
-    fn region_color(&mut self, bounds: Bounds) -> Okhsl {
-        if let Some((cached, color)) = self.cached_average
-            && cached == bounds
-        {
-            return color;
+    /// The average of `bounds`, recomputed when the selection changes, at most
+    /// once per [`AVERAGE_MIN_INTERVAL_SECONDS`] unless `force`d.
+    fn region_color(&mut self, bounds: Bounds, now: f64, force: bool) -> Okhsl {
+        if let Some((cached, color)) = self.cached_average {
+            if cached == bounds {
+                return color;
+            }
+            if !force && now - self.average_updated < AVERAGE_MIN_INTERVAL_SECONDS {
+                return color;
+            }
         }
         let color = average_color(&self.image, bounds);
         self.cached_average = Some((bounds, color));
+        self.average_updated = now;
         color
     }
 
@@ -272,6 +282,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     ));
     painter.image(texture_id, screen, FULL_UV, egui::Color32::WHITE);
 
+    let now = ctx.input(|input| input.time);
     let (
         pointer_pos,
         primary_pressed,
@@ -314,11 +325,11 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
                 uv_at(screen, rect.min),
                 uv_at(screen, rect.max),
             );
-            session.region_color(bounds)
+            session.region_color(bounds, now, primary_released)
         }
         None => {
             let (pixel_x, pixel_y) = pixel_at(&session.image, uv_at(screen, pointer));
-            session.region_color((pixel_x, pixel_y, pixel_x, pixel_y))
+            session.region_color((pixel_x, pixel_y, pixel_x, pixel_y), now, primary_released)
         }
     };
 
