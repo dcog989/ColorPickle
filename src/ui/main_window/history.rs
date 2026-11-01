@@ -6,13 +6,19 @@ const HISTORY_LIMIT: usize = 8;
 #[derive(Default)]
 pub(super) struct History {
     colors: Vec<Okhsl>,
+    /// What the file is known to hold, so a merge can tell this window's new
+    /// picks from colours another instance wrote.
+    saved: Vec<Okhsl>,
 }
 
 impl History {
     pub(super) fn from_stored(entries: &[StoredColor]) -> Self {
         let mut colors: Vec<Okhsl> = entries.iter().map(|entry| entry.to_okhsl()).collect();
         colors.truncate(HISTORY_LIMIT);
-        Self { colors }
+        Self {
+            saved: colors.clone(),
+            colors,
+        }
     }
 
     pub(super) fn to_stored(&self) -> Vec<StoredColor> {
@@ -37,15 +43,35 @@ impl History {
         self.colors.retain(|existing| *existing != color);
     }
 
-    /// Keeps picks another instance wrote while this one was open. Entries this
-    /// window already knows are ignored, so the newest-first order survives.
+    /// Merges the file another instance may have written. Picks this window
+    /// made since the last save are the newest, so they stay in front; then
+    /// come the file's entries in file order, so a newer pick from the other
+    /// instance still lands before the older ones.
     pub(super) fn merge_missing(&mut self, entries: &[StoredColor]) {
-        for color in entries.iter().map(|entry| entry.to_okhsl()) {
-            if !self.colors.contains(&color) {
-                self.colors.push(color);
+        let on_disk: Vec<Okhsl> = entries
+            .iter()
+            .take(HISTORY_LIMIT)
+            .map(|entry| entry.to_okhsl())
+            .collect();
+        let mut merged: Vec<Okhsl> = self
+            .colors
+            .iter()
+            .copied()
+            .filter(|color| !self.saved.contains(color))
+            .collect();
+        for color in &on_disk {
+            if !merged.contains(color) {
+                merged.push(*color);
             }
         }
-        self.colors.truncate(HISTORY_LIMIT);
+        merged.truncate(HISTORY_LIMIT);
+        self.colors = merged;
+        self.saved = on_disk;
+    }
+
+    /// Call after the history has been written, so the next merge starts from it.
+    pub(super) fn mark_saved(&mut self) {
+        self.saved = self.colors.clone();
     }
 
     pub(super) fn colors(&self) -> &[Okhsl] {
@@ -103,6 +129,22 @@ mod tests {
         let on_disk = [
             StoredColor::from_okhsl(theirs),
             StoredColor::from_okhsl(mine),
+            StoredColor::from_okhsl(old),
+        ];
+        history.merge_missing(&on_disk);
+
+        assert_eq!(history.colors(), [mine, theirs, old].as_slice());
+    }
+
+    #[test]
+    fn keeps_a_pick_this_window_made_after_load_in_front() {
+        let colors = distinct_colors(3);
+        let (old, theirs, mine) = (colors[0], colors[1], colors[2]);
+        let mut history = History::from_stored(&[StoredColor::from_okhsl(old)]);
+        history.push(mine);
+
+        let on_disk = [
+            StoredColor::from_okhsl(theirs),
             StoredColor::from_okhsl(old),
         ];
         history.merge_missing(&on_disk);
