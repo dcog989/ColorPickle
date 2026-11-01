@@ -1,6 +1,2 @@
 .docs/
 target/
-packaging/aur/pkg/
-packaging/aur/src/
-packaging/aur/*.tar.gz
-packaging/aur/*.pkg.tar.zst
