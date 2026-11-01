@@ -55,7 +55,7 @@ fn capture_active_screen() -> CaptureResult<(RgbaImage, OutputInfo)> {
         ..OutputInfo::default()
     };
 
-    tracing::info!(
+    tracing::debug!(
         width,
         height,
         stride,

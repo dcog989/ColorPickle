@@ -64,7 +64,7 @@ pub fn init() -> (Logging, Option<WorkerGuard>) {
     if guard.is_some()
         && let Some(directory) = directory.as_deref()
     {
-        tracing::info!(directory = %directory.display(), "logging to file");
+        tracing::debug!(directory = %directory.display(), "logging to file");
     }
     (Logging { filter }, guard)
 }

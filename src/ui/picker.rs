@@ -75,7 +75,7 @@ impl PickerController {
         self.viewport = egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, self.generation));
         self.capture_started = ctx.input(|input| input.time);
         self.waiting_for_user = false;
-        tracing::info!(generation = self.generation, "picker: capture requested");
+        tracing::debug!(generation = self.generation, "picker: capture requested");
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
 
@@ -105,7 +105,7 @@ impl PickerController {
                     self.abandoned = false;
                 }
                 Ok(CaptureUpdate::Finished(Ok(captured))) => {
-                    tracing::info!("picker: frame ready, showing overlay");
+                    tracing::debug!("picker: frame ready, showing overlay");
                     self.session =
                         Some(overlay::Session::new(captured, self.format, self.precision));
                     // Run another frame immediately so the overlay is shown.
@@ -161,7 +161,11 @@ impl PickerController {
         if let Some(mut session) = self.session.take() {
             match overlay::show(ctx, frame, &mut session, self.viewport) {
                 Some(outcome) => {
-                    tracing::info!(?outcome, "picker: overlay closed");
+                    tracing::info!(
+                        ?outcome,
+                        source = ?session.source(),
+                        "picker: overlay closed"
+                    );
                     show_main_window(ctx);
                     return Some(match outcome {
                         PickOutcome::Picked(color) => Event::Picked(color),

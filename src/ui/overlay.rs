@@ -59,7 +59,7 @@ pub enum PickOutcome {
 pub struct Session {
     image: Arc<egui::ColorImage>,
     texture: Option<egui::TextureHandle>,
-    uses_portal_fallback: bool,
+    source: capture::CaptureSource,
     output: capture::OutputInfo,
     drag_anchor: Option<egui::Pos2>,
     format: ColorFormat,
@@ -83,7 +83,7 @@ impl Session {
         Self {
             image,
             texture: None,
-            uses_portal_fallback: captured.source.uses_portal_fallback(),
+            source: captured.source,
             output: captured.output,
             drag_anchor: None,
             format,
@@ -91,6 +91,11 @@ impl Session {
             cached_average: None,
             average_updated: 0.0,
         }
+    }
+
+    /// Which backend produced this frame, for the one log line a pick writes.
+    pub fn source(&self) -> capture::CaptureSource {
+        self.source
     }
 
     /// The average of `bounds`, recomputed when the selection changes, at most
@@ -124,7 +129,7 @@ impl Session {
             );
             self.image = Arc::new(downscale_to_fit(&self.image, max_side));
         }
-        tracing::info!(
+        tracing::debug!(
             width = self.image.size[0],
             height = self.image.size[1],
             "overlay: uploading frame texture"
@@ -354,7 +359,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     } else {
         draw_crosshair(&painter, pointer);
     }
-    if session.uses_portal_fallback {
+    if session.source.uses_portal_fallback() {
         draw_banner(&painter, screen);
     }
 
