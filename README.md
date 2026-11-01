@@ -31,7 +31,7 @@ Assign shortcut to launch the GUI or screen picker:
 - Arch Linux (AUR): `yay -S colorpickle` (or `paru`)
 - Debian/Ubuntu (`.deb`): `sudo apt install ./colorpickle_*.deb`
 - Fedora/RHEL/openSUSE (`.rpm`): `sudo dnf install ./colorpickle-*.rpm`
-- AppImage (any distro): `chmod +x ColorPickle-*.AppImage ./ColorPickle-*.AppImage`
+- AppImage (any distro): `chmod +x ColorPickle-*.AppImage`
 
 > [!NOTE]
 > On KDE Plasma, running the app from AppImage prevents use of the fast *ScreenShot2*. It therefore falls back to a slower method, such as XDG desktop portal.
@@ -45,6 +45,13 @@ just install   # release build, then install to /usr (prompts for sudo)
 ```
 
 `just` is required for this; the recipes are thin wrappers over `cargo`.
+
+## Development
+
+```sh
+cargo install cargo-edit cocogitto   # `cargo set-version` and `cog`, used by the commit and release hooks
+lefthook install                     # install the git hooks; lefthook must be on PATH
+```
 
 ## Logs
 
@@ -61,7 +68,7 @@ Rust 1.99 or newer; `rust-toolchain.toml` pins that version for rustup users.
 
 ```sh
 just build                               # release build
-just check                               # clippy (deny warnings), then tests
+just check                               # clippy (deny warnings), formatting check, then tests
 just lint                                # clippy only
 just --list                              # all recipes
 cargo build                              # debug build
