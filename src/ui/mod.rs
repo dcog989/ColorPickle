@@ -12,6 +12,7 @@ use eframe::egui;
 
 use crate::color::okhsl::Okhsl;
 use crate::config::Config;
+use crate::logging::Logging;
 use crate::state::State;
 use crate::ui::main_window::MainWindow;
 use crate::ui::overlay::PickOutcome;
@@ -21,20 +22,20 @@ pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 pub const ICON_PNG: &[u8] = include_bytes!("../../assets/colorpickle.png");
 
-pub fn run_ui(config: Config, state: State) -> Result<()> {
-    run_main(config, state, None)
+pub fn run_ui(config: Config, state: State, logging: Logging) -> Result<()> {
+    run_main(config, state, logging, None)
 }
 
 /// Captures before any window exists, so a hotkey launch shows only the picker.
-pub fn run_picker(config: Config, state: State) -> Result<()> {
+pub fn run_picker(config: Config, state: State, logging: Logging) -> Result<()> {
     let outcome = overlay::run(config.clone())?;
     match outcome {
-        Some(PickOutcome::Picked(color)) => run_main(config, state, Some(color)),
+        Some(PickOutcome::Picked(color)) => run_main(config, state, logging, Some(color)),
         _ => Ok(()),
     }
 }
 
-fn run_main(config: Config, state: State, initial: Option<Okhsl>) -> Result<()> {
+fn run_main(config: Config, state: State, logging: Logging, initial: Option<Okhsl>) -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(WINDOW_TITLE)
         .with_app_id("colorpickle")
@@ -54,8 +55,8 @@ fn run_main(config: Config, state: State, initial: Option<Okhsl>) -> Result<()> 
         Box::new(move |cc| {
             icons::install(&cc.egui_ctx);
             let mut window = match initial {
-                Some(color) => MainWindow::new(config, state).with_initial(color),
-                None => MainWindow::new(config, state),
+                Some(color) => MainWindow::new(config, state, logging).with_initial(color),
+                None => MainWindow::new(config, state, logging),
             };
             window.install_theme(&cc.egui_ctx);
             Ok(Box::new(window))

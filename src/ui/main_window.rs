@@ -6,6 +6,7 @@ use crate::color::okhsl::Okhsl;
 use crate::color::parse;
 use crate::color::{ColorFormat, Precision};
 use crate::config::Config;
+use crate::logging::Logging;
 use crate::state::State;
 use crate::ui::picker::{Event, PickerController};
 use crate::ui::theme::{self, color32, contrast_color32};
@@ -56,6 +57,7 @@ struct InputKey {
 pub struct MainWindow {
     config: Config,
     state: State,
+    logging: Logging,
     color: Okhsl,
     input: String,
     input_editing: bool,
@@ -73,12 +75,13 @@ pub struct MainWindow {
 }
 
 impl MainWindow {
-    pub fn new(config: Config, state: State) -> Self {
+    pub fn new(config: Config, state: State, logging: Logging) -> Self {
         let picker = PickerController::new(config.default_format, config.precision);
         let history = History::from_stored(&state.history);
         Self {
             config,
             state,
+            logging,
             color: Okhsl::new(DEFAULT_HUE_DEGREES, DEFAULT_SATURATION, DEFAULT_LIGHTNESS),
             input: String::new(),
             input_editing: false,
@@ -229,7 +232,10 @@ impl eframe::App for MainWindow {
             self.handle_event(event);
         }
 
-        self.about.show(&ctx, self.config.log_level);
+        if self.about.show(&ctx, &mut self.config) {
+            self.logging.set_level(self.config.log_level);
+            self.persist_config();
+        }
         self.show_toast(&ctx);
     }
 }

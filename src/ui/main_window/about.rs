@@ -15,6 +15,7 @@ const ROW_SPACING: f32 = 14.0;
 const NAME_FONT_SIZE: f32 = 22.0;
 const PATH_FONT_SIZE: f32 = 13.0;
 const WINDOW_WIDTH: f32 = 480.0;
+const LOG_ROW_LABEL: &str = "Logs";
 
 #[derive(Default)]
 pub struct About {
@@ -35,26 +36,29 @@ impl About {
         self.open = false;
     }
 
-    pub fn show(&mut self, ctx: &egui::Context, level: LogLevel) {
+    /// Returns `true` when the log level changed.
+    pub fn show(&mut self, ctx: &egui::Context, config: &mut Config) -> bool {
         if !self.open {
-            return;
+            return false;
         }
         if self.logo.is_none() {
             self.logo = logo_texture(ctx);
         }
 
         let mut open = self.open;
+        let mut changed = false;
         egui::Window::new(format!("About {WINDOW_TITLE}"))
             .id(egui::Id::unique(WINDOW_ID))
             .collapsible(false)
             .resizable(false)
             .default_width(WINDOW_WIDTH)
             .open(&mut open)
-            .show(ctx, |ui| self.contents(ui, level));
+            .show(ctx, |ui| changed = self.contents(ui, &mut config.log_level));
         self.open = open;
+        changed
     }
 
-    fn contents(&self, ui: &mut egui::Ui, level: LogLevel) {
+    fn contents(&self, ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
         ui.vertical_centered(|ui| {
             if let Some(logo) = &self.logo {
                 ui.add(egui::Image::new(logo).fit_to_exact_size(egui::vec2(LOGO_SIZE, LOGO_SIZE)));
@@ -72,23 +76,47 @@ impl About {
         ui.separator();
         ui.add_space(SECTION_SPACING);
 
-        for (label, path) in paths(level) {
+        let mut changed = false;
+        for (label, path) in paths() {
             ui.label(egui::RichText::new(label).strong());
             path_value(ui, path);
+            if label == LOG_ROW_LABEL {
+                changed = log_level_combo(ui, level);
+            }
             ui.add_space(ROW_SPACING);
         }
+        changed
     }
 }
 
-fn paths(level: LogLevel) -> [(String, Option<PathBuf>); 4] {
+fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.label("Log level");
+        egui::ComboBox::from_id_salt("log-level")
+            .selected_text(level.as_str())
+            .show_ui(ui, |ui| {
+                for candidate in LogLevel::ALL {
+                    if ui
+                        .selectable_value(level, candidate, candidate.as_str())
+                        .changed()
+                    {
+                        changed = true;
+                    }
+                }
+            })
+            .response
+            .on_hover_text("Log level: applies immediately and saves to the config file.");
+    });
+    changed
+}
+
+fn paths() -> [(&'static str, Option<PathBuf>); 4] {
     [
-        ("Config".to_string(), Config::path()),
-        ("History".to_string(), State::path()),
-        (
-            format!("Logs - level = {}", level.as_str()),
-            logging::directory(),
-        ),
-        ("Binary".to_string(), std::env::current_exe().ok()),
+        ("Config", Config::path()),
+        ("History", State::path()),
+        (LOG_ROW_LABEL, logging::directory()),
+        ("Binary", std::env::current_exe().ok()),
     ]
 }
 

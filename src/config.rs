@@ -33,6 +33,14 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
+    pub const ALL: [Self; 5] = [
+        Self::Error,
+        Self::Warn,
+        Self::Info,
+        Self::Debug,
+        Self::Trace,
+    ];
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Error => "error",

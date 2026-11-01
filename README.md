@@ -75,7 +75,7 @@ lefthook install                                    # install the git hooks; lef
 Logs are written to `~/.local/state/colorpickle/log/` (or `$XDG_STATE_HOME/colorpickle/log/`), one file per day named `colorpickle.log.<date>`; the 7 most recent are kept.
 
 - `--log-level error|warn|info|debug|trace` sets the verbosity; the default is `info`
-- `log_level` in `config.toml` does the same, and is overridden by the flag
+- `log_level` in `config.toml` does the same, and is overridden by the flag; the About panel has a log level dropdown that applies the change at once and saves it
 - `RUST_LOG` overrides both, e.g. `RUST_LOG=colorpickle=debug,wgpu=warn`
 - The same lines are mirrored to stderr, with colour when stderr is a terminal
 
