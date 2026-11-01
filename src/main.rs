@@ -15,6 +15,9 @@ use crate::cli::Cli;
 use crate::config::LaunchMode;
 
 fn main() -> Result<()> {
+    if clipboard::is_server() {
+        return clipboard::serve();
+    }
     let cli = Cli::parse();
     // Kept for the whole run: dropping the guard discards lines still queued for the log file.
     let (logging, _log_guard) = logging::init();
