@@ -33,6 +33,10 @@ pub(super) fn show(
         .show(ui, |ui| {
             let row_height = widgets::row_height(ui);
             ui.spacing_mut().interact_size.y = row_height;
+            // The popup inherits this roomy spacing, so its default max height
+            // fits fewer rows than there are formats and adds a scrollbar.
+            let menu_height =
+                (row_height + ui.spacing().item_spacing.y) * ColorFormat::ALL.len() as f32;
             ui.horizontal(|ui| {
                 widgets::settings_icon(ui, foreground);
                 egui::ComboBox::from_id_salt("launch-mode")
@@ -56,6 +60,7 @@ pub(super) fn show(
                         "Launch mode: open the main window, or start the screen picker.",
                     );
                 egui::ComboBox::from_id_salt("default-format")
+                    .height(menu_height)
                     .selected_text(config.default_format.label())
                     .show_ui(ui, |ui| {
                         for format in ColorFormat::ALL {
