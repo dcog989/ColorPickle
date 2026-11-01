@@ -387,9 +387,12 @@ impl MainWindow {
             return;
         }
 
-        for (format, key) in ColorFormat::ALL.iter().zip(FORMAT_KEYS) {
-            if ctx.input(|input| input.key_pressed(key)) {
-                self.copy(*format);
+        // A bare digit copies; Ctrl/Alt/Shift+digit belongs to something else.
+        if !ctx.input(|input| input.modifiers.any()) {
+            for (format, key) in ColorFormat::ALL.iter().zip(FORMAT_KEYS) {
+                if ctx.input(|input| input.key_pressed(key)) {
+                    self.copy(*format);
+                }
             }
         }
 
