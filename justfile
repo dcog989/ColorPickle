@@ -6,6 +6,7 @@ lint:
 
 # clippy type-checks too, so there's no separate `cargo check` step.
 check: lint
+    cargo fmt --all -- --check
     cargo test
 
 package:
