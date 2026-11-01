@@ -37,6 +37,17 @@ impl History {
         self.colors.retain(|existing| *existing != color);
     }
 
+    /// Keeps picks another instance wrote while this one was open. Entries this
+    /// window already knows are ignored, so the newest-first order survives.
+    pub(super) fn merge_missing(&mut self, entries: &[StoredColor]) {
+        for color in entries.iter().map(|entry| entry.to_okhsl()) {
+            if !self.colors.contains(&color) {
+                self.colors.push(color);
+            }
+        }
+        self.colors.truncate(HISTORY_LIMIT);
+    }
+
     pub(super) fn colors(&self) -> &[Okhsl] {
         &self.colors
     }
@@ -46,6 +57,7 @@ impl History {
 mod tests {
     use super::{HISTORY_LIMIT, History};
     use crate::color::okhsl::Okhsl;
+    use crate::state::StoredColor;
 
     const HUE_STEP: f32 = 10.0;
 
@@ -79,5 +91,22 @@ mod tests {
 
         let expected: Vec<Okhsl> = pushed.iter().rev().take(HISTORY_LIMIT).copied().collect();
         assert_eq!(history.colors(), expected.as_slice());
+    }
+
+    #[test]
+    fn merges_entries_another_instance_wrote() {
+        let mut history = History::default();
+        let colors = distinct_colors(3);
+        let (old, mine, theirs) = (colors[0], colors[1], colors[2]);
+        history.push(mine);
+
+        let on_disk = [
+            StoredColor::from_okhsl(theirs),
+            StoredColor::from_okhsl(mine),
+            StoredColor::from_okhsl(old),
+        ];
+        history.merge_missing(&on_disk);
+
+        assert_eq!(history.colors(), [mine, theirs, old].as_slice());
     }
 }

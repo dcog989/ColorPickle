@@ -127,6 +127,9 @@ impl MainWindow {
     }
 
     fn persist_state(&mut self) {
+        // Another instance (a hotkey-launched picker) may have written picks
+        // since this window loaded the file; keep those instead of dropping them.
+        self.history.merge_missing(&State::load().history);
         self.state.history = self.history.to_stored();
         if let Err(error) = self.state.save() {
             self.set_toast(format!("Could not save history: {error}"));
