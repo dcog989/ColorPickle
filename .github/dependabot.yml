@@ -7,3 +7,11 @@ updates:
     ignore:
       # Pinned per-toolchain ref, not semver; dependabot bumps it to a nonexistent rust version.
       - dependency-name: "dtolnay/rust-toolchain"
+
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      cargo:
+        patterns: ["*"]
