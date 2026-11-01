@@ -99,7 +99,7 @@ impl ColorFormat {
     pub fn format(self, color: Okhsl, precision: Precision) -> String {
         let srgb = color.to_srgb();
         match self {
-            Self::Hex => format_hex(srgb),
+            Self::Hex => format_hex(color.to_srgb8()),
             Self::Rgb => format!(
                 "rgb({} {} {})",
                 srgb_channel(srgb.red, precision.channel()),
@@ -178,19 +178,13 @@ fn decimals(value: f32, places: usize) -> String {
     if text == "-0" { "0".to_string() } else { text }
 }
 
-fn to_srgb8(srgb: Srgb) -> [u8; 3] {
-    let color: palette::Srgb<u8> = srgb.into_format();
-    [color.red, color.green, color.blue]
-}
-
 const CHANNEL_MAX: f32 = 255.0;
 
 fn srgb_channel(value: f32, places: usize) -> String {
     decimals(value.clamp(0.0, 1.0) * CHANNEL_MAX, places)
 }
 
-fn format_hex(srgb: Srgb) -> String {
-    let [red, green, blue] = to_srgb8(srgb);
+fn format_hex([red, green, blue]: [u8; 3]) -> String {
     format!("#{red:02X}{green:02X}{blue:02X}")
 }
 
@@ -237,8 +231,8 @@ mod tests {
 
     #[test]
     fn hex_uses_uppercase_pairs() {
-        assert_eq!(format_hex(Srgb::new(1.0, 0.0, 0.0)), "#FF0000");
-        assert_eq!(format_hex(Srgb::new(1.0, 0.5, 0.0)), "#FF8000");
+        assert_eq!(format_hex([255, 0, 0]), "#FF0000");
+        assert_eq!(format_hex([255, 128, 0]), "#FF8000");
     }
 
     #[test]

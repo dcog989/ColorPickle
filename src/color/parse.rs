@@ -83,7 +83,7 @@ fn parse_hex(hex: &str) -> Option<Okhsl> {
         ),
         _ => return None,
     };
-    Some(from_srgb8(red, green, blue))
+    Some(Okhsl::from_srgb8([red, green, blue]))
 }
 
 fn hex_byte(text: &str) -> Option<u8> {
@@ -112,7 +112,7 @@ fn parse_function(name: &str, args: &str) -> Option<Okhsl> {
 
 fn parse_rgb(values: &[Value]) -> Option<Okhsl> {
     let [red, green, blue] = three(values)?;
-    Some(from_srgb8(red.byte(), green.byte(), blue.byte()))
+    Some(Okhsl::from_srgb8([red.byte(), green.byte(), blue.byte()]))
 }
 
 fn parse_hsl(values: &[Value]) -> Option<Okhsl> {
@@ -220,14 +220,6 @@ fn four(values: &[Value]) -> Option<[Value; 4]> {
         [first, second, third, fourth] => Some([*first, *second, *third, *fourth]),
         _ => None,
     }
-}
-
-fn from_srgb8(red: u8, green: u8, blue: u8) -> Okhsl {
-    Okhsl::from_srgb(Srgb::new(
-        f32::from(red) / CHANNEL_MAX,
-        f32::from(green) / CHANNEL_MAX,
-        f32::from(blue) / CHANNEL_MAX,
-    ))
 }
 
 #[cfg(test)]

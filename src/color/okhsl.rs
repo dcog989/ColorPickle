@@ -6,6 +6,8 @@
 
 use palette::{FromColor, IntoColor, Oklab, OklabHue, Srgb};
 
+const SRGB8_MAX: f32 = 255.0;
+
 #[derive(Debug, Clone, Copy)]
 pub struct Okhsl {
     inner: palette::Okhsl,
@@ -24,6 +26,14 @@ impl Okhsl {
         Self {
             inner: palette::Okhsl::new(OklabHue::from_degrees(hue_degrees), saturation, lightness),
         }
+    }
+
+    pub fn from_srgb8([red, green, blue]: [u8; 3]) -> Self {
+        Self::from_srgb(Srgb::new(
+            f32::from(red) / SRGB8_MAX,
+            f32::from(green) / SRGB8_MAX,
+            f32::from(blue) / SRGB8_MAX,
+        ))
     }
 
     pub fn from_srgb(color: Srgb) -> Self {

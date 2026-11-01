@@ -1,7 +1,6 @@
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use palette::Srgb;
 use serde::{Deserialize, Serialize};
 
 use crate::color::okhsl::Okhsl;
@@ -9,8 +8,6 @@ use crate::config::APP_NAME;
 use crate::persistence;
 
 pub const STATE_FILE: &str = "state.toml";
-
-const SRGB8_MAX: f32 = 255.0;
 
 /// A persisted history colour, kept at full precision as Okhsl
 /// `[hue, saturation, lightness]`. Older state files stored 8-bit sRGB, which
@@ -28,11 +25,7 @@ impl StoredColor {
     }
 
     fn from_srgb8(red: u8, green: u8, blue: u8) -> Self {
-        Self::from_okhsl(Okhsl::from_srgb(Srgb::new(
-            f32::from(red) / SRGB8_MAX,
-            f32::from(green) / SRGB8_MAX,
-            f32::from(blue) / SRGB8_MAX,
-        )))
+        Self::from_okhsl(Okhsl::from_srgb8([red, green, blue]))
     }
 }
 
