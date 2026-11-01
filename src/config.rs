@@ -21,15 +21,6 @@ pub enum LaunchMode {
     PickerFirst,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum Theme {
-    #[default]
-    System,
-    Light,
-    Dark,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LogLevel {
@@ -59,7 +50,6 @@ pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
     pub precision: Precision,
-    pub theme: Theme,
     pub log_level: LogLevel,
 }
 
@@ -99,7 +89,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use super::{CONFIG_FILE, Config, LaunchMode, LogLevel, Theme};
+    use super::{CONFIG_FILE, Config, LaunchMode, LogLevel};
     use crate::color::{ColorFormat, Precision};
 
     fn temporary_directory(name: &str) -> std::path::PathBuf {
@@ -117,7 +107,6 @@ mod tests {
             launch_mode: LaunchMode::PickerFirst,
             default_format: ColorFormat::Oklch,
             precision: Precision::Precise,
-            theme: Theme::Dark,
             log_level: LogLevel::Debug,
         };
 

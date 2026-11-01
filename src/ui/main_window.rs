@@ -1,8 +1,8 @@
 use eframe::egui;
 
 use crate::clipboard;
-use crate::color::ColorFormat;
 use crate::color::harmony::Harmony;
+use crate::color::{ColorFormat, Precision};
 use crate::color::okhsl::Okhsl;
 use crate::color::parse;
 use crate::config::Config;
@@ -13,14 +13,12 @@ use crate::ui::widgets;
 
 mod about;
 mod history;
-mod keys;
 mod settings_panel;
 mod slider_panel;
 mod toast;
 
 use self::about::About;
 use self::history::History;
-use self::keys::{InputKey, ThemeKey};
 use self::toast::Toast;
 
 const PANEL_MARGIN: f32 = 16.0;
@@ -47,6 +45,14 @@ const FORMAT_KEYS: [egui::Key; 9] = [
 
 const _: () = assert!(FORMAT_KEYS.len() == ColorFormat::ALL.len());
 
+/// The input field is refreshed only when its contents would change.
+#[derive(Clone, Copy, PartialEq)]
+struct InputKey {
+    format: ColorFormat,
+    precision: Precision,
+    color: Okhsl,
+}
+
 pub struct MainWindow {
     config: Config,
     state: State,
@@ -61,7 +67,6 @@ pub struct MainWindow {
     pending_toast: Option<String>,
     picker: PickerController,
     about: About,
-    applied_theme: Option<ThemeKey>,
     applied_theme_color: Option<Okhsl>,
     applied_input: Option<InputKey>,
     min_inner_size: Option<egui::Vec2>,
@@ -85,7 +90,6 @@ impl MainWindow {
             pending_toast: None,
             picker,
             about: About::default(),
-            applied_theme: None,
             applied_theme_color: None,
             applied_input: None,
             min_inner_size: None,
@@ -103,17 +107,9 @@ impl MainWindow {
         self
     }
 
-    pub fn apply_theme(&mut self, ctx: &egui::Context) {
-        theme::apply(ctx, self.config.theme, self.color);
-        self.applied_theme = Some(self.theme_key(ctx));
+    pub fn install_theme(&mut self, ctx: &egui::Context) {
+        theme::install(ctx, self.color);
         self.applied_theme_color = Some(self.color);
-    }
-
-    fn theme_key(&self, ctx: &egui::Context) -> ThemeKey {
-        ThemeKey {
-            theme: self.config.theme,
-            system: ctx.system_theme(),
-        }
     }
 
     fn set_toast(&mut self, message: impl Into<String>) {
@@ -203,12 +199,7 @@ impl eframe::App for MainWindow {
         ui.spacing_mut().item_spacing = egui::vec2(ITEM_SPACING, ITEM_SPACING);
         ui.spacing_mut().button_padding = egui::vec2(ITEM_SPACING, ITEM_SPACING * 0.6);
 
-        let theme_key = self.theme_key(&ctx);
-        if self.applied_theme != Some(theme_key) {
-            theme::apply(&ctx, self.config.theme, self.color);
-            self.applied_theme = Some(theme_key);
-            self.applied_theme_color = Some(self.color);
-        } else if self.applied_theme_color != Some(self.color) {
+        if self.applied_theme_color != Some(self.color) {
             theme::apply_color_to_current(&ctx, self.color);
             self.applied_theme_color = Some(self.color);
         }

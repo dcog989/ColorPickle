@@ -2,7 +2,6 @@ use eframe::egui;
 
 use crate::color::apca;
 use crate::color::okhsl::Okhsl;
-use crate::config::Theme;
 
 const CONTRAST_LIGHTNESS_THRESHOLD: f32 = 0.5;
 const TARGET_CONTRAST_LC: f32 = 90.0;
@@ -134,9 +133,11 @@ fn surface_color(color: Okhsl, foreground: Okhsl) -> Okhsl {
     )
 }
 
-pub fn apply(ctx: &egui::Context, theme: Theme, color: Okhsl) {
-    ctx.set_theme(theme_preference(theme));
-    let mut visuals = base_visuals(ctx, theme);
+/// Installs the visuals for both egui themes. `apply_color` overrides every
+/// colour this UI draws, so the light and dark slots end up identical and the
+/// system preference only decides which slot is read.
+pub fn install(ctx: &egui::Context, color: Okhsl) {
+    let mut visuals = base_visuals();
     apply_color(&mut visuals, color);
     ctx.set_visuals_of(egui::Theme::Dark, visuals.clone());
     ctx.set_visuals_of(egui::Theme::Light, visuals);
@@ -150,23 +151,8 @@ pub fn apply_color_to_current(ctx: &egui::Context, color: Okhsl) {
     }
 }
 
-fn theme_preference(theme: Theme) -> egui::ThemePreference {
-    match theme {
-        Theme::System => egui::ThemePreference::System,
-        Theme::Dark => egui::ThemePreference::Dark,
-        Theme::Light => egui::ThemePreference::Light,
-    }
-}
-
-fn base_visuals(ctx: &egui::Context, theme: Theme) -> egui::Visuals {
-    let mut visuals = match theme {
-        Theme::Dark => egui::Visuals::dark(),
-        Theme::Light => egui::Visuals::light(),
-        Theme::System => match ctx.system_theme() {
-            Some(egui::Theme::Light) => egui::Visuals::light(),
-            _ => egui::Visuals::dark(),
-        },
-    };
+fn base_visuals() -> egui::Visuals {
+    let mut visuals = egui::Visuals::dark();
 
     let corner = egui::CornerRadius::same(CORNER_RADIUS);
     visuals.window_corner_radius = corner;

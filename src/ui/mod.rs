@@ -57,7 +57,7 @@ fn run_main(config: Config, state: State, initial: Option<Okhsl>) -> Result<()> 
                 Some(color) => MainWindow::new(config, state).with_initial(color),
                 None => MainWindow::new(config, state),
             };
-            window.apply_theme(&cc.egui_ctx);
+            window.install_theme(&cc.egui_ctx);
             Ok(Box::new(window))
         }),
     )
