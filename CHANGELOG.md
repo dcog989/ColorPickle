@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.9.1 - 2026-11-07
+#### Bug Fixes
+- (**capture**) migrate the KWin backend to the zbus 6 async API - (c03040e) - dcog989
+#### Performance Improvements
+- (**ui**) stop rebuilding the hidden main window while the picker is open - (5a369ef) - dcog989
+
+- - -
+
 ## v0.9.0 - 2026-11-01
 #### Features
 - (**ui**) add log level dropdown to the about window - (6f3142d) - dcog989
