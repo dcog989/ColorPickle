@@ -60,6 +60,12 @@ impl PickerController {
         self.session.is_some() || self.capture.is_some()
     }
 
+    /// True while the main window is hidden: a capture is pending or the overlay
+    /// is up. An abandoned capture brings the window back, so it does not count.
+    pub fn hides_main_window(&self) -> bool {
+        self.session.is_some() || (self.capture.is_some() && !self.abandoned)
+    }
+
     pub fn request(
         &mut self,
         ctx: &egui::Context,

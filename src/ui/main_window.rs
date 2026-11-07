@@ -197,6 +197,15 @@ impl eframe::App for MainWindow {
         let ctx = ui.ctx().clone();
         self.now = ctx.input(|input| input.time);
 
+        // The overlay is an immediate viewport: every picker frame repaints this
+        // hidden window too, so do not rebuild the whole panel tree for it.
+        if self.picker.hides_main_window() {
+            if let Some(event) = self.picker.update(&ctx, frame) {
+                self.handle_event(event);
+            }
+            return;
+        }
+
         if let Some(message) = self.pending_toast.take() {
             self.set_toast(message);
         }
