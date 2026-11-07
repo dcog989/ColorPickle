@@ -2,8 +2,7 @@ use std::collections::HashMap;
 use std::io::Read;
 
 use image::RgbaImage;
-use zbus::blocking::{Connection, Proxy};
-use zbus::zvariant::{DynamicTuple, Fd, OwnedValue};
+use zbus::{Connection, DynamicTuple, Fd, OwnedVariant, Proxy};
 
 use crate::capture::{
     CaptureError, CaptureResult, OutputInfo, PixelOrder, Point, compact_and_swizzle,
@@ -33,16 +32,23 @@ pub fn capture(_cursor: Option<Point>) -> CaptureResult<(RgbaImage, OutputInfo)>
 }
 
 fn capture_active_screen() -> CaptureResult<(RgbaImage, OutputInfo)> {
-    tracing::debug!("kwin: connecting to ScreenShot2");
-    let connection = Connection::session()?;
-    let proxy = Proxy::new(&connection, SERVICE, PATH, INTERFACE)?;
+    zbus::block_on(capture_active_screen_async())
+}
 
-    let mut options: HashMap<String, OwnedValue> = HashMap::new();
-    options.insert(OPTION_NATIVE_RESOLUTION.to_owned(), OwnedValue::from(true));
+async fn capture_active_screen_async() -> CaptureResult<(RgbaImage, OutputInfo)> {
+    tracing::debug!("kwin: connecting to ScreenShot2");
+    let connection = Connection::session().await?;
+    let proxy = Proxy::new(&connection, SERVICE, PATH, INTERFACE).await?;
+
+    let mut options: HashMap<String, OwnedVariant> = HashMap::new();
+    options.insert(
+        OPTION_NATIVE_RESOLUTION.to_owned(),
+        OwnedVariant::from(true),
+    );
 
     let (mut reader, writer) = std::io::pipe()?;
     let body = DynamicTuple((&options, Fd::from(&writer)));
-    let reply: HashMap<String, OwnedValue> = proxy.call(METHOD_ACTIVE_SCREEN, &body)?;
+    let reply: HashMap<String, OwnedVariant> = proxy.call(METHOD_ACTIVE_SCREEN, &body).await?;
     drop(body);
     drop(writer);
 
@@ -71,13 +77,13 @@ fn capture_active_screen() -> CaptureResult<(RgbaImage, OutputInfo)> {
     repack(buffer, width, height, stride, format).map(|image| (image, output))
 }
 
-fn get_u32(map: &HashMap<String, OwnedValue>, key: &str) -> CaptureResult<u32> {
+fn get_u32(map: &HashMap<String, OwnedVariant>, key: &str) -> CaptureResult<u32> {
     map.get(key)
         .and_then(|value| value.downcast_ref::<u32>().ok())
         .ok_or_else(|| CaptureError::MalformedReply(key.to_owned()))
 }
 
-fn get_string(map: &HashMap<String, OwnedValue>, key: &str) -> Option<String> {
+fn get_string(map: &HashMap<String, OwnedVariant>, key: &str) -> Option<String> {
     map.get(key).and_then(|value| value.downcast_ref().ok())
 }
 
