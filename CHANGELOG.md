@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.9.3 - 2026-11-08
+#### Continuous Integration
+- invalidate stale rust cache - (167b9d6) - dcog989
+
+- - -
+
 ## v0.9.2 - 2026-11-08
 #### Bug Fixes
 - (**ui**) enable system clipboard and make text selection visible - (f727166) - dcog989
