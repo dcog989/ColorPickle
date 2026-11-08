@@ -14,7 +14,6 @@ const INACTIVE_SHADE: f32 = 30.0 / 255.0;
 const HOVERED_SHADE: f32 = 77.0 / 255.0;
 const ACTIVE_SHADE: f32 = 115.0 / 255.0;
 const OPEN_SHADE: f32 = 64.0 / 255.0;
-const SELECTION_SHADE: f32 = 80.0 / 255.0;
 const FIELD_SHADE: f32 = 28.0 / 255.0;
 const BORDER_ALPHA: u8 = 110;
 const HOVERED_BORDER_ALPHA: u8 = 200;
@@ -221,8 +220,11 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     visuals.widgets.active.bg_stroke = active_border;
     visuals.widgets.open.bg_stroke = hovered_border;
     set_surfaces(visuals, surface, border, readable(FIELD_SHADE));
-    visuals.selection.bg_fill = readable(SELECTION_SHADE);
-    visuals.selection.stroke.color = foreground;
+    // Selected text inverts rather than tints: the field already sits at the
+    // text contrast floor, so any tinted selection clamps to the same fill and
+    // disappears.
+    visuals.selection.bg_fill = foreground;
+    visuals.selection.stroke.color = surface;
 }
 
 fn set_surfaces(
@@ -330,16 +332,15 @@ mod tests {
                     "lightness {lightness} fraction {fraction}"
                 );
             }
-            for fraction in [super::FIELD_SHADE, super::SELECTION_SHADE] {
-                let fill =
-                    super::fill_color(surface, foreground, fraction, super::MIN_TEXT_CONTRAST_LC);
-                let floor =
-                    super::MIN_TEXT_CONTRAST_LC.min(super::contrast_against(foreground, surface));
-                assert!(
-                    super::contrast_against(foreground, fill) >= floor,
-                    "lightness {lightness} fraction {fraction}"
-                );
-            }
+            let fraction = super::FIELD_SHADE;
+            let fill =
+                super::fill_color(surface, foreground, fraction, super::MIN_TEXT_CONTRAST_LC);
+            let floor =
+                super::MIN_TEXT_CONTRAST_LC.min(super::contrast_against(foreground, surface));
+            assert!(
+                super::contrast_against(foreground, fill) >= floor,
+                "lightness {lightness} fraction {fraction}"
+            );
         }
     }
 
@@ -391,6 +392,22 @@ mod tests {
                 assert!(
                     steps[1].max(composited[1]) >= MIN_HIGHLIGHT_DELTA,
                     "visible lightness {lightness} saturation {saturation}: surface {surface:?} steps {steps:?} composite {composited:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn text_selection_stands_out_from_the_field() {
+        for lightness in [0.0, 0.2, 0.5, 0.65, 0.8, 1.0] {
+            for saturation in [0.0, 0.78] {
+                let color = Okhsl::new(116.0, saturation, lightness);
+                let mut visuals = egui::Visuals::dark();
+                super::apply_color(&mut visuals, color);
+                assert!(
+                    channel_delta(visuals.selection.bg_fill, visuals.extreme_bg_color)
+                        >= MIN_HIGHLIGHT_DELTA,
+                    "lightness {lightness} saturation {saturation}"
                 );
             }
         }
