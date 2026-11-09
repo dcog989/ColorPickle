@@ -38,7 +38,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: rust-v2
+          shared-key: rust-v3
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -53,7 +53,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.0
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: rust-v2
+          shared-key: rust-v3
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -70,7 +70,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.99.0
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          shared-key: rust-v2
+          shared-key: rust-v3
       - uses: taiki-e/install-action@3a3daafd3b7f23b8f65d9f5ba2db203fb59b79e2 # v2
         with:
           tool: cargo-deb,cargo-generate-rpm
