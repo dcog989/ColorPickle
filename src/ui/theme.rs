@@ -200,7 +200,8 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
         ))
     };
 
-    visuals.override_text_color = Some(foreground);
+    // No `override_text_color`: it also overrides per-widget text, so a
+    // selected dropdown row would paint the foreground on the foreground.
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
     visuals.widgets.inactive.fg_stroke.color = foreground;
     visuals.widgets.hovered.fg_stroke.color = foreground;
@@ -428,5 +429,30 @@ mod tests {
 
         let widget = super::shade_color(surface, foreground, super::ACTIVE_SHADE);
         assert!(widget.lightness() >= super::MIN_FILL_LIGHTNESS / 2.0);
+    }
+
+    #[test]
+    fn selected_widget_text_contrasts_with_its_fill() {
+        for lightness in [0.0, 0.43, 0.74, 1.0] {
+            let color = Okhsl::new(116.0, 0.78, lightness);
+            let mut visuals = egui::Visuals::dark();
+            super::apply_color(&mut visuals, color);
+            // Forcing the base text colour would also override the selected
+            // row's text, leaving foreground on foreground.
+            assert!(
+                visuals.override_text_color.is_none(),
+                "lightness {lightness}"
+            );
+            assert!(
+                channel_delta(visuals.selection.bg_fill, visuals.selection.stroke.color)
+                    >= MIN_HIGHLIGHT_DELTA,
+                "lightness {lightness}"
+            );
+            assert_eq!(
+                visuals.text_color(),
+                super::color32(super::foreground(color)),
+                "lightness {lightness}"
+            );
+        }
     }
 }
