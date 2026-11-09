@@ -14,6 +14,7 @@ const INACTIVE_SHADE: f32 = 30.0 / 255.0;
 const HOVERED_SHADE: f32 = 77.0 / 255.0;
 const ACTIVE_SHADE: f32 = 115.0 / 255.0;
 const OPEN_SHADE: f32 = 64.0 / 255.0;
+const SELECTION_SHADE: f32 = 160.0 / 255.0;
 const FIELD_SHADE: f32 = 28.0 / 255.0;
 const BORDER_ALPHA: u8 = 110;
 const HOVERED_BORDER_ALPHA: u8 = 200;
@@ -200,8 +201,7 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
         ))
     };
 
-    // No `override_text_color`: it also overrides per-widget text, so a
-    // selected dropdown row would paint the foreground on the foreground.
+    visuals.override_text_color = Some(foreground);
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
     visuals.widgets.inactive.fg_stroke.color = foreground;
     visuals.widgets.hovered.fg_stroke.color = foreground;
@@ -221,11 +221,11 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     visuals.widgets.active.bg_stroke = active_border;
     visuals.widgets.open.bg_stroke = hovered_border;
     set_surfaces(visuals, surface, border, readable(FIELD_SHADE));
-    // Selected text inverts rather than tints: the field already sits at the
-    // text contrast floor, so any tinted selection clamps to the same fill and
-    // disappears.
-    visuals.selection.bg_fill = foreground;
-    visuals.selection.stroke.color = surface;
+    // Selection moves away from the text like hover and active, so the
+    // highlight stays a tint of the swatch instead of inverting to near black
+    // or near white. The text keeps the foreground colour.
+    visuals.selection.bg_fill = shade(SELECTION_SHADE);
+    visuals.selection.stroke.color = foreground;
 }
 
 fn set_surfaces(
@@ -432,25 +432,16 @@ mod tests {
     }
 
     #[test]
-    fn selected_widget_text_contrasts_with_its_fill() {
-        for lightness in [0.0, 0.43, 0.74, 1.0] {
+    fn selected_rows_contrast_with_their_text() {
+        for lightness in [0.0, 0.43, 0.74, 0.84, 1.0] {
             let color = Okhsl::new(116.0, 0.78, lightness);
             let mut visuals = egui::Visuals::dark();
             super::apply_color(&mut visuals, color);
-            // Forcing the base text colour would also override the selected
-            // row's text, leaving foreground on foreground.
+            // A selection that inverts to the foreground collapses to the text
+            // colour: near black for light swatches, near white for dark ones.
             assert!(
-                visuals.override_text_color.is_none(),
-                "lightness {lightness}"
-            );
-            assert!(
-                channel_delta(visuals.selection.bg_fill, visuals.selection.stroke.color)
+                channel_delta(visuals.selection.bg_fill, visuals.text_color())
                     >= MIN_HIGHLIGHT_DELTA,
-                "lightness {lightness}"
-            );
-            assert_eq!(
-                visuals.text_color(),
-                super::color32(super::foreground(color)),
                 "lightness {lightness}"
             );
         }
