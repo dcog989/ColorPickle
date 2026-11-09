@@ -18,7 +18,8 @@ cargo build --release --locked
 cargo deb --no-build
 cargo generate-rpm
 packaging/appimage/build.sh
+packaging/tarball/build.sh
 
 echo "artifacts:"
-find target/debian target/generate-rpm target/appimage -maxdepth 1 \
-    \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \) 2>/dev/null
+find target/debian target/generate-rpm target/appimage target/tarball -maxdepth 1 \
+    \( -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' -o -name '*.tar.zst' \) 2>/dev/null

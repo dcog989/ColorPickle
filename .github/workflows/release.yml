@@ -31,7 +31,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            pkg-config libwayland-dev libxkbcommon-dev mold clang
+            pkg-config libwayland-dev libxkbcommon-dev mold clang zstd
       # A tag must not publish code the tests reject.
       - name: Test
         run: cargo test --locked --workspace
@@ -54,6 +54,7 @@ jobs:
             target/debian/*.deb
             target/generate-rpm/*.rpm
             target/appimage/*.AppImage
+            target/tarball/*.tar.zst
           if-no-files-found: error
 
   release:
@@ -88,4 +89,5 @@ jobs:
             dist/**/*.deb
             dist/**/*.rpm
             dist/**/*.AppImage
+            dist/**/*.tar.zst
             CHANGELOG.md
