@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.10.0 - 2026-11-09
+#### Features
+- (**packaging**) publish a tarball that installs to /usr - (46da8da) - dcog989
+#### Bug Fixes
+- (**ui**) tint the selection from the swatch instead of inverting it - (e5ecc35) - dcog989
+- (**ui**) stop overriding per-widget text so selected dropdown rows stay readable - (73053a9) - dcog989
+#### Miscellaneous Chores
+- crate updates - (dfea07f) - dcog989
+
+- - -
+
 ## v0.9.3 - 2026-11-08
 #### Continuous Integration
 - invalidate stale rust cache - (167b9d6) - dcog989
