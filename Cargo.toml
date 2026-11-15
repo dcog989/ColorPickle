@@ -2,7 +2,7 @@
 name = "colorpickle"
 version = "0.10.0"
 edition = "2024"
-rust-version = "1.99"
+rust-version = "1.100"
 description = "Linux screen color picker: pick a pixel or drag-select a region, get the color in any common format, copy it."
 readme = "README.md"
 repository = "https://github.com/dcog989/ColorPickle"
@@ -43,9 +43,6 @@ assets = [
 [package.metadata.generate-rpm.recommends]
 "xdg-desktop-portal" = "*"
 
-# Without this, Cargo walks up and attaches to any parent directory holding a Cargo.toml.
-[workspace]
-
 [dependencies]
 anyhow = "1.0.104"
 arboard = { version = "3.7.0", default-features = false, features = ["wayland-data-control"] }
@@ -58,15 +55,15 @@ eframe = {
   version = "0.37.0",
   default-features = false,
   features = [
-    "clipboard",
     "default_fonts",
+    "clipboard",
     "wayland",
     "wgpu",
     "x11",
   ]
 }
 image = { version = "0.25.10", default-features = false, features = ["png"] }
-lucide-icons = "1.70.0"
+lucide-icons = "1.73.0"
 palette = "0.7.7"
 percent-encoding = "2.3.2"
 pollster = "1.0.1"
@@ -81,7 +78,10 @@ wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
 winit = "0.30"
 x11rb = { version = "0.14", features = ["image", "randr"] }
-zbus = "6.2"
+zbus = "6.3"
+
+# Without this, Cargo walks up and attaches to any parent directory holding a Cargo.toml.
+[workspace]
 
 [profile.dev]
 debug = 1  # line tables only: enough for backtraces, cheaper to write and link than full DWARF

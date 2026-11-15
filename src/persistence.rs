@@ -1,4 +1,5 @@
 use std::io::Write;
+use std::mem::DropGuard;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -66,16 +67,21 @@ pub fn save<T: Serialize>(path: &Path, value: &T) -> Result<()> {
             .with_context(|| format!("failed to create {}", parent.display()))?;
     }
     let text = toml::to_string_pretty(value).context("failed to serialize")?;
-    let temporary = temporary_file_path(path);
-    let mut file = std::fs::File::create(&temporary)
+    // Removes the temp file on every failure path, so a failed save leaves nothing behind.
+    let temporary = DropGuard::new(temporary_file_path(path), |temporary| {
+        let _ = std::fs::remove_file(temporary);
+    });
+    let mut file = std::fs::File::create(temporary.as_path())
         .with_context(|| format!("failed to write {}", temporary.display()))?;
     file.write_all(text.as_bytes())
         .with_context(|| format!("failed to write {}", temporary.display()))?;
     file.sync_all()
         .with_context(|| format!("failed to flush {}", temporary.display()))?;
     drop(file);
-    std::fs::rename(&temporary, path)
-        .with_context(|| format!("failed to replace {}", path.display()))
+    std::fs::rename(temporary.as_path(), path)
+        .with_context(|| format!("failed to replace {}", path.display()))?;
+    DropGuard::dismiss(temporary);
+    Ok(())
 }
 
 /// A temp path unique to this write, so two processes saving at once never
@@ -152,6 +158,23 @@ mod tests {
                 .to_string_lossy()
                 .contains(&std::process::id().to_string())
         );
+    }
+
+    #[test]
+    fn a_failed_save_leaves_no_temporary_file() {
+        let path = temporary_path("failed-save");
+        // Renaming a file onto a directory fails, after the temp file has been written.
+        std::fs::create_dir(&path).unwrap();
+
+        assert!(save(&path, &Document { value: 7 }).is_err());
+
+        let names: Vec<String> = std::fs::read_dir(path.parent().unwrap())
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, ["document.toml"]);
+
+        std::fs::remove_dir_all(path.parent().unwrap()).unwrap();
     }
 
     #[test]

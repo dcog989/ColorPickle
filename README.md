@@ -79,7 +79,7 @@ Logs are written to `~/.local/state/colorpickle/log/`, one file per day named `c
 
 ### Requirements
 
-Rust 1.99, `just`, `pkg-config`, `lefthook`, Wayland and `libxkbcommon` development headers; `zstd` is needed for the tarball.
+Rust 1.100, `just`, `pkg-config`, `lefthook`, Wayland and `libxkbcommon` development headers; `zstd`.
 
 - Debian/Ubuntu: `sudo apt install just pkg-config libwayland-dev libxkbcommon-dev zstd`
 - Arch: `sudo pacman -S --needed just pkgconf wayland libxkbcommon zstd`
