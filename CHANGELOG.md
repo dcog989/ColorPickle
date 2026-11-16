@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.11.0 - 2026-11-16
+#### Features
+- (**ui**) copy environment info from the About panel - (7136adf) - dcog989
+- (**ui**) open the folder for a path in the About panel instead of copying it - (2d9bbd6) - dcog989
+#### Bug Fixes
+- (**persistence**) clean up the temporary file when a save fails - (2a3b7dc) - dcog989
+- (**ui**) open the main window in a fresh process after a picker-first pick - (31e8ea5) - dcog989
+#### Miscellaneous Chores
+- tidy - (cb95663) - dcog989
+
+- - -
+
 ## v0.10.0 - 2026-11-09
 #### Features
 - (**packaging**) publish a tarball that installs to /usr - (46da8da) - dcog989
