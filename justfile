@@ -57,5 +57,5 @@ outdated:
     cargo outdated -w
 
 # Verify a commit message file, as the commit-msg hook passes it.
-commit-check file:
-    cog verify --file {{file}}
+commit-check file *args:
+    cog verify --file {{file}} {{args}}
