@@ -27,12 +27,12 @@ See `README.md` for usage, configuration, install and distribution.
 ### Workflow
 
 - Install: `just install` (needs `pkg-config`, Wayland and `libxkbcommon` development headers)
-- Dev: `cargo run`
-- Test: `cargo test --workspace`
-- Lint: `cargo clippy --workspace --all-targets -- -D warnings`
-- Format: `cargo fmt --all`
+- Dev: `just run`
 - Check lint, format and tests: `just check`
-- Build: `cargo build --release`
+- Test: `just test`
+- Lint: `just lint`
+- Format: `just format`
+- Build: `just build`
 - Package: `just package` (needs `cargo-deb`, `cargo-generate-rpm`, `linuxdeploy`)
 
 ### Common Patterns

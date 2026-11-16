@@ -1,14 +1,38 @@
+# Verify the repo: the same lint, format check and tests CI runs.
+default: check
+
+# Lint, format check and tests.
+check: lint format-check test
+
+# Clippy, warnings as errors.
+lint:
+    cargo clippy --locked --workspace --all-targets -- -D warnings
+
+# Rewrite formatting.
+format:
+    cargo fmt --all
+
+# Fail if anything needs formatting.
+format-check:
+    cargo fmt --all -- --check
+
+# Test suite.
+test:
+    cargo test --locked --workspace
+
+# Release build.
 build:
     cargo build --release
 
-lint:
-    cargo clippy --workspace --all-targets -- -D warnings
+# Debug build and run.
+run:
+    cargo run
 
-# clippy type-checks too, so there's no separate `cargo check` step.
-check: lint
-    cargo fmt --all -- --check
-    cargo test
+# Remove build artifacts.
+clean:
+    cargo clean
 
+# .deb, .rpm, AppImage and tarball into target/.
 package:
     packaging/build.sh
 

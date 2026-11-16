@@ -96,19 +96,17 @@ Building the AppImage needs `linuxdeploy` on `PATH`, or its path in `LINUXDEPLOY
 ### Build
 
 ```sh
+just check                               # clippy, formatting check, tests
 just build                               # release build
-just check                               # clippy linter, formatting check, run tests
+just run                                 # debug build and run
+just format                              # format all files
+just test                                # tests
 just lint                                # clippy only
+just clean                               # clean build artifacts
 just --list                              # all recipes
 
-cargo build                              # debug build
 cargo fetch && cargo outdated -w         # check for updates above semver range
-cargo fmt --all -- --check               # formatting check
-cargo fmt --all                          # format all files
-cargo test --workspace                   # tests
-cargo run                                # build and run
 cargo upgrade && cargo update --verbose  # update Cargo.lock and dependencies to latest with semver ranges
-cargo clean                              # clean build artifacts
 
 just package                             # .deb, .rpm, AppImage and tarball into target/
 cog bump --auto                          # bump version and push

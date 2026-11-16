@@ -36,10 +36,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             pkg-config libwayland-dev libxkbcommon-dev mold clang zstd
       # A tag must not publish code the tests reject.
-      - name: Test
-        run: cargo test --locked --workspace
-      - name: Lint
-        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+      # A tag must not publish code the tests reject.
+      - name: Check
+        run: just check
       - name: Install linuxdeploy
         run: |
           wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20251107-1/linuxdeploy-x86_64.AppImage
@@ -49,7 +51,7 @@ jobs:
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           LINUXDEPLOY: ${{ github.workspace }}/linuxdeploy-x86_64.AppImage
-        run: packaging/build.sh
+        run: just package
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages
