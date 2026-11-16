@@ -43,3 +43,7 @@ install: build
     sudo install -Dm644 assets/colorpickle.svg /usr/share/icons/hicolor/scalable/apps/colorpickle.svg
     sudo install -Dm644 assets/colorpickle.png /usr/share/icons/hicolor/256x256/apps/colorpickle.png
     sudo update-desktop-database /usr/share/applications
+
+# Refresh dependencies to the latest allowed versions.
+update:
+    cargo upgrade && cargo update --verbose

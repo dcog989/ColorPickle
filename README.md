@@ -105,8 +105,7 @@ just lint                                # clippy only
 just clean                               # clean build artifacts
 just --list                              # all recipes
 
-cargo fetch && cargo outdated -w         # check for updates above semver range
-cargo upgrade && cargo update --verbose  # update Cargo.lock and dependencies to latest with semver ranges
+just update                              # latest allowed versions; cargo outdated -w to preview
 
 just package                             # .deb, .rpm, AppImage and tarball into target/
 cog bump --auto                          # bump version and push
