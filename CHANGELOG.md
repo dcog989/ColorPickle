@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.12.1 - 2026-11-16
+#### Bug Fixes
+- (**about**) open files, not their paths, refined - (0104748) - dcog989
+- (**overlay**) stop throttling the single-pixel readout - (81c2d99) - dcog989
+
+- - -
+
 ## v0.12.0 - 2026-11-16
 #### Features
 - (**logging**) add colorpickle.latest.log symlink to the current log file - (fc03607) - dcog989
