@@ -55,3 +55,7 @@ release:
 # Preview dependency updates above the semver ranges.
 outdated:
     cargo outdated -w
+
+# Verify a commit message file, as the commit-msg hook passes it.
+commit-check file:
+    cog verify --file {{file}}
