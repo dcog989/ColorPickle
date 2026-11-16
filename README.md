@@ -22,7 +22,7 @@ Assign shortcut to launch the GUI or screen picker:
 - History of the last 8 picks — click one to reuse it, hover and click × to remove it, or clear the list
 - `+` button beside the input adds the current color to history
 - Color-harmony swatches (complementary, split complementary, analogous, triadic, tetradic, rectangle) — click a swatch to use it
-- Launch-mode, default-format and precision (Practical/Precise) selectors, saved to the config file
+- Launch-mode, default-format, precision (Practical/Precise) and magnifier-zoom (2x/4x/8x) selectors, saved to the config file
 - Screen capture on KDE Plasma (`ScreenShot2`), other Wayland compositors (`ext-image-copy-capture`) and X11, falling back to the slower XDG desktop portal
 
 ## Install
@@ -57,6 +57,7 @@ Settings live in `~/.config/colorpickle/config.toml` (or `$XDG_CONFIG_HOME/color
 launch_mode = "ui_first"     # ui_first | picker_first
 default_format = "hex"       # hex | rgb | hsl | hsv | oklch | oklab | okhsl | p3 | cmyk
 precision = "practical"      # practical | precise
+zoom = "x4"                  # x2 | x4 | x8 (picker magnifier)
 log_level = "info"           # error | warn | info | debug | trace
 ```
 

@@ -52,12 +52,43 @@ impl LogLevel {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Zoom {
+    X2,
+    #[default]
+    X4,
+    X8,
+}
+
+impl Zoom {
+    pub const ALL: [Self; 3] = [Self::X2, Self::X4, Self::X8];
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::X2 => "2x",
+            Self::X4 => "4x",
+            Self::X8 => "8x",
+        }
+    }
+
+    /// Magnifier points per captured pixel.
+    pub const fn factor(self) -> f32 {
+        match self {
+            Self::X2 => 2.0,
+            Self::X4 => 4.0,
+            Self::X8 => 8.0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub launch_mode: LaunchMode,
     pub default_format: ColorFormat,
     pub precision: Precision,
+    pub zoom: Zoom,
     pub log_level: LogLevel,
 }
 
@@ -97,7 +128,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use super::{CONFIG_FILE, Config, LaunchMode, LogLevel};
+    use super::{CONFIG_FILE, Config, LaunchMode, LogLevel, Zoom};
     use crate::color::{ColorFormat, Precision};
 
     fn temporary_directory(name: &str) -> std::path::PathBuf {
@@ -115,6 +146,7 @@ mod tests {
             launch_mode: LaunchMode::PickerFirst,
             default_format: ColorFormat::Oklch,
             precision: Precision::Precise,
+            zoom: Zoom::X8,
             log_level: LogLevel::Debug,
         };
 
@@ -123,6 +155,7 @@ mod tests {
         assert_eq!(Config::load_from(&path), config);
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.contains("log_level = \"debug\""), "{text}");
+        assert!(text.contains("zoom = \"x8\""), "{text}");
         assert_eq!(
             Config::load_from(&directory.join("absent.toml")),
             Config::default()

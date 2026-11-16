@@ -13,7 +13,7 @@ use crate::clipboard;
 use crate::color::ColorFormat;
 use crate::color::Precision;
 use crate::color::okhsl::Okhsl;
-use crate::config::Config;
+use crate::config::{Config, Zoom};
 use crate::ui::frame_stats::FrameStats;
 use crate::ui::pixels::{average_srgb, pixel_at, pixel_bounds};
 use crate::ui::theme;
@@ -21,8 +21,6 @@ use crate::ui::theme;
 const PICKER_TITLE: &str = "ColorPickle";
 const PICKER_VIEWPORT: &str = "colorpickle-picker";
 const MAGNIFIER_SIZE: f32 = 180.0;
-const MAGNIFIER_ZOOM: f32 = 4.0;
-const MAGNIFIER_SOURCE_PIXELS: f32 = MAGNIFIER_SIZE / MAGNIFIER_ZOOM;
 const DRAG_MAGNIFIER_MARGIN: f32 = 24.0;
 const CROSSHAIR_ARM: f32 = 8.0;
 const CROSSHAIR_WIDTH: f32 = 1.0;
@@ -65,6 +63,7 @@ pub struct Session {
     drag_anchor: Option<egui::Pos2>,
     format: ColorFormat,
     precision: Precision,
+    zoom: Zoom,
     cached_average: Option<(Bounds, Okhsl)>,
     average_updated: f64,
     stats: FrameStats,
@@ -74,7 +73,12 @@ pub struct Session {
 type Bounds = (u32, u32, u32, u32);
 
 impl Session {
-    pub fn new(captured: capture::Capture, format: ColorFormat, precision: Precision) -> Self {
+    pub fn new(
+        captured: capture::Capture,
+        format: ColorFormat,
+        precision: Precision,
+        zoom: Zoom,
+    ) -> Self {
         let size = [
             captured.image.width() as usize,
             captured.image.height() as usize,
@@ -91,6 +95,7 @@ impl Session {
             drag_anchor: None,
             format,
             precision,
+            zoom,
             cached_average: None,
             average_updated: 0.0,
             stats: FrameStats::default(),
@@ -173,7 +178,12 @@ fn downscale_to_fit(image: &egui::ColorImage, max_side: usize) -> egui::ColorIma
 pub fn run(config: Config) -> Result<Option<PickOutcome>> {
     let captured = capture_frame()?;
     let output = captured.output.clone();
-    let session = Session::new(captured, config.default_format, config.precision);
+    let session = Session::new(
+        captured,
+        config.default_format,
+        config.precision,
+        config.zoom,
+    );
     let outcome: Rc<Cell<Option<PickOutcome>>> = Rc::new(Cell::new(None));
 
     let options = eframe::NativeOptions {
@@ -383,6 +393,7 @@ fn draw_frame(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome>
         magnifier_center,
         uv_at(screen, pointer),
         egui::vec2(session.image.size[0] as f32, session.image.size[1] as f32),
+        session.zoom,
     );
     draw_value(
         &painter,
@@ -435,9 +446,12 @@ fn draw_magnifier(
     center: egui::Pos2,
     uv: egui::Pos2,
     source_size: egui::Vec2,
+    zoom: Zoom,
 ) {
-    let half_x = (MAGNIFIER_SOURCE_PIXELS * 0.5 / source_size.x).min(0.5);
-    let half_y = (MAGNIFIER_SOURCE_PIXELS * 0.5 / source_size.y).min(0.5);
+    let zoom = zoom.factor();
+    let source_pixels = MAGNIFIER_SIZE / zoom;
+    let half_x = (source_pixels * 0.5 / source_size.x).min(0.5);
+    let half_y = (source_pixels * 0.5 / source_size.y).min(0.5);
     let source_center = egui::pos2(
         uv.x.clamp(half_x, 1.0 - half_x),
         uv.y.clamp(half_y, 1.0 - half_y),
@@ -464,8 +478,7 @@ fn draw_magnifier(
         target.min.x + marker_fraction.x * target.width(),
         target.min.y + marker_fraction.y * target.height(),
     );
-    let marker =
-        egui::Rect::from_center_size(marker_center, egui::vec2(MAGNIFIER_ZOOM, MAGNIFIER_ZOOM));
+    let marker = egui::Rect::from_center_size(marker_center, egui::vec2(zoom, zoom));
     painter.rect_stroke(
         marker,
         egui::CornerRadius::ZERO,

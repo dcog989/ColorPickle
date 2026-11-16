@@ -1,7 +1,7 @@
 use eframe::egui;
 
 use crate::color::{ColorFormat, Precision};
-use crate::config::{Config, LaunchMode};
+use crate::config::{Config, LaunchMode, Zoom};
 use crate::ui::widgets;
 
 const SETTINGS_PANEL_ID: &str = "colorpickle-settings";
@@ -100,6 +100,20 @@ pub(super) fn show(
                     .on_hover_text(
                         "Precision: round values for general use, or keep decimals for accuracy.",
                     );
+                egui::ComboBox::from_id_salt("zoom")
+                    .selected_text(config.zoom.label())
+                    .show_ui(ui, |ui| {
+                        for zoom in Zoom::ALL {
+                            if ui
+                                .selectable_value(&mut config.zoom, zoom, zoom.label())
+                                .changed()
+                            {
+                                outcome.config_changed = true;
+                            }
+                        }
+                    })
+                    .response
+                    .on_hover_text("Magnifier zoom: how much the picker enlarges the pixels.");
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     outcome.about_opened = widgets::about_icon(ui);

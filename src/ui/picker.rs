@@ -7,6 +7,7 @@ use crate::capture;
 use crate::color::ColorFormat;
 use crate::color::Precision;
 use crate::color::okhsl::Okhsl;
+use crate::config::Zoom;
 use crate::ui::overlay::{self, PickOutcome};
 
 const CAPTURE_TIMEOUT_SECONDS: f64 = 5.0;
@@ -39,10 +40,11 @@ pub struct PickerController {
     viewport: egui::ViewportId,
     format: ColorFormat,
     precision: Precision,
+    zoom: Zoom,
 }
 
 impl PickerController {
-    pub fn new(format: ColorFormat, precision: Precision) -> Self {
+    pub fn new(format: ColorFormat, precision: Precision, zoom: Zoom) -> Self {
         Self {
             session: None,
             capture: None,
@@ -53,6 +55,7 @@ impl PickerController {
             viewport: egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, 0_u64)),
             format,
             precision,
+            zoom,
         }
     }
 
@@ -71,12 +74,14 @@ impl PickerController {
         ctx: &egui::Context,
         format: ColorFormat,
         precision: Precision,
+        zoom: Zoom,
     ) -> bool {
         if self.is_busy() {
             return false;
         }
         self.format = format;
         self.precision = precision;
+        self.zoom = zoom;
         self.generation = self.generation.wrapping_add(1);
         self.viewport = egui::ViewportId::from_hash_of((PICKER_VIEWPORT_SALT, self.generation));
         self.capture_started = ctx.input(|input| input.time);
@@ -112,8 +117,12 @@ impl PickerController {
                 }
                 Ok(CaptureUpdate::Finished(Ok(captured))) => {
                     tracing::debug!("picker: frame ready, showing overlay");
-                    self.session =
-                        Some(overlay::Session::new(captured, self.format, self.precision));
+                    self.session = Some(overlay::Session::new(
+                        captured,
+                        self.format,
+                        self.precision,
+                        self.zoom,
+                    ));
                     // Run another frame immediately so the overlay is shown.
                     ctx.request_repaint();
                     return Some(Event::Ready);

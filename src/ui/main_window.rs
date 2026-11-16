@@ -76,7 +76,7 @@ pub struct MainWindow {
 
 impl MainWindow {
     pub fn new(config: Config, state: State, logging: Logging) -> Self {
-        let picker = PickerController::new(config.default_format, config.precision);
+        let picker = PickerController::new(config.default_format, config.precision, config.zoom);
         let history = History::from_stored(&state.history);
         Self {
             config,
@@ -158,10 +158,12 @@ impl MainWindow {
     }
 
     fn open_picker(&mut self, ctx: &egui::Context) {
-        if self
-            .picker
-            .request(ctx, self.config.default_format, self.config.precision)
-        {
+        if self.picker.request(
+            ctx,
+            self.config.default_format,
+            self.config.precision,
+            self.config.zoom,
+        ) {
             self.set_toast("Capturing screen...");
         } else if self.picker.is_busy() {
             // Only reachable when an earlier capture outlived its timeout.
