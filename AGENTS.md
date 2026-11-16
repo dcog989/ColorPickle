@@ -15,7 +15,7 @@ See `README.md` for usage, configuration, install and distribution.
 - `src/config.rs` — `Config` load/path via `directories` + `toml`
 - `src/state.rs` — `State` (pick history) load/path under `$XDG_STATE_HOME`
 - `src/persistence.rs` — atomic toml load/save shared by `Config` and `State`
-- `src/logging.rs` — `tracing` subscriber: daily-rotating file log under `$XDG_STATE_HOME/colorpickle/log` plus stderr; level from `RUST_LOG`, `--log-level` or `config.toml`
+- `src/logging.rs` — `tracing` subscriber: daily-rotating file log under `$XDG_STATE_HOME/colorpickle/logs` plus stderr; level from `RUST_LOG`, `--log-level` or `config.toml`
 - `src/color/mod.rs` — `ColorFormat` (hex, rgb, hsl, hsv, oklch, oklab, okhsl, p3, cmyk) and `Precision`
 - `src/color/parse.rs` — input parsing: hex, `rgb`/`hsl`/`hsv`/`oklch`/`oklab`/`okhsl`/`cmyk`, `color(display-p3 …)`, CSS color names
 - `src/color/okhsl.rs` — Okhsl internal color model, backed by `palette::Okhsl`
@@ -41,7 +41,7 @@ See `README.md` for usage, configuration, install and distribution.
 - Backends are a function-pointer `Backend` table in `capture/mod.rs`, not a trait; each returns a plain frame, so the picker overlay stays agnostic to X11 vs Wayland.
 - Single-binary, two launch modes via `clap`: UI mode (default) and picker mode.
 - No menus, no settings pane, no tabs — preserve the one-glance model.
-- User data is split so picking never rewrites settings: `$XDG_CONFIG_HOME/colorpickle/config.toml` (`launch_mode`, `default_format`, `precision`, `log_level`), history in `$XDG_STATE_HOME/colorpickle/state.toml`, logs in `$XDG_STATE_HOME/colorpickle/log`.
+- User data is split so picking never rewrites settings: `$XDG_CONFIG_HOME/colorpickle/config.toml` (`launch_mode`, `default_format`, `precision`, `log_level`), history in `$XDG_STATE_HOME/colorpickle/state.toml`, logs in `$XDG_STATE_HOME/colorpickle/logs`.
 
 ### Architecture Notes
 

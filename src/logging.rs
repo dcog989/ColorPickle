@@ -11,7 +11,7 @@ use tracing_subscriber::{EnvFilter, Registry, fmt, reload};
 use crate::config::{APP_NAME, LogLevel};
 use crate::state;
 
-const LOG_DIRECTORY: &str = "log";
+const LOG_DIRECTORY: &str = "logs";
 const LOG_FILE: &str = "colorpickle.log";
 const RETAINED_LOG_FILES: usize = 7;
 
@@ -75,7 +75,7 @@ fn env_filter(level: LogLevel) -> EnvFilter {
         .unwrap_or_else(|_| EnvFilter::new(format!("{APP_NAME}={}", level.as_str())))
 }
 
-/// `$XDG_STATE_HOME/colorpickle/log`, conventionally `~/.local/state/colorpickle/log`.
+/// `$XDG_STATE_HOME/colorpickle/logs`, conventionally `~/.local/state/colorpickle/logs`.
 pub fn directory() -> Option<PathBuf> {
     Some(state::directory()?.join(LOG_DIRECTORY))
 }
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn creates_a_missing_log_directory() {
         let parent = temporary_directory("missing");
-        let directory = parent.join("log");
+        let directory = parent.join("logs");
 
         let (_, guard) = appender(&directory).unwrap();
         drop(guard);

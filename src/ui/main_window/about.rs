@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use eframe::egui;
 
@@ -8,6 +9,7 @@ use crate::state::State;
 use crate::ui::{ICON_PNG, WINDOW_TITLE};
 
 const WINDOW_ID: &str = "colorpickle-about";
+const OPENER: &str = "xdg-open";
 const LOGO_SIZE: f32 = 144.0;
 const LOGO_SPACING: f32 = 12.0;
 const SECTION_SPACING: f32 = 14.0;
@@ -18,6 +20,8 @@ const SECTION_TITLE_FONT_SIZE: f32 = 15.0;
 const WINDOW_WIDTH: f32 = 480.0;
 const LOG_ROW_LABEL: &str = "Logs";
 const PATH_PADDING: f32 = 2.0;
+/// Paths sit under their title like a list, not flush with it.
+const LINK_INDENT: f32 = 12.0;
 /// egui bundles no bold font, so titles are overpainted by this much to gain weight.
 const BOLD_SMUDGE: f32 = 0.5;
 
@@ -82,11 +86,16 @@ impl About {
 
         let mut changed = false;
         for (label, path) in paths() {
-            section_title(ui, label);
-            path_value(ui, path);
-            if label == LOG_ROW_LABEL {
-                changed = log_level_combo(ui, level);
-            }
+            ui.horizontal(|ui| {
+                section_title(ui, label);
+                if label == LOG_ROW_LABEL {
+                    changed = log_level_combo(ui, level);
+                }
+            });
+            ui.horizontal(|ui| {
+                ui.add_space(LINK_INDENT);
+                path_value(ui, path);
+            });
             ui.add_space(ROW_SPACING);
         }
         changed
@@ -109,23 +118,20 @@ fn section_title(ui: &mut egui::Ui, text: &str) {
 
 fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
     let mut changed = false;
-    ui.horizontal(|ui| {
-        ui.label("Log level");
-        egui::ComboBox::from_id_salt("log-level")
-            .selected_text(level.as_str())
-            .show_ui(ui, |ui| {
-                for candidate in LogLevel::ALL {
-                    if ui
-                        .selectable_value(level, candidate, candidate.as_str())
-                        .changed()
-                    {
-                        changed = true;
-                    }
+    egui::ComboBox::from_id_salt("log-level")
+        .selected_text(level.as_str())
+        .show_ui(ui, |ui| {
+            for candidate in LogLevel::ALL {
+                if ui
+                    .selectable_value(level, candidate, candidate.as_str())
+                    .changed()
+                {
+                    changed = true;
                 }
-            })
-            .response
-            .on_hover_text("Log level: applies immediately and saves to the config file.");
-    });
+            }
+        })
+        .response
+        .on_hover_text("Log level: applies immediately and saves to the config file.");
     changed
 }
 
@@ -146,8 +152,8 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
 
     let text = path.display().to_string();
     let font = egui::FontId::monospace(PATH_FONT_SIZE);
-    let color = ui.visuals().text_color();
-    let mut job = egui::text::LayoutJob::simple(text.clone(), font, color, f32::INFINITY);
+    let color = ui.visuals().hyperlink_color;
+    let mut job = egui::text::LayoutJob::simple(text, font, color, f32::INFINITY);
     job.wrap =
         egui::text::TextWrapping::truncate_at_width(ui.available_width() - 2.0 * PATH_PADDING);
     let galley = ui.painter().layout_job(job);
@@ -157,25 +163,42 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
     let response = response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text("Click to copy path.");
-    if response.hovered() {
-        let visuals = ui.style().interact(&response);
-        ui.painter()
-            .rect_filled(rect, visuals.corner_radius, visuals.weak_bg_fill);
-        ui.painter().rect_stroke(
-            rect,
-            visuals.corner_radius,
-            visuals.bg_stroke,
-            egui::StrokeKind::Inside,
-        );
-    }
-    ui.painter().galley(
-        rect.left_top() + egui::vec2(PATH_PADDING, PATH_PADDING),
-        galley,
-        color,
+        .on_hover_text("Click to open its folder.");
+    let underline = if response.hovered() {
+        egui::Stroke::new(ui.style().visuals.widgets.hovered.fg_stroke.width, color)
+    } else {
+        egui::Stroke::NONE
+    };
+    ui.painter().add(
+        egui::epaint::TextShape::new(
+            rect.left_top() + egui::vec2(PATH_PADDING, PATH_PADDING),
+            galley,
+            color,
+        )
+        .with_underline(underline),
     );
     if response.clicked() {
-        ui.ctx().copy_text(text);
+        open_path(&path);
+    }
+}
+
+/// Open the folder a path lives in: launching the file itself is not useful for
+/// a log directory, a config file or the binary.
+fn open_path(path: &Path) {
+    let folder = if path.is_dir() {
+        path
+    } else {
+        path.parent().unwrap_or(path)
+    };
+    match Command::new(OPENER).arg(folder).spawn() {
+        Ok(mut child) => {
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
+        }
+        Err(error) => {
+            tracing::warn!(%error, path = %folder.display(), "could not open the folder");
+        }
     }
 }
 

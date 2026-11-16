@@ -8,6 +8,12 @@ const TARGET_CONTRAST_LC: f32 = 90.0;
 /// Text on a resting surface.
 const MIN_TEXT_CONTRAST_LC: f32 = 75.0;
 const MIN_FILL_LIGHTNESS: f32 = 0.2;
+/// Links keep the text's lightness on the background's contrast curve; a fixed
+/// hyperlink blue would vanish on a blue swatch.
+const LINK_HUE_DEGREES: f32 = 250.0;
+const LINK_SATURATION: f32 = 0.9;
+const LINK_LIGHT_LIGHTNESS: f32 = 0.9;
+const LINK_DARK_LIGHTNESS: f32 = 0.2;
 const CONTRAST_SEARCH_STEPS: u32 = 12;
 const SURFACE_LIGHTNESS_SHIFT: f32 = 0.06;
 const INACTIVE_SHADE: f32 = 30.0 / 255.0;
@@ -75,6 +81,18 @@ fn foreground(background: Okhsl) -> Okhsl {
 
 fn contrast_against(color: Okhsl, background: Okhsl) -> f32 {
     apca::contrast(color.to_srgb(), background.to_srgb()).abs()
+}
+
+/// The blue that is most readable on `surface`: mid-tone backgrounds leave no
+/// blue above the text floor, so the lighter and darker ends compete.
+fn link_color(surface: Okhsl) -> Okhsl {
+    let light = Okhsl::new(LINK_HUE_DEGREES, LINK_SATURATION, LINK_LIGHT_LIGHTNESS);
+    let dark = Okhsl::new(LINK_HUE_DEGREES, LINK_SATURATION, LINK_DARK_LIGHTNESS);
+    if contrast_against(light, surface) >= contrast_against(dark, surface) {
+        light
+    } else {
+        dark
+    }
 }
 
 /// Clamp a UI fill so text on it keeps at least `floor` contrast, and keep it
@@ -202,6 +220,7 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     };
 
     visuals.override_text_color = Some(foreground);
+    visuals.hyperlink_color = color32(link_color(surface_okhsl));
     visuals.widgets.noninteractive.fg_stroke.color = foreground;
     visuals.widgets.inactive.fg_stroke.color = foreground;
     visuals.widgets.hovered.fg_stroke.color = foreground;
@@ -355,6 +374,21 @@ mod tests {
                 super::contrast_against(foreground, surface) >= super::MIN_TEXT_CONTRAST_LC,
                 "lightness {lightness}"
             );
+        }
+    }
+
+    #[test]
+    fn links_stay_blue_and_differ_from_the_text() {
+        for lightness in [0.0, 0.15, 0.43, 0.65, 0.80, 0.95] {
+            let color = Okhsl::new(116.0, 0.78, lightness);
+            let foreground = super::foreground(color);
+            let surface = super::surface_color(color, foreground);
+            let link = super::link_color(surface);
+            assert!(
+                (link.hue() - super::LINK_HUE_DEGREES).abs() < 0.5,
+                "lightness {lightness}"
+            );
+            assert_ne!(link, foreground, "lightness {lightness}");
         }
     }
 
