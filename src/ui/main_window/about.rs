@@ -28,7 +28,8 @@ const WINDOW_WIDTH: f32 = 580.0;
 /// Both the opening size and the minimum: the collapsed content measures 529.
 const WINDOW_HEIGHT: f32 = 550.0;
 const LOG_ROW_LABEL: &str = "Logs";
-const LOG_LEVEL_ROW_LABEL: &str = "Log level";
+/// Sits before the level dropdown, which no longer has a label-column entry.
+const LOG_LEVEL_PREFIX: &str = "Level: ";
 /// Title column of the path table; the value column starts after it.
 const LABEL_COLUMN_WIDTH: f32 = 76.0;
 const LINK_WEBSITE: &str = "Website";
@@ -177,7 +178,10 @@ impl About {
             if label == LOG_ROW_LABEL {
                 ui.add_space(ROW_SPACING);
                 ui.horizontal(|ui| {
-                    label_column(ui, LOG_LEVEL_ROW_LABEL);
+                    // Empty title column: the dropdown starts where the path values do.
+                    label_column(ui, "");
+                    ui.add_space(PATH_PADDING);
+                    ui.label(LOG_LEVEL_PREFIX);
                     outcome.log_level_changed = log_level_combo(ui, level);
                 });
             }
