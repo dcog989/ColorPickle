@@ -66,7 +66,7 @@ log_level = "info"           # error | warn | info | debug | trace
 
 ## Logs
 
-Logs are written to `~/.local/state/colorpickle/logs/`, one file per day named `colorpickle.log.<date>`; the 7 most recent are kept.
+Logs are written to `~/.local/state/colorpickle/logs/`, one file per day named `colorpickle.log.<date>`; the 7 most recent are kept. `colorpickle.latest.log` is a symlink to the current day's file.
 
 - `--log-level error|warn|info|debug|trace` sets the verbosity; default `info`
 - `log_level` in `config.toml` does the same, and is overridden by the flag; the About panel has a log level dropdown that applies the change at once and saves it

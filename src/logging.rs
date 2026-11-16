@@ -13,6 +13,7 @@ use crate::state;
 
 const LOG_DIRECTORY: &str = "logs";
 const LOG_FILE: &str = "colorpickle.log";
+const LOG_LATEST_FILE: &str = "colorpickle.latest.log";
 const RETAINED_LOG_FILES: usize = 7;
 
 /// The installed subscriber, whose level can be raised once the config file has
@@ -88,6 +89,7 @@ fn appender(directory: &Path) -> Result<(NonBlocking, WorkerGuard)> {
     let file = RollingFileAppender::builder()
         .rotation(Rotation::DAILY)
         .filename_prefix(LOG_FILE)
+        .latest_symlink(LOG_LATEST_FILE)
         .max_log_files(RETAINED_LOG_FILES)
         .build(directory)
         .with_context(|| format!("failed to open a log file in {}", directory.display()))?;
@@ -109,6 +111,7 @@ mod tests {
     fn log_files(directory: &Path) -> Vec<String> {
         let mut names: Vec<String> = std::fs::read_dir(directory)
             .unwrap()
+            .filter(|entry| entry.as_ref().unwrap().file_type().unwrap().is_file())
             .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
         names.sort();
@@ -124,6 +127,13 @@ mod tests {
         let names = log_files(&directory);
         assert_eq!(names.len(), 1);
         assert!(names[0].starts_with("colorpickle.log."), "{names:?}");
+
+        let latest = directory.join("colorpickle.latest.log");
+        assert!(latest.is_symlink());
+        assert_eq!(
+            std::fs::read_link(&latest).unwrap().file_name().unwrap(),
+            names[0].as_str()
+        );
 
         std::fs::remove_dir_all(&directory).unwrap();
     }
