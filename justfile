@@ -47,3 +47,7 @@ install: build
 # Refresh dependencies to the latest allowed versions.
 update:
     cargo upgrade && cargo update --verbose
+
+# Bump the version from conventional commits and tag it.
+release:
+    cog bump --auto
