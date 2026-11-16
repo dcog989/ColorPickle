@@ -98,14 +98,15 @@ impl Session {
         self.source
     }
 
-    /// The average of `bounds`, recomputed when the selection changes, at most
-    /// once per [`AVERAGE_MIN_INTERVAL_SECONDS`] unless `force`d.
-    fn region_color(&mut self, bounds: Bounds, now: f64, force: bool) -> Okhsl {
+    /// The average of `bounds`, recomputed when the selection changes. A region
+    /// is recomputed at most once per [`AVERAGE_MIN_INTERVAL_SECONDS`] unless
+    /// `immediate`; a pointer probe is one lookup, so it is always immediate.
+    fn region_color(&mut self, bounds: Bounds, now: f64, immediate: bool) -> Okhsl {
         if let Some((cached, color)) = self.cached_average {
             if cached == bounds {
                 return color;
             }
-            if !force && now - self.average_updated < AVERAGE_MIN_INTERVAL_SECONDS {
+            if !immediate && now - self.average_updated < AVERAGE_MIN_INTERVAL_SECONDS {
                 return color;
             }
         }
@@ -334,7 +335,7 @@ fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
         }
         None => {
             let (pixel_x, pixel_y) = pixel_at(&session.image, uv_at(screen, pointer));
-            session.region_color((pixel_x, pixel_y, pixel_x, pixel_y), now, primary_released)
+            session.region_color((pixel_x, pixel_y, pixel_x, pixel_y), now, true)
         }
     };
 
