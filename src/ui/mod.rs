@@ -20,6 +20,8 @@ use crate::ui::main_window::MainWindow;
 use crate::ui::overlay::PickOutcome;
 
 pub const WINDOW_TITLE: &str = "ColorPickle";
+/// Matches the `.desktop` file name so a Wayland compositor can find the icon.
+pub const APP_ID: &str = "colorpickle";
 pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 pub const ICON_PNG: &[u8] = include_bytes!("../../assets/colorpickle.png");
@@ -83,7 +85,7 @@ fn parse_initial_color(text: &str) -> Option<Okhsl> {
 fn run_main(config: Config, state: State, logging: Logging, initial: Option<Okhsl>) -> Result<()> {
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(WINDOW_TITLE)
-        .with_app_id("colorpickle")
+        .with_app_id(APP_ID)
         .with_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT]);
     if let Some(icon) = app_icon() {
         viewport = viewport.with_icon(icon);

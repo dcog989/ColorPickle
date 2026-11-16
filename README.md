@@ -23,7 +23,6 @@ Assign shortcut to launch the GUI or screen picker:
 - `+` button beside the input adds the current color to history
 - Color-harmony swatches (complementary, split complementary, analogous, triadic, tetradic, rectangle) — click a swatch to use it
 - Launch-mode, default-format and precision (Practical/Precise) selectors, saved to the config file
-- About panel with the logo, version, log level, and the config, history, log and binary paths
 - Screen capture on KDE Plasma (`ScreenShot2`), other Wayland compositors (`ext-image-copy-capture`) and X11, falling back to the slower XDG desktop portal
 
 ## Install
