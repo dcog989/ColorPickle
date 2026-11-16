@@ -105,7 +105,7 @@ just lint                                # clippy only
 just clean                               # clean build artifacts
 just --list                              # all recipes
 
-just update                              # latest allowed versions; cargo outdated -w to preview
+just update                              # latest allowed versions; just outdated to preview
 
 just package                             # .deb, .rpm, AppImage and tarball into target/
 cog bump --auto                          # bump version and push

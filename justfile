@@ -51,3 +51,7 @@ update:
 # Bump the version from conventional commits and tag it.
 release:
     cog bump --auto
+
+# Preview dependency updates above the semver ranges.
+outdated:
+    cargo outdated -w

@@ -8,12 +8,12 @@ pre-commit:
   commands:
     fmt:
       glob: "*.{rs,toml,lock}"
-      run: cargo fmt --all -- --check
+      run: just format-check
     clippy:
       glob: "*.{rs,toml,lock}"
-      run: cargo clippy --workspace --all-targets -- -D warnings
+      run: just lint
 
 pre-push:
   commands:
     test:
-      run: cargo test --workspace
+      run: just test
