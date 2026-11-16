@@ -179,8 +179,8 @@ impl PickerController {
                     });
                 }
                 None => {
-                    // Repaint only on input (pointer motion, clicks, keys) while the
-                    // overlay waits, so an idle picker does not redraw every frame.
+                    // The overlay requests a repaint every frame it draws, so it
+                    // keeps presenting even when no input arrives.
                     self.session = Some(session);
                 }
             }

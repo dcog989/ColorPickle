@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use eframe::egui;
@@ -14,6 +14,7 @@ use crate::color::ColorFormat;
 use crate::color::Precision;
 use crate::color::okhsl::Okhsl;
 use crate::config::Config;
+use crate::ui::frame_stats::FrameStats;
 use crate::ui::pixels::{average_srgb, pixel_at, pixel_bounds};
 use crate::ui::theme;
 
@@ -66,6 +67,8 @@ pub struct Session {
     precision: Precision,
     cached_average: Option<(Bounds, Okhsl)>,
     average_updated: f64,
+    stats: FrameStats,
+    described: bool,
 }
 
 type Bounds = (u32, u32, u32, u32);
@@ -90,6 +93,8 @@ impl Session {
             precision,
             cached_average: None,
             average_updated: 0.0,
+            stats: FrameStats::default(),
+            described: false,
         }
     }
 
@@ -280,8 +285,40 @@ fn resolve_monitor(window: &winit::window::Window, output: &capture::OutputInfo)
 }
 
 fn draw(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
+    let started = Instant::now();
+    let (motion_events, pointer) = ctx.input(|input| {
+        let motion_events = input
+            .events
+            .iter()
+            .filter(|event| matches!(event, egui::Event::PointerMoved(_)))
+            .count();
+        (motion_events, input.pointer.hover_pos())
+    });
+    let outcome = draw_frame(ctx, session);
+    session
+        .stats
+        .record(started.elapsed(), motion_events, pointer);
+    // The overlay must resample the pointer once per refresh. Waiting for input
+    // to trigger the next frame let the compositor withhold callbacks for tens
+    // of refreshes, which reads as a stutter, and left the panel free to vary
+    // its refresh under the irregular presents (VRR).
+    ctx.request_repaint();
+    ctx.request_repaint_of(egui::ViewportId::ROOT);
+    outcome
+}
+
+fn draw_frame(ctx: &egui::Context, session: &mut Session) -> Option<PickOutcome> {
     let texture_id = session.texture_id(ctx);
     let screen = ctx.input(|input| input.viewport_rect());
+    if !session.described {
+        session.described = true;
+        tracing::debug!(
+            frame = ?session.image.size,
+            ?screen,
+            pixels_per_point = ctx.pixels_per_point(),
+            "overlay: first frame"
+        );
+    }
     let painter = ctx.layer_painter(egui::LayerId::new(
         egui::Order::Foreground,
         egui::Id::unique(PICKER_VIEWPORT),

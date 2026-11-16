@@ -1,3 +1,4 @@
+pub mod frame_stats;
 pub mod icons;
 pub mod main_window;
 pub mod overlay;
