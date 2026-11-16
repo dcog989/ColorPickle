@@ -2,6 +2,19 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.12.0 - 2026-11-16
+#### Features
+- (**logging**) add colorpickle.latest.log symlink to the current log file - (fc03607) - dcog989
+- (**ui**) rework the About panel into a support page - (1b5f671) - dcog989
+#### Bug Fixes
+- (**ui**) enable eframe accesskit so screen readers can see the window - (2119b40) - dcog989
+#### Build system
+- (**deps**) bump taiki-e/install-action from 2.90.2 to 2.90.3 - (1e26e19) - dependabot[bot]
+#### Refactoring
+- (**about**) refine log lines - (f02a971) - dcog989
+
+- - -
+
 ## v0.11.0 - 2026-11-16
 #### Features
 - (**ui**) copy environment info from the About panel - (7136adf) - dcog989
