@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use eframe::egui;
 
@@ -46,9 +47,20 @@ const BOLD_SMUDGE: f32 = 0.5;
 #[derive(Default)]
 pub struct About {
     open: bool,
+    /// Shared with the About viewport: a deferred callback is `'static`, so it
+    /// cannot borrow this window.
+    panel: Arc<Mutex<Panel>>,
+}
+
+#[derive(Default)]
+struct Panel {
     logo: Option<egui::TextureHandle>,
     /// Gathered once per opening: it shells out to `plasmashell` and `lspci`.
     info: Option<String>,
+    level: LogLevel,
+    level_changed: bool,
+    toast: Option<String>,
+    close_requested: bool,
 }
 
 /// What the panel changed this frame.
@@ -61,7 +73,7 @@ pub struct Outcome {
 impl About {
     pub fn open(&mut self) {
         self.open = true;
-        self.info = None;
+        lock(&self.panel).info = None;
     }
 
     pub fn is_open(&self) -> bool {
@@ -82,112 +94,172 @@ impl About {
         if !self.open {
             return Outcome::default();
         }
-        if self.logo.is_none() {
-            self.logo = logo_texture(ctx);
-        }
-        let first_frame = self.info.is_none();
-        if first_frame {
-            self.info = Some(environment_info(frame));
-        }
-        let info = self.info.as_deref().unwrap_or_default();
 
+        let shared = Arc::clone(&self.panel);
+        // A deferred viewport, not an immediate one: an immediate viewport's
+        // input is taken by the main window's pass first, so nothing in it is
+        // clickable.
         let mut viewport = egui::ViewportBuilder::default()
             .with_title(format!("About {WINDOW_TITLE}"))
             .with_app_id(crate::ui::APP_ID)
             .with_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT])
             .with_min_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT]);
+        let first_frame = {
+            let mut panel = lock(&shared);
+            if panel.logo.is_none() {
+                panel.logo = logo_texture(ctx);
+            }
+            if panel.info.is_none() {
+                panel.info = Some(environment_info(frame));
+                panel.level = config.log_level;
+                panel.level_changed = false;
+                panel.toast = None;
+                panel.close_requested = false;
+                true
+            } else {
+                false
+            }
+        };
         // The window is created on the first frame, so the icon only has to be
         // decoded and handed over then.
         if first_frame && let Some(icon) = crate::ui::app_icon() {
             viewport = viewport.with_icon(icon);
         }
 
-        let mut open = self.open;
-        let mut outcome = Outcome::default();
-        // A viewport of its own: the diagnostics make the panel taller than the
-        // main window, which would clip it.
-        ctx.show_viewport_immediate(
+        let callback = Arc::clone(&shared);
+        ctx.show_viewport_deferred(
             egui::ViewportId::from_hash_of(WINDOW_ID),
             viewport,
-            |ctx, _class| {
-                if ctx.input(|input| input.viewport().close_requested())
-                    || ctx.input(|input| input.key_pressed(egui::Key::Escape))
-                {
-                    open = false;
-                }
-                let panel = egui::Frame::central_panel(ctx.style())
-                    .inner_margin(egui::Margin::same(LOGO_SPACING as i8));
-                egui::CentralPanel::default().frame(panel).show(ctx, |ui| {
-                    egui::ScrollArea::vertical()
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| {
-                            outcome = self.contents(ui, &mut config.log_level, info);
-                        });
-                });
-                if copy_shortcut(ctx) {
-                    outcome.toast = Some(copy_environment_info(info));
-                }
-            },
+            move |ui, _class| viewport_ui(ui, &callback),
         );
-        self.open = open;
-        outcome
-    }
 
-    fn contents(&self, ui: &mut egui::Ui, level: &mut LogLevel, info: &str) -> Outcome {
         let mut outcome = Outcome::default();
-        ui.vertical_centered(|ui| {
-            // Every gap in the identity block is explicit, so the space above
-            // and below the logo and the name is the same.
-            ui.spacing_mut().item_spacing.y = 0.0;
-            if let Some(logo) = &self.logo {
-                ui.add(egui::Image::new(logo).fit_to_exact_size(egui::vec2(LOGO_SIZE, LOGO_SIZE)));
-            }
-            ui.add_space(LOGO_SPACING);
-            ui.label(
-                egui::RichText::new(WINDOW_TITLE)
-                    .size(NAME_FONT_SIZE)
-                    .strong(),
-            );
-            ui.add_space(LOGO_SPACING);
-            version_row(ui);
-            ui.add_space(LABEL_SPACING);
-            ui.weak(format!("{} · {COPYRIGHT}", env!("CARGO_PKG_LICENSE")));
-            ui.add_space(LABEL_SPACING);
-            if let Some(message) = links_row(ui, info) {
-                outcome.toast = Some(message);
-            }
-        });
-
-        ui.add_space(TIGHT_SPACING);
-        if system_information(ui, info) {
-            outcome.toast = Some(copy_environment_info(info));
+        let mut panel = lock(&shared);
+        if panel.close_requested {
+            self.open = false;
         }
-
-        ui.add_space(TIGHT_SPACING);
-        ui.separator();
-        ui.add_space(SECTION_SPACING);
-
-        for (index, (label, path)) in paths().into_iter().enumerate() {
-            if index > 0 {
-                ui.add_space(ROW_SPACING);
-            }
-            ui.horizontal(|ui| {
-                label_column(ui, label);
-                path_value(ui, path);
-            });
-            if label == LOG_ROW_LABEL {
-                ui.add_space(ROW_SPACING);
-                ui.horizontal(|ui| {
-                    // Empty title column: the dropdown starts where the path values do.
-                    label_column(ui, "");
-                    ui.add_space(PATH_PADDING);
-                    ui.label(LOG_LEVEL_PREFIX);
-                    outcome.log_level_changed = log_level_combo(ui, level);
-                });
-            }
+        if panel.level_changed {
+            config.log_level = panel.level;
+            panel.level_changed = false;
+            outcome.log_level_changed = true;
         }
+        outcome.toast = panel.toast.take();
         outcome
     }
+}
+
+/// Runs in the About viewport's own pass, so the pointer input is its own.
+fn viewport_ui(ui: &mut egui::Ui, shared: &Mutex<Panel>) {
+    let mut panel = lock(shared);
+    if ui.input(|input| input.viewport().close_requested())
+        || ui.input(|input| input.key_pressed(egui::Key::Escape))
+    {
+        panel.close_requested = true;
+    }
+
+    let frame =
+        egui::Frame::central_panel(ui.style()).inner_margin(egui::Margin::same(LOGO_SPACING as i8));
+    let mut level = panel.level;
+    let mut outcome = Outcome::default();
+    egui::CentralPanel::default().frame(frame).show(ui, |ui| {
+        egui::ScrollArea::vertical()
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                outcome = panel_ui(
+                    ui,
+                    panel.logo.as_ref(),
+                    panel.info.as_deref().unwrap_or_default(),
+                    &mut level,
+                );
+            });
+    });
+    let mut notify_parent = panel.close_requested;
+    if outcome.log_level_changed {
+        panel.level = level;
+        panel.level_changed = true;
+        notify_parent = true;
+    }
+    if let Some(message) = outcome.toast {
+        panel.toast = Some(message);
+        notify_parent = true;
+    }
+    if copy_shortcut(ui.ctx()) {
+        let info = panel.info.clone().unwrap_or_default();
+        panel.toast = Some(copy_environment_info(&info));
+        notify_parent = true;
+    }
+    // The panel only repaints its own window; the toast and the saved log level
+    // live in the main window.
+    if notify_parent {
+        ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
+    }
+}
+
+fn lock(panel: &Mutex<Panel>) -> std::sync::MutexGuard<'_, Panel> {
+    panel
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+fn panel_ui(
+    ui: &mut egui::Ui,
+    logo: Option<&egui::TextureHandle>,
+    info: &str,
+    level: &mut LogLevel,
+) -> Outcome {
+    let mut outcome = Outcome::default();
+    ui.vertical_centered(|ui| {
+        // Every gap in the identity block is explicit, so the space above
+        // and below the logo and the name is the same.
+        ui.spacing_mut().item_spacing.y = 0.0;
+        if let Some(logo) = logo {
+            ui.add(egui::Image::new(logo).fit_to_exact_size(egui::vec2(LOGO_SIZE, LOGO_SIZE)));
+        }
+        ui.add_space(LOGO_SPACING);
+        ui.label(
+            egui::RichText::new(WINDOW_TITLE)
+                .size(NAME_FONT_SIZE)
+                .strong(),
+        );
+        ui.add_space(LOGO_SPACING);
+        version_row(ui);
+        ui.add_space(LABEL_SPACING);
+        ui.weak(format!("{} · {COPYRIGHT}", env!("CARGO_PKG_LICENSE")));
+        ui.add_space(LABEL_SPACING);
+        if let Some(message) = links_row(ui, info) {
+            outcome.toast = Some(message);
+        }
+    });
+
+    ui.add_space(TIGHT_SPACING);
+    if system_information(ui, info) {
+        outcome.toast = Some(copy_environment_info(info));
+    }
+
+    ui.add_space(TIGHT_SPACING);
+    ui.separator();
+    ui.add_space(SECTION_SPACING);
+
+    for (index, (label, path, open_folder)) in paths().into_iter().enumerate() {
+        if index > 0 {
+            ui.add_space(ROW_SPACING);
+        }
+        ui.horizontal(|ui| {
+            label_column(ui, label);
+            path_value(ui, path, open_folder);
+        });
+        if label == LOG_ROW_LABEL {
+            ui.add_space(ROW_SPACING);
+            ui.horizontal(|ui| {
+                // Empty title column: the dropdown starts where the path values do.
+                label_column(ui, "");
+                ui.add_space(PATH_PADDING);
+                ui.label(LOG_LEVEL_PREFIX);
+                outcome.log_level_changed = log_level_combo(ui, level);
+            });
+        }
+    }
+    outcome
 }
 
 /// The title column: every value in the table starts at the same x.
@@ -535,16 +607,18 @@ fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
     changed
 }
 
-fn paths() -> [(&'static str, Option<PathBuf>); 4] {
+/// `open_folder` marks a path that must not be launched: the binary itself
+/// would start a second copy of the app.
+fn paths() -> [(&'static str, Option<PathBuf>, bool); 4] {
     [
-        ("Config", Config::path()),
-        ("History", State::path()),
-        (LOG_ROW_LABEL, logging::directory()),
-        ("Binary", std::env::current_exe().ok()),
+        ("Config", Config::path(), false),
+        ("History", State::path(), false),
+        ("Binary", std::env::current_exe().ok(), true),
+        (LOG_ROW_LABEL, logging::directory(), false),
     ]
 }
 
-fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
+fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>, open_folder: bool) {
     let Some(path) = path else {
         ui.weak("unavailable");
         return;
@@ -562,9 +636,14 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
     let size = galley.size() + egui::vec2(2.0, 2.0) * PATH_PADDING;
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
     // A long path is truncated, so the hover carries the whole thing.
+    let hint = if open_folder {
+        "Click to open its folder."
+    } else {
+        "Click to open it."
+    };
     let response = response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text(format!("{}\nClick to open its folder.", path.display()));
+        .on_hover_text(format!("{}\n{hint}", path.display()));
     let underline = if response.hovered() {
         egui::Stroke::new(ui.style().visuals.widgets.hovered.fg_stroke.width, color)
     } else {
@@ -579,26 +658,21 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>) {
         .with_underline(underline),
     );
     if response.clicked() {
-        open_path(&path);
+        let target = if open_folder {
+            path.parent().unwrap_or(&path)
+        } else {
+            &path
+        };
+        open_target(target.as_os_str());
     }
-}
-
-/// Open the folder a path lives in: launching the file itself is not useful for
-/// a log directory, a config file or the binary.
-fn open_path(path: &Path) {
-    let folder = if path.is_dir() {
-        path
-    } else {
-        path.parent().unwrap_or(path)
-    };
-    open_target(folder.as_os_str());
 }
 
 fn open_url(url: &str) {
     open_target(std::ffi::OsStr::new(url));
 }
 
-/// One spawn-and-reap for folders and URLs: the opener hands off and returns.
+/// One spawn-and-reap for files, folders and URLs: the opener hands off and
+/// returns.
 fn open_target(target: &std::ffi::OsStr) {
     match Command::new(OPENER).arg(target).spawn() {
         Ok(mut child) => {
