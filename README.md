@@ -108,7 +108,7 @@ just --list                              # all recipes
 just update                              # latest allowed versions; just outdated to preview
 
 just package                             # .deb, .rpm, AppImage and tarball into target/
-cog bump --auto                          # bump version and push
+just release                             # bump version and push
 ```
 
 ---
