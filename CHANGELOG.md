@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.13.0 - 2026-11-16
+#### Features
+- (**picker**) add a magnifier zoom setting - (1f09a2f) - dcog989
+#### Bug Fixes
+- (**overlay**) repaint every frame so the picker keeps pace with the display - (514faa8) - dcog989
+
+- - -
+
 ## v0.12.1 - 2026-11-16
 #### Bug Fixes
 - (**about**) open files, not their paths, refined - (0104748) - dcog989
