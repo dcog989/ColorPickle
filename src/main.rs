@@ -31,6 +31,6 @@ fn main() -> Result<()> {
 
     match launch_mode {
         LaunchMode::UiFirst => ui::run_ui(config, state, logging),
-        LaunchMode::PickerFirst => ui::run_picker(config, state, logging),
+        LaunchMode::PickerFirst => ui::run_picker(config),
     }
 }

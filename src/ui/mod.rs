@@ -7,7 +7,9 @@ pub mod slider;
 pub mod theme;
 pub mod widgets;
 
-use anyhow::Result;
+use std::process::Command;
+
+use anyhow::{Context, Result};
 use eframe::egui;
 
 use crate::color::okhsl::Okhsl;
@@ -22,17 +24,60 @@ pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 pub const ICON_PNG: &[u8] = include_bytes!("../../assets/colorpickle.png");
 
+/// Carries the colour from a picker-first process to the main window it opens.
+const INITIAL_COLOR_VARIABLE: &str = "COLORPICKLE_INITIAL_COLOR";
+const UI_FIRST: &str = "ui_first";
+
 pub fn run_ui(config: Config, state: State, logging: Logging) -> Result<()> {
-    run_main(config, state, logging, None)
+    run_main(config, state, logging, initial_color())
 }
 
 /// Captures before any window exists, so a hotkey launch shows only the picker.
-pub fn run_picker(config: Config, state: State, logging: Logging) -> Result<()> {
-    let outcome = overlay::run(config.clone())?;
-    match outcome {
-        Some(PickOutcome::Picked(color)) => run_main(config, state, logging, Some(color)),
+pub fn run_picker(config: Config) -> Result<()> {
+    match overlay::run(config)? {
+        Some(PickOutcome::Picked(color)) => open_main_window(color),
         _ => Ok(()),
     }
+}
+
+/// A second `eframe::run_native` in this process dies in winit's event loop once
+/// the Wayland clipboard has used the connection, so the main window is a fresh
+/// process instead. This one waits for it so the desktop's systemd scope does
+/// not kill the child when the picker exits.
+fn open_main_window(color: Okhsl) -> Result<()> {
+    let executable = std::env::current_exe().context("failed to find the executable")?;
+    let mut child = Command::new(executable)
+        .args(["--launch-mode", UI_FIRST])
+        .env(INITIAL_COLOR_VARIABLE, format_initial_color(color))
+        .spawn()
+        .context("failed to open the main window")?;
+    let status = child.wait().context("failed to wait for the main window")?;
+    if !status.success() {
+        anyhow::bail!("the main window exited with {status}");
+    }
+    Ok(())
+}
+
+fn format_initial_color(color: Okhsl) -> String {
+    // Display prints the shortest text that parses back to the same f32.
+    format!(
+        "{} {} {}",
+        color.hue(),
+        color.saturation(),
+        color.lightness()
+    )
+}
+
+fn initial_color() -> Option<Okhsl> {
+    parse_initial_color(&std::env::var(INITIAL_COLOR_VARIABLE).ok()?)
+}
+
+fn parse_initial_color(text: &str) -> Option<Okhsl> {
+    let mut parts = text.split_whitespace();
+    let hue = parts.next()?.parse().ok()?;
+    let saturation = parts.next()?.parse().ok()?;
+    let lightness = parts.next()?.parse().ok()?;
+    Some(Okhsl::new(hue, saturation, lightness))
 }
 
 fn run_main(config: Config, state: State, logging: Logging, initial: Option<Okhsl>) -> Result<()> {
@@ -81,5 +126,21 @@ fn app_icon() -> Option<egui::IconData> {
             tracing::warn!(?error, "failed to decode the app icon");
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{format_initial_color, parse_initial_color};
+    use crate::color::okhsl::Okhsl;
+
+    #[test]
+    fn the_picked_colour_survives_the_handoff() {
+        let color = Okhsl::new(202.584_05, 0.938_364_8, 0.670_973);
+        assert_eq!(
+            parse_initial_color(&format_initial_color(color)),
+            Some(color)
+        );
+        assert_eq!(parse_initial_color("not a colour"), None);
     }
 }
