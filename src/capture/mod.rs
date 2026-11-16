@@ -53,6 +53,15 @@ impl CaptureSource {
     pub fn uses_portal_fallback(self) -> bool {
         matches!(self, Self::Portal)
     }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::KWin => "KWin ScreenShot2",
+            Self::ExtImage => "ext-image-copy-capture",
+            Self::X11 => "X11 GetImage",
+            Self::Portal => "XDG portal",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -114,6 +123,15 @@ const BACKENDS: &[Backend] = &[
 
 fn no_cursor() -> Option<Point> {
     None
+}
+
+/// Backends whose preconditions hold, in the order they are tried.
+pub fn available_sources() -> Vec<CaptureSource> {
+    BACKENDS
+        .iter()
+        .filter(|backend| (backend.available)())
+        .map(|backend| backend.source)
+        .collect()
 }
 
 pub fn capture_with(progress: impl FnOnce()) -> CaptureResult<Capture> {

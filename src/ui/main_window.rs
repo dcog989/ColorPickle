@@ -241,7 +241,7 @@ impl eframe::App for MainWindow {
             self.handle_event(event);
         }
 
-        if self.about.show(&ctx, &mut self.config) {
+        if self.about.show(&ctx, frame, &mut self.config) {
             self.logging.set_level(self.config.log_level);
             self.persist_config();
         }

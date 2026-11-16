@@ -22,6 +22,8 @@ const CLOSE_MARK_CORNER_RADIUS: u8 = 3;
 const CLOSE_MARK_FILL_ALPHA: u8 = 40;
 const CLEAR_HISTORY_PADDING: f32 = 4.0;
 const ABOUT_PADDING: f32 = 4.0;
+pub const COPY_BUTTON_SIZE: f32 = 26.0;
+const COPY_BUTTON_PADDING: f32 = 6.0;
 const APCA_FONT_SIZE: f32 = 14.0;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -102,6 +104,16 @@ pub fn palette_icon(ui: &mut egui::Ui, color: egui::Color32) {
 pub fn copy_icon(ui: &mut egui::Ui, color: egui::Color32) {
     let rect = icon_slot(ui);
     icons::copy(ui.painter(), rect, color);
+}
+
+pub fn copy_button(ui: &mut egui::Ui, tooltip: &str) -> bool {
+    icon_button(
+        ui,
+        egui::Vec2::splat(COPY_BUTTON_SIZE),
+        tooltip,
+        COPY_BUTTON_PADDING,
+        icons::copy,
+    )
 }
 
 fn icon_slot(ui: &mut egui::Ui) -> egui::Rect {
