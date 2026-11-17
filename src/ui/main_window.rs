@@ -229,7 +229,11 @@ impl eframe::App for MainWindow {
             self.persist_config();
         }
         if settings.about_opened {
-            self.about.open();
+            if self.about.is_open() {
+                self.about.close();
+            } else {
+                self.about.open();
+            }
         }
         let open_picker = self.show_central(ui, background, foreground, panel_width);
 
