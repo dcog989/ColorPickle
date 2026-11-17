@@ -24,7 +24,6 @@ const TIGHT_SPACING: f32 = 6.0;
 const ROW_SPACING: f32 = 14.0;
 const NAME_FONT_SIZE: f32 = 28.0;
 const PATH_FONT_SIZE: f32 = 13.0;
-const SECTION_TITLE_FONT_SIZE: f32 = 15.0;
 const WINDOW_WIDTH: f32 = 580.0;
 /// Both the opening size and the minimum: the collapsed content measures 529.
 const WINDOW_HEIGHT: f32 = 550.0;
@@ -39,7 +38,7 @@ const LINK_ISSUES: &str = "Report a bug";
 /// Kept in step with the copyright in Cargo.toml.
 const COPYRIGHT: &str = "© 2026 dcog989";
 const SYSTEM_INFO_TITLE: &str = "System information";
-const COPY_TOOLTIP: &str = "Copy environment info (Ctrl+C)";
+const COPY_TOOLTIP: &str = "Copy environment info";
 const PATH_PADDING: f32 = 2.0;
 /// egui bundles no bold font, so titles are overpainted by this much to gain weight.
 const BOLD_SMUDGE: f32 = 0.5;
@@ -264,7 +263,7 @@ fn panel_ui(
 
 /// The title column: every value in the table starts at the same x.
 fn label_column(ui: &mut egui::Ui, text: &str) {
-    let font = egui::FontId::proportional(SECTION_TITLE_FONT_SIZE);
+    let font = egui::TextStyle::Body.resolve(ui.style());
     let color = ui.visuals().strong_text_color();
     let galley = ui.painter().layout_no_wrap(text.to_owned(), font, color);
     let width = galley.size().x.max(LABEL_COLUMN_WIDTH);
@@ -589,6 +588,9 @@ fn displays(frame: &eframe::Frame) -> Vec<String> {
 }
 
 fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
+    // Match the settings dropdowns, which sit in the main window's spacing.
+    ui.spacing_mut().button_padding = egui::vec2(super::ITEM_SPACING, super::ITEM_SPACING * 0.6);
+    ui.spacing_mut().interact_size.y = widgets::row_height(ui);
     let mut changed = false;
     egui::ComboBox::from_id_salt("log-level")
         .selected_text(level.as_str())
@@ -636,14 +638,9 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>, open_folder: bool) {
     let size = galley.size() + egui::vec2(2.0, 2.0) * PATH_PADDING;
     let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
     // A long path is truncated, so the hover carries the whole thing.
-    let hint = if open_folder {
-        "Click to open its folder."
-    } else {
-        "Click to open it."
-    };
     let response = response
         .on_hover_cursor(egui::CursorIcon::PointingHand)
-        .on_hover_text(format!("{}\n{hint}", path.display()));
+        .on_hover_text(format!("{}\nClick to open.", path.display()));
     let underline = if response.hovered() {
         egui::Stroke::new(ui.style().visuals.widgets.hovered.fg_stroke.width, color)
     } else {
