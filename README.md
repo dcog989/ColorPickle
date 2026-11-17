@@ -62,16 +62,8 @@ log_level = "info"           # error | warn | info | debug | trace
 ```
 
 - `--launch-mode ui_first|picker_first` overrides `launch_mode` for one run
-- `--log-level` overrides `log_level` for one run (see [Logs](#logs))
+- `--log-level` overrides `log_level` for one run
 - Pick history is kept apart in `~/.local/state/colorpickle/state.toml` (or `$XDG_STATE_HOME/colorpickle/state.toml`), so picking never rewrites your settings
-
-## Logs
-
-Logs are written to `~/.local/state/colorpickle/logs/`, one file per day named `colorpickle.log.<date>`; the 7 most recent are kept. `colorpickle.latest.log` is a symlink to the current day's file.
-
-- `--log-level error|warn|info|debug|trace` sets the verbosity; default `info`
-- `log_level` in `config.toml` does the same, and is overridden by the flag; the About panel has a log level dropdown that applies the change at once and saves it
-- The same lines are mirrored to stderr, with color when stderr is a terminal
 
 ---
 
@@ -87,8 +79,8 @@ Rust 1.100, `just`, `pkg-config`, `lefthook`, Wayland and `libxkbcommon` develop
 
 ```sh
 cargo install cargo-edit cocogitto cargo-outdated   # cargo set-version, cargo upgrade, cog, cargo outdated
-lefthook install                                    # install the git hooks; lefthook must be on PATH
 cargo install cargo-deb cargo-generate-rpm          # deb and rpm generators
+lefthook install                                    # install the git hooks; lefthook must be on PATH
 ```
 
 Building the AppImage needs `linuxdeploy` on `PATH`, or its path in `LINUXDEPLOY`.
@@ -96,15 +88,15 @@ Building the AppImage needs `linuxdeploy` on `PATH`, or its path in `LINUXDEPLOY
 ### Build
 
 ```sh
-just check                               # clippy, formatting check, tests
-just build                               # release build
-just run                                 # debug build and run
-just format                              # format all files
-just test                                # tests
-just lint                                # clippy only
-just clean                               # clean build artifacts
 just --list                              # all recipes
 
+just build                               # release build
+just check                               # clippy, formatting check, tests
+just clean                               # clean build artifacts
+just format                              # format all files
+just lint                                # clippy only
+just run                                 # debug build and run
+just test                                # tests
 just update                              # latest allowed versions; just outdated to preview
 
 just package                             # .deb, .rpm, AppImage and tarball into target/

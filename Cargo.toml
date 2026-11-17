@@ -47,7 +47,7 @@ assets = [
 anyhow = "1.0.104"
 arboard = { version = "3.7.0", default-features = false, features = ["wayland-data-control"] }
 ashpd = { version = "0.14", default-features = false, features = ["async-io", "screenshot"] }
-clap = { version = "4.6.7", features = ["derive"] }
+clap = { version = "4.6.8", features = ["derive"] }
 directories = "6.0.0"
 # default-features = false drops links and web_screen_reader. winit's own
 # defaults (x11, wayland, rwh_06) still arrive via the direct winit dependency below.
