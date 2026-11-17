@@ -250,6 +250,12 @@ fn panel_ui(
         if label == LOG_ROW_LABEL {
             ui.add_space(ROW_SPACING);
             ui.horizontal(|ui| {
+                // Match the settings dropdowns, and give the row its height up
+                // front so the label centres against the taller combo.
+                ui.spacing_mut().button_padding =
+                    egui::vec2(super::ITEM_SPACING, super::ITEM_SPACING * 0.6);
+                ui.spacing_mut().interact_size.y = widgets::row_height(ui);
+                ui.set_min_height(ui.spacing().interact_size.y);
                 // Empty title column: the dropdown starts where the path values do.
                 label_column(ui, "");
                 ui.add_space(PATH_PADDING);
@@ -588,9 +594,6 @@ fn displays(frame: &eframe::Frame) -> Vec<String> {
 }
 
 fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
-    // Match the settings dropdowns, which sit in the main window's spacing.
-    ui.spacing_mut().button_padding = egui::vec2(super::ITEM_SPACING, super::ITEM_SPACING * 0.6);
-    ui.spacing_mut().interact_size.y = widgets::row_height(ui);
     let mut changed = false;
     egui::ComboBox::from_id_salt("log-level")
         .selected_text(level.as_str())
