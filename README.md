@@ -88,19 +88,21 @@ Building the AppImage needs `linuxdeploy` on `PATH`, or its path in `LINUXDEPLOY
 ### Build
 
 ```sh
-just --list                              # all recipes
+just --list         # all recipes
 
-just build                               # release build
-just check                               # clippy, formatting check, tests
-just clean                               # clean build artifacts
-just format                              # format all files
-just lint                                # clippy only
-just run                                 # debug build and run
-just test                                # tests
-just update                              # latest allowed versions; just outdated to preview
+just                # verify the repo: lint, format check and tests CI runs.
+just build          # release build
+just check          # clippy, formatting check, tests
+just clean          # clean build artifacts
+just format         # format all files
+just lint           # clippy only
+just run            # debug build and run
+just test           # tests
+just update         # latest allowed versions; just outdated to preview
 
-just package                             # .deb, .rpm, AppImage and tarball into target/
-just release                             # bump version and push
+just install        # install from source
+just package        # .deb, .rpm, AppImage and tarball into target/
+just release        # bump version and push
 ```
 
 ---
