@@ -47,7 +47,7 @@ assets = [
 anyhow = "1.0.104"
 arboard = { version = "3.7.0", default-features = false, features = ["wayland-data-control"] }
 ashpd = { version = "0.14", default-features = false, features = ["async-io", "screenshot"] }
-clap = { version = "4.6.8", features = ["derive"] }
+clap = { version = "4.6.9", features = ["derive"] }
 directories = "6.0.0"
 # default-features = false drops links and web_screen_reader. winit's own
 # defaults (x11, wayland, rwh_06) still arrive via the direct winit dependency below.
@@ -64,10 +64,10 @@ eframe = {
   ]
 }
 image = { version = "0.25.10", default-features = false, features = ["png"] }
-lucide-icons = "1.73.0"
+lucide-icons = "1.77.0"
 palette = "0.7.7"
 percent-encoding = "2.3.2"
-pollster = "1.0.1"
+pollster = "1.0.3"
 rustix = { version = "1", features = ["event", "fs"] }
 serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.21"
@@ -79,7 +79,7 @@ wayland-client = "0.31"
 wayland-protocols = { version = "0.32", features = ["client", "staging", "unstable"] }
 winit = "0.30"
 x11rb = { version = "0.14", features = ["image", "randr"] }
-zbus = "6.3"
+zbus = "6.5"
 
 # Without this, Cargo walks up and attaches to any parent directory holding a Cargo.toml.
 [workspace]
