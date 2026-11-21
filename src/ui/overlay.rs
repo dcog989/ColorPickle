@@ -436,7 +436,17 @@ fn magnifier_center(screen: egui::Rect, pointer: egui::Pos2, dragging: bool) -> 
             screen.bottom() - MAGNIFIER_SIZE / 2.0 - DRAG_MAGNIFIER_MARGIN,
         )
     } else {
-        pointer
+        // Shift the lens inward only as far as needed so its edge stops at the
+        // screen edge; the cursor pixel stays inside it.
+        let inset = MAGNIFIER_SIZE / 2.0;
+        egui::pos2(
+            pointer
+                .x
+                .clamp(screen.left() + inset, screen.right() - inset),
+            pointer
+                .y
+                .clamp(screen.top() + inset, screen.bottom() - inset),
+        )
     }
 }
 
