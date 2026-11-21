@@ -2,6 +2,27 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.13.1 - 2026-11-21
+#### Bug Fixes
+- (**ui**) keep magnifier on the cursor up to the screen edge - (e470c0f) - dcog989
+- (**ui**) vertically centre the about log level label - (a028229) - dcog989
+- (**ui**) toggle the About window from its main-window button - (cc5e2df) - dcog989
+- (**ui**) drop Ctrl+C hint from about copy tooltip - (ec261c3) - dcog989
+#### Documentation
+- readme refined - (68b4b1c) - dcog989
+#### Miscellaneous Chores
+- (**build**) call just from the git hooks - (89cb7fa) - dcog989
+- (**build**) call just from the git hooks - (8a668fd) - dcog989
+- (**build**) close the remaining raw-command gaps - (fec8b30) - dcog989
+- (**build**) call the just recipes from CI, hooks and docs - (7b2b6d7) - dcog989
+- (**build**) wrap the remaining dev scripts in just - (8a4f193) - dcog989
+- (**build**) add an update recipe - (5606039) - dcog989
+- (**build**) route the dev and CI commands through just - (7672634) - dcog989
+- updates - (70ba6b2) - dcog989
+- updates, readme refined - (62adec4) - dcog989
+
+- - -
+
 ## v0.13.0 - 2026-11-16
 #### Features
 - (**picker**) add a magnifier zoom setting - (1f09a2f) - dcog989
