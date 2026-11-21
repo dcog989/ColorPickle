@@ -82,7 +82,7 @@ jobs:
           shared-key: rust-v3
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
-          tool: cargo-deb,cargo-generate-rpm
+          tool: cargo-deb,cargo-generate-rpm,just
       - name: Install build dependencies
         run: |
           sudo apt-get update
