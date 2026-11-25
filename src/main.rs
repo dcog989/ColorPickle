@@ -3,6 +3,7 @@ mod cli;
 mod clipboard;
 mod color;
 mod config;
+mod desktop_integration;
 mod logging;
 mod persistence;
 mod state;
@@ -21,6 +22,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     // Kept for the whole run: dropping the guard discards lines still queued for the log file.
     let (logging, _log_guard) = logging::init();
+    desktop_integration::install();
     let config = config::Config::load();
     logging.set_level(cli.log_level.unwrap_or(config.log_level));
 

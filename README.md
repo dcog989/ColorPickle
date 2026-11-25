@@ -34,10 +34,10 @@ Assign shortcut to launch the GUI or screen picker:
 | Arch / CachyOS           | `.tar.zst` | `tar --zstd -xf colorpickle-*.tar.zst && sudo ./colorpickle-*/install.sh` |
 | Debian / Ubuntu          | `.deb`     | `sudo apt install ./colorpickle_*.deb`                                    |
 | Fedora / RHEL / openSUSE | `.rpm`     | `sudo dnf install ./colorpickle-*.rpm`                                    |
-| Linux - see NOTE         | AppImage   | `chmod +x ColorPickle-*.AppImage && ./ColorPickle-*.AppImage`             |
+| Linux                    | AppImage   | `chmod +x ColorPickle-*.AppImage && ./ColorPickle-*.AppImage`             |
 
 > [!NOTE]
-> On KDE Plasma, the fast *ScreenShot2* capture requires the binary at a fixed path in `/usr`. The `.deb`, `.rpm` and tarball installs qualify; the AppImage runs from a temporary mount and falls back to a slower method such as the XDG desktop portal.
+> The AppImage adds itself to the application menu and installs its icon. On KDE Plasma, the fast *ScreenShot2* capture requires the binary at a fixed path in `/usr`. The `.deb`, `.rpm` and tarball installs qualify; the AppImage runs from a temporary mount and falls back to a slower method such as the XDG desktop portal.
 
 ## Install from source
 
