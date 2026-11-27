@@ -13,7 +13,13 @@ if ! command -v "$linuxdeploy" >/dev/null 2>&1; then
     exit 1
 fi
 
-cargo build --release --locked
+build=1
+if [ "${1:-}" = "--no-build" ]; then
+    build=0
+fi
+if [ "$build" = 1 ]; then
+    cargo build --release --locked
+fi
 
 rm -rf "$appdir"
 mkdir -p "$outdir"

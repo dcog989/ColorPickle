@@ -5,6 +5,7 @@ ignore_merge_commits = true
 # The AUR recipe is bumped by hand after the tag exists: pkgver needs the release
 # tarball's checksum, which cannot be computed before the tag is pushed.
 pre_bump_hooks = [
+    "just check",
     "cargo set-version {{version}}",
 ]
 

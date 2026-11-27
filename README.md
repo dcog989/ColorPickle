@@ -1,6 +1,6 @@
 # ColorPickle
 
-Linux screen color picker. Pick a pixel or drag-select a region with a magnified picker, using any common color format. Launch to GUI or straight to picker.
+Linux screen color picker: pick a pixel or drag-select a region with a magnified picker; returns any common color format; launch to GUI or straight to picker.
 
 ![screenshot](assets/screen-1.webp)
 
@@ -12,11 +12,10 @@ Assign shortcut to launch the GUI or screen picker:
 
 - Fullscreen picker overlay with a magnified view of the area under the cursor
 - Click to pick a single pixel, or drag to select a region and pick its averaged color
-- `Esc` or right-click cancels the picker
 - Copy as HEX, RGB, HSL, HSV, Oklch, Oklab, Okhsl, P3, or CMYK
 - Keyboard shortcuts `1`–`9` copy the respective format
 - Input any supported format, or a CSS color name to set the color
-- The main window is the current color, with contrast-adjusted controls
+- The main window is painted with the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
 - APCA contrast scores of the current color on white and black
 - History of the last 8 picks — click one to reuse it, hover and click × to remove it, or clear the list

@@ -17,8 +17,8 @@ fi
 cargo build --release --locked
 cargo deb --no-build
 cargo generate-rpm
-packaging/appimage/build.sh
-packaging/tarball/build.sh
+packaging/appimage/build.sh --no-build
+packaging/tarball/build.sh --no-build
 
 echo "artifacts:"
 find target/debian target/generate-rpm target/appimage target/tarball -maxdepth 1 \

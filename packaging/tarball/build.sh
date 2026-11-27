@@ -14,7 +14,13 @@ name="colorpickle-$version-x86_64-linux"
 staging="$root/target/tarball/$name"
 outdir="$root/target/tarball"
 
-cargo build --release --locked
+build=1
+if [ "${1:-}" = "--no-build" ]; then
+    build=0
+fi
+if [ "$build" = 1 ]; then
+    cargo build --release --locked
+fi
 
 rm -rf "$staging"
 mkdir -p "$staging"

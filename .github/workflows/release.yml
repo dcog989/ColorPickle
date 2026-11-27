@@ -3,7 +3,6 @@ name: release
 on:
   push:
     tags: ["v*"]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,11 +15,23 @@ env:
 jobs:
   packages:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@1.100.0
-        with:
-          components: clippy
+      # Fail in seconds, not after the build, when the tag, the tree or the
+      # changelog disagree. The extracted body rides along as an artifact.
+      - name: Check tag and changelog
+        run: |
+          test "v$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)" = "$GITHUB_REF_NAME"
+          awk -v version="$GITHUB_REF_NAME" '
+            $0 ~ "^## " version "([[:space:]]|$)" { found = 1; next }
+            found && /^## / { exit }
+            found && !/^- - -$/ { print }
+          ' CHANGELOG.md > release-body.md
+          test -s release-body.md
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           # Restoring a target from another lockfile left a proc-macro artifact
@@ -29,16 +40,12 @@ jobs:
           cache-targets: false
       - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
-          tool: cargo-deb,cargo-generate-rpm
+          tool: cargo-deb,cargo-generate-rpm,just
       - name: Install build dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             pkg-config libwayland-dev libxkbcommon-dev mold clang zstd
-      # A tag must not publish code the tests reject.
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: just
       # A tag must not publish code the tests reject.
       - name: Check
         run: just check
@@ -52,6 +59,13 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
           LINUXDEPLOY: ${{ github.workspace }}/linuxdeploy-x86_64.AppImage
         run: just package
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: |
+            target/debian/*.deb
+            target/generate-rpm/*.rpm
+            target/appimage/*.AppImage
+            target/tarball/*.tar.zst
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages
@@ -60,6 +74,7 @@ jobs:
             target/generate-rpm/*.rpm
             target/appimage/*.AppImage
             target/tarball/*.tar.zst
+            release-body.md
           if-no-files-found: error
 
   release:
@@ -74,22 +89,10 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      # The release body is the version's own CHANGELOG.md section, not GitHub's
-      # commit list, so it reads the same as the file shipped as an asset.
-      - name: Extract changelog section
-        run: |
-          awk -v version="${GITHUB_REF_NAME}" '
-            $0 ~ "^## " version "([[:space:]]|$)" { found = 1; next }
-            found && /^## / { exit }
-            found && !/^- - -$/ { print }
-          ' CHANGELOG.md > release-body.md
-          if [ ! -s release-body.md ]; then
-            echo "No CHANGELOG.md section for ${GITHUB_REF_NAME}" >&2
-            exit 1
-          fi
       - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
-          body_path: release-body.md
+          # The version's own CHANGELOG.md section, extracted before the build.
+          body_path: dist/release-body.md
           files: |
             dist/**/*.deb
             dist/**/*.rpm

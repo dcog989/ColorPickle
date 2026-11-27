@@ -1,9 +1,8 @@
 version: 2
 updates:
+  # Rust dependencies are updated by hand with `just update`; the cargo
+  # ecosystem is deliberately absent so upgrades stay deliberate.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
-    ignore:
-      # Pinned per-toolchain ref, not semver; dependabot bumps it to a nonexistent rust version.
-      - dependency-name: "dtolnay/rust-toolchain"
