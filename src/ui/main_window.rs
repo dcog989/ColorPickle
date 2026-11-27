@@ -247,13 +247,10 @@ impl eframe::App for MainWindow {
             self.handle_event(event);
         }
 
-        let about = self.about.show(&ctx, frame, &mut self.config);
-        if about.log_level_changed {
+        let level_changed = self.about.show(&ctx, frame, &mut self.config);
+        if level_changed {
             self.logging.set_level(self.config.log_level);
             self.persist_config();
-        }
-        if let Some(message) = about.toast {
-            self.set_toast(message);
         }
         self.show_toast(&ctx);
     }

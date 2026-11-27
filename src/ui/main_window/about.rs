@@ -13,35 +13,29 @@ use crate::ui::{ICON_PNG, WINDOW_TITLE, widgets};
 
 const WINDOW_ID: &str = "colorpickle-about";
 const OPENER: &str = "xdg-open";
+const WINDOW_MARGIN: i8 = 12;
 const LOGO_SIZE: f32 = 144.0;
-/// The gap above the logo, between the logo and the name, and below the name.
-const LOGO_SPACING: f32 = 12.0;
-/// Gaps inside the identity block below the name.
-const LABEL_SPACING: f32 = 2.0;
-const SECTION_SPACING: f32 = 14.0;
-/// Tighter than `SECTION_SPACING` where a row belongs to the block above it.
-const TIGHT_SPACING: f32 = 6.0;
-const ROW_SPACING: f32 = 14.0;
+/// The one gap between every row on the page, so the rhythm does not drift.
+const ROW_SPACING: f32 = 8.0;
 const NAME_FONT_SIZE: f32 = 28.0;
-const PATH_FONT_SIZE: f32 = 13.0;
-const WINDOW_WIDTH: f32 = 580.0;
-/// Both the opening size and the minimum: the collapsed content measures 529.
-const WINDOW_HEIGHT: f32 = 550.0;
-const LOG_ROW_LABEL: &str = "Logs";
-/// Sits before the level dropdown, which no longer has a label-column entry.
-const LOG_LEVEL_PREFIX: &str = "Level: ";
+const WINDOW_WIDTH: f32 = 560.0;
+/// The first-frame estimate; the measured content height takes over at once.
+const WINDOW_HEIGHT: f32 = 520.0;
 /// Title column of the path table; the value column starts after it.
 const LABEL_COLUMN_WIDTH: f32 = 76.0;
+const PATH_PADDING: f32 = 2.0;
+const DESCRIPTION: &str = "Linux screen color picker.";
+const SYSTEM_INFO_TITLE: &str = "System information";
+const COPY_TOOLTIP: &str = "Copy environment info";
+/// How long the copy confirmation stays under the system information header.
+const COPY_FEEDBACK: f64 = 2.0;
+const LOG_ROW_LABEL: &str = "Logs";
+const LOG_LEVEL_LABEL: &str = "Log level";
 const LINK_WEBSITE: &str = "Website";
 const LINK_RELEASES: &str = "Releases";
 const LINK_ISSUES: &str = "Report a bug";
 /// Kept in step with the copyright in Cargo.toml.
 const COPYRIGHT: &str = "© 2026 dcog989";
-const SYSTEM_INFO_TITLE: &str = "System information";
-const COPY_TOOLTIP: &str = "Copy environment info";
-const PATH_PADDING: f32 = 2.0;
-/// egui bundles no bold font, so titles are overpainted by this much to gain weight.
-const BOLD_SMUDGE: f32 = 0.5;
 
 #[derive(Default)]
 pub struct About {
@@ -56,17 +50,13 @@ struct Panel {
     logo: Option<egui::TextureHandle>,
     /// Gathered once per opening: it shells out to `plasmashell` and `lspci`.
     info: Option<String>,
+    /// The last copy confirmation and when it was shown.
+    feedback: Option<(String, f64)>,
+    /// The window height last requested, so it is only resized when it moves.
+    height: f32,
     level: LogLevel,
     level_changed: bool,
-    toast: Option<String>,
     close_requested: bool,
-}
-
-/// What the panel changed this frame.
-#[derive(Default)]
-pub struct Outcome {
-    pub log_level_changed: bool,
-    pub toast: Option<String>,
 }
 
 impl About {
@@ -83,15 +73,15 @@ impl About {
         self.open = false;
     }
 
-    /// Returns what the panel changed: its log level, or a toast to show.
+    /// Returns whether the panel changed the saved log level.
     pub fn show(
         &mut self,
         ctx: &egui::Context,
         frame: &eframe::Frame,
         config: &mut Config,
-    ) -> Outcome {
+    ) -> bool {
         if !self.open {
-            return Outcome::default();
+            return false;
         }
 
         let shared = Arc::clone(&self.panel);
@@ -101,8 +91,7 @@ impl About {
         let mut viewport = egui::ViewportBuilder::default()
             .with_title(format!("About {WINDOW_TITLE}"))
             .with_app_id(crate::ui::APP_ID)
-            .with_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT])
-            .with_min_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT]);
+            .with_inner_size([WINDOW_WIDTH, WINDOW_HEIGHT]);
         let first_frame = {
             let mut panel = lock(&shared);
             if panel.logo.is_none() {
@@ -112,7 +101,7 @@ impl About {
                 panel.info = Some(environment_info(frame));
                 panel.level = config.log_level;
                 panel.level_changed = false;
-                panel.toast = None;
+                panel.feedback = None;
                 panel.close_requested = false;
                 true
             } else {
@@ -132,65 +121,65 @@ impl About {
             move |ui, _class| viewport_ui(ui, &callback),
         );
 
-        let mut outcome = Outcome::default();
-        let mut panel = lock(&shared);
-        if panel.close_requested {
-            self.open = false;
+        let mut level_changed = false;
+        {
+            let mut panel = lock(&shared);
+            if panel.close_requested {
+                self.open = false;
+            }
+            if panel.level_changed {
+                config.log_level = panel.level;
+                panel.level_changed = false;
+                level_changed = true;
+            }
         }
-        if panel.level_changed {
-            config.log_level = panel.level;
-            panel.level_changed = false;
-            outcome.log_level_changed = true;
-        }
-        outcome.toast = panel.toast.take();
-        outcome
+        level_changed
     }
 }
 
 /// Runs in the About viewport's own pass, so the pointer input is its own.
 fn viewport_ui(ui: &mut egui::Ui, shared: &Mutex<Panel>) {
     let mut panel = lock(shared);
-    if ui.input(|input| input.viewport().close_requested())
-        || ui.input(|input| input.key_pressed(egui::Key::Escape))
+    let ctx = ui.ctx().clone();
+    if ctx.input(|input| input.viewport().close_requested())
+        || ctx.input(|input| input.key_pressed(egui::Key::Escape))
     {
         panel.close_requested = true;
     }
+    if copy_shortcut(&ctx) {
+        let info = panel.info.clone().unwrap_or_default();
+        let now = ctx.input(|input| input.time);
+        panel.feedback = Some((copy_environment_info(&info), now));
+    }
 
     let frame =
-        egui::Frame::central_panel(ui.style()).inner_margin(egui::Margin::same(LOGO_SPACING as i8));
-    let mut level = panel.level;
-    let mut outcome = Outcome::default();
-    egui::CentralPanel::default().frame(frame).show(ui, |ui| {
-        egui::ScrollArea::vertical()
-            .auto_shrink([false, false])
-            .show(ui, |ui| {
-                outcome = panel_ui(
-                    ui,
-                    panel.logo.as_ref(),
-                    panel.info.as_deref().unwrap_or_default(),
-                    &mut level,
-                );
-            });
-    });
-    let mut notify_parent = panel.close_requested;
-    if outcome.log_level_changed {
-        panel.level = level;
-        panel.level_changed = true;
-        notify_parent = true;
+        egui::Frame::central_panel(ui.style()).inner_margin(egui::Margin::same(WINDOW_MARGIN));
+    let content = egui::CentralPanel::default()
+        .frame(frame)
+        .show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| panel_ui(ui, &mut panel))
+        })
+        .inner
+        .content_size;
+    // The window follows the page: the identity block, the paths, and the
+    // system information section when it is expanded.
+    let tallest = ctx
+        .input(|input| input.viewport().monitor_size)
+        .map_or(f32::INFINITY, |size| size.y);
+    let height = (content.y + 2.0 * f32::from(WINDOW_MARGIN)).min(tallest);
+    if (height - panel.height).abs() > 0.5 {
+        panel.height = height;
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+            WINDOW_WIDTH,
+            height,
+        )));
     }
-    if let Some(message) = outcome.toast {
-        panel.toast = Some(message);
-        notify_parent = true;
-    }
-    if copy_shortcut(ui.ctx()) {
-        let info = panel.info.clone().unwrap_or_default();
-        panel.toast = Some(copy_environment_info(&info));
-        notify_parent = true;
-    }
-    // The panel only repaints its own window; the toast and the saved log level
-    // live in the main window.
-    if notify_parent {
-        ui.ctx().request_repaint_of(egui::ViewportId::ROOT);
+    // The panel only repaints its own window; the main window closes it and
+    // saves the level.
+    if panel.close_requested || panel.level_changed {
+        ctx.request_repaint_of(egui::ViewportId::ROOT);
     }
 }
 
@@ -200,44 +189,37 @@ fn lock(panel: &Mutex<Panel>) -> std::sync::MutexGuard<'_, Panel> {
         .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-fn panel_ui(
-    ui: &mut egui::Ui,
-    logo: Option<&egui::TextureHandle>,
-    info: &str,
-    level: &mut LogLevel,
-) -> Outcome {
-    let mut outcome = Outcome::default();
+fn panel_ui(ui: &mut egui::Ui, panel: &mut Panel) {
+    let info = panel.info.clone().unwrap_or_default();
+    // Every gap is explicit; egui's own item spacing would otherwise add to it.
+    ui.spacing_mut().item_spacing.y = 0.0;
+
+    let mut feedback = None;
     ui.vertical_centered(|ui| {
-        // Every gap in the identity block is explicit, so the space above
-        // and below the logo and the name is the same.
-        ui.spacing_mut().item_spacing.y = 0.0;
-        if let Some(logo) = logo {
-            ui.add(egui::Image::new(logo).fit_to_exact_size(egui::vec2(LOGO_SIZE, LOGO_SIZE)));
+        if let Some(logo) = panel.logo.as_ref() {
+            ui.add(
+                egui::Image::new(logo)
+                    .fit_to_exact_size(egui::vec2(LOGO_SIZE, LOGO_SIZE))
+                    .alt_text(WINDOW_TITLE),
+            );
         }
-        ui.add_space(LOGO_SPACING);
+        ui.add_space(ROW_SPACING);
         ui.label(
             egui::RichText::new(WINDOW_TITLE)
                 .size(NAME_FONT_SIZE)
                 .strong(),
         );
-        ui.add_space(LOGO_SPACING);
-        version_row(ui);
-        ui.add_space(LABEL_SPACING);
-        ui.weak(format!("{} · {COPYRIGHT}", env!("CARGO_PKG_LICENSE")));
-        ui.add_space(LABEL_SPACING);
-        if let Some(message) = links_row(ui, info) {
-            outcome.toast = Some(message);
-        }
+        ui.add_space(ROW_SPACING);
+        ui.weak(DESCRIPTION);
+        ui.add_space(ROW_SPACING);
+        ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+        ui.add_space(ROW_SPACING);
+        feedback = links_row(ui, &info);
     });
 
-    ui.add_space(TIGHT_SPACING);
-    if system_information(ui, info) {
-        outcome.toast = Some(copy_environment_info(info));
-    }
-
-    ui.add_space(TIGHT_SPACING);
+    ui.add_space(ROW_SPACING);
     ui.separator();
-    ui.add_space(SECTION_SPACING);
+    ui.add_space(ROW_SPACING);
 
     for (index, (label, path, open_folder)) in paths().into_iter().enumerate() {
         if index > 0 {
@@ -250,21 +232,44 @@ fn panel_ui(
         if label == LOG_ROW_LABEL {
             ui.add_space(ROW_SPACING);
             ui.horizontal(|ui| {
-                // Match the settings dropdowns, and give the row its height up
-                // front so the label centres against the taller combo.
-                ui.spacing_mut().button_padding =
-                    egui::vec2(super::ITEM_SPACING, super::ITEM_SPACING * 0.6);
-                ui.spacing_mut().interact_size.y = widgets::row_height(ui);
-                ui.set_min_height(ui.spacing().interact_size.y);
-                // Empty title column: the dropdown starts where the path values do.
-                label_column(ui, "");
-                ui.add_space(PATH_PADDING);
-                ui.label(LOG_LEVEL_PREFIX);
-                outcome.log_level_changed = log_level_combo(ui, level);
+                label_column(ui, LOG_LEVEL_LABEL);
+                panel.level_changed |= log_level_combo(ui, &mut panel.level);
             });
         }
     }
-    outcome
+
+    ui.add_space(ROW_SPACING);
+    if system_information(ui, &info) {
+        feedback = Some(copy_environment_info(&info));
+    }
+    if let Some(message) = feedback {
+        let now = ui.ctx().input(|input| input.time);
+        panel.feedback = Some((message, now));
+    }
+    feedback_message(ui, &mut panel.feedback);
+
+    ui.add_space(ROW_SPACING);
+    ui.separator();
+    ui.add_space(ROW_SPACING);
+    ui.vertical_centered(|ui| {
+        ui.weak(format!("{} · {COPYRIGHT}", env!("CARGO_PKG_LICENSE")));
+    });
+}
+
+/// The copy confirmation under the header, cleared after `COPY_FEEDBACK`.
+fn feedback_message(ui: &mut egui::Ui, feedback: &mut Option<(String, f64)>) {
+    let Some((message, at)) = feedback.clone() else {
+        return;
+    };
+    let elapsed = ui.ctx().input(|input| input.time) - at;
+    if elapsed < COPY_FEEDBACK {
+        ui.add_space(ROW_SPACING);
+        ui.weak(message);
+        ui.ctx()
+            .request_repaint_after(std::time::Duration::from_secs_f64(COPY_FEEDBACK - elapsed));
+    } else {
+        *feedback = None;
+    }
 }
 
 /// The title column: every value in the table starts at the same x.
@@ -275,13 +280,7 @@ fn label_column(ui: &mut egui::Ui, text: &str) {
     let width = galley.size().x.max(LABEL_COLUMN_WIDTH);
     let (rect, _) =
         ui.allocate_exact_size(egui::vec2(width, galley.size().y), egui::Sense::hover());
-    let painter = ui.painter();
-    painter.galley(rect.left_top(), galley.clone(), color);
-    painter.galley(
-        rect.left_top() + egui::vec2(BOLD_SMUDGE, 0.0),
-        galley,
-        color,
-    );
+    ui.painter().galley(rect.left_top(), galley, color);
 }
 
 /// Centred like the version, and each link names its destination on hover.
@@ -305,61 +304,30 @@ fn links_row(ui: &mut egui::Ui, info: &str) -> Option<String> {
         .sum::<f32>()
         + ui.spacing().item_spacing.x * (links.len() - 1) as f32;
 
-    let mut toast = None;
+    let mut feedback = None;
     ui.horizontal(|ui| {
         ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
         for (label, url) in links {
             if ui.link(label).on_hover_text(url.as_str()).clicked() {
                 if label == LINK_ISSUES {
-                    toast = Some(copy_environment_info(info));
+                    feedback = Some(copy_environment_info(info));
                 }
                 open_url(&url);
             }
         }
     });
-    toast
+    feedback
 }
 
-fn version_row(ui: &mut egui::Ui) {
-    let text = format!("Version {}", env!("CARGO_PKG_VERSION"));
-    ui.horizontal(|ui| {
-        let font = egui::TextStyle::Body.resolve(ui.style());
-        let width = ui
-            .painter()
-            .layout_no_wrap(text.clone(), font, ui.visuals().text_color())
-            .size()
-            .x;
-        ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
-        ui.label(text);
-    });
-}
-
-/// Centred header, left-aligned content. The arrow and the title both toggle,
-/// and the copy button rides beside the title.
+/// The header toggles the section; its copy button sits at the right edge.
 fn system_information(ui: &mut egui::Ui, info: &str) -> bool {
     let id = ui.make_persistent_id(SYSTEM_INFO_TITLE);
     let mut state =
         egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false);
+    let mut toggled = false;
     let mut copied = false;
 
-    let font = egui::TextStyle::Body.resolve(ui.style());
-    let title_width = ui
-        .painter()
-        .layout_no_wrap(
-            SYSTEM_INFO_TITLE.to_owned(),
-            font,
-            ui.visuals().text_color(),
-        )
-        .size()
-        .x;
-    let row_width = ui.spacing().indent
-        + title_width
-        + widgets::COPY_BUTTON_SIZE
-        + 2.0 * ui.spacing().item_spacing.x;
-
-    let mut toggled = false;
     ui.horizontal(|ui| {
-        ui.add_space(((ui.available_width() - row_width) / 2.0).max(0.0));
         let (_, arrow) = ui.allocate_exact_size(
             egui::vec2(ui.spacing().indent, ui.spacing().icon_width),
             egui::Sense::click(),
@@ -370,16 +338,17 @@ fn system_information(ui: &mut egui::Ui, info: &str) -> bool {
         let title = ui
             .add(egui::Label::new(SYSTEM_INFO_TITLE).sense(egui::Sense::click()))
             .on_hover_cursor(egui::CursorIcon::PointingHand);
-        copied = widgets::copy_button(ui, COPY_TOOLTIP);
         toggled = arrow.clicked() || title.clicked();
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            copied = widgets::copy_button(ui, COPY_TOOLTIP);
+        });
     });
     if toggled {
         state.toggle(ui);
     }
     if state.is_open() {
-        ui.indent(id, |ui| {
-            ui.monospace(info);
-        });
+        ui.add_space(ROW_SPACING);
+        ui.indent(id, |ui| ui.label(info));
     }
     state.store(ui.ctx());
     copied
@@ -630,7 +599,7 @@ fn path_value(ui: &mut egui::Ui, path: Option<PathBuf>, open_folder: bool) {
     };
 
     let text = path.display().to_string();
-    let font = egui::FontId::monospace(PATH_FONT_SIZE);
+    let font = egui::TextStyle::Body.resolve(ui.style());
     let color = ui.visuals().hyperlink_color;
     let mut job = egui::text::LayoutJob::simple(text, font, color, f32::INFINITY);
     job.wrap =
