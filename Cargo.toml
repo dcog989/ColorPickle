@@ -44,10 +44,10 @@ assets = [
 "xdg-desktop-portal" = "*"
 
 [dependencies]
-anyhow = "1.0.104"
+anyhow = "1.0.105"
 arboard = { version = "3.7.0", default-features = false, features = ["wayland-data-control"] }
 ashpd = { version = "0.14", default-features = false, features = ["async-io", "screenshot"] }
-clap = { version = "4.6.9", features = ["derive"] }
+clap = { version = "4.6.10", features = ["derive"] }
 directories = "6.0.0"
 # default-features = false drops links and web_screen_reader. winit's own
 # defaults (x11, wayland, rwh_06) still arrive via the direct winit dependency below.
@@ -55,8 +55,8 @@ eframe = {
   version = "0.37.0",
   default-features = false,
   features = [
-    "accesskit",
     "default_fonts",
+    "accesskit",
     "clipboard",
     "wayland",
     "wgpu",
@@ -64,7 +64,7 @@ eframe = {
   ]
 }
 image = { version = "0.25.10", default-features = false, features = ["png"] }
-lucide-icons = "1.77.0"
+lucide-icons = "1.82.0"
 palette = "0.7.7"
 percent-encoding = "2.3.2"
 pollster = "1.0.3"
@@ -96,6 +96,8 @@ opt-level = 2
 opt-level = 2  # the per-pixel loops in overlay.rs and ext_image.rs are painful at opt-level 0
 
 [profile.release]
+opt-level = 3
 strip = true
 lto = "thin"
+panic = "abort"
 codegen-units = 1
