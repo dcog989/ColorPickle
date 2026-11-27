@@ -608,7 +608,7 @@ fn log_level_combo(ui: &mut egui::Ui, level: &mut LogLevel) -> bool {
             }
         })
         .response
-        .on_hover_text("Log level: applies immediately and saves to the config file.");
+        .on_hover_text("Log level: applies immediately and saves to config file.");
     changed
 }
 

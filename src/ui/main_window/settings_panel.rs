@@ -57,7 +57,7 @@ pub(super) fn show(
                     })
                     .response
                     .on_hover_text(
-                        "Launch mode: open the main window, or start the screen picker.",
+                        "Launch mode: open main window, or start screen picker.",
                     );
                 egui::ComboBox::from_id_salt("default-format")
                     .height(menu_height)
@@ -78,7 +78,7 @@ pub(super) fn show(
                     })
                     .response
                     .on_hover_text(
-                        "Default format: shown in the input field and copied to clipboard.",
+                        "Default format: shown in input field and copied to clipboard.",
                     );
                 egui::ComboBox::from_id_salt("precision")
                     .selected_text(config.precision.label())

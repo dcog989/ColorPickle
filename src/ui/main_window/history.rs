@@ -7,7 +7,7 @@ const HISTORY_LIMIT: usize = 9;
 pub(super) struct History {
     colors: Vec<Okhsl>,
     /// What the file is known to hold, so a merge can tell this window's new
-    /// picks from colours another instance wrote.
+    /// picks from colors another instance wrote.
     saved: Vec<Okhsl>,
 }
 
@@ -46,7 +46,7 @@ impl History {
     /// Merges the file another instance may have written. Picks this window
     /// made since the last save are the newest, so they stay in front; then
     /// come the file's entries in file order, so a newer pick from the other
-    /// instance still lands before the older ones. A colour this window showed
+    /// instance still lands before the older ones. A color this window showed
     /// at the last save and no longer does was removed here, so the file must
     /// not bring it back.
     pub(super) fn merge_missing(&mut self, entries: &[StoredColor]) {
@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_one_entry_per_colour_newest_first() {
+    fn keeps_one_entry_per_color_newest_first() {
         let mut history = History::default();
         let colors = distinct_colors(2);
         let (first, second) = (colors[0], colors[1]);
@@ -145,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn does_not_restore_a_colour_removed_here() {
+    fn does_not_restore_a_color_removed_here() {
         let colors = distinct_colors(3);
         let stored: Vec<StoredColor> = colors.iter().map(|&c| StoredColor::from_okhsl(c)).collect();
         let mut history = History::from_stored(&stored);

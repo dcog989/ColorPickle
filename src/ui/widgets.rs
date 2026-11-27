@@ -46,7 +46,7 @@ pub fn add_button(ui: &mut egui::Ui, height: f32) -> bool {
     icon_button(
         ui,
         egui::vec2(height, height),
-        "Add the current colour to history",
+        "Add the current color to history",
         LAUNCHER_PADDING,
         icons::plus,
     )
@@ -254,13 +254,13 @@ pub fn apca_scores(ui: &mut egui::Ui, color: Okhsl, foreground: egui::Color32) {
     let srgb = color.to_srgb();
     let on_white = apca::contrast(srgb, Srgb::new(1.0, 1.0, 1.0)).abs();
     let on_black = apca::contrast(srgb, Srgb::new(0.0, 0.0, 0.0)).abs();
-    let text = format!("APCA score: {on_white:.0} (white), {on_black:.0} (black)");
+    let text = format!("APCA contrast: {on_white:.0} (white), {on_black:.0} (black)");
     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
         ui.label(
             egui::RichText::new(text)
                 .color(foreground)
                 .size(APCA_FONT_SIZE),
         )
-        .on_hover_text("APCA contrast (Lc) of this colour on white and on black.");
+        .on_hover_text("APCA contrast of this color on white / black. >75 = good, <30 = fail.");
     });
 }

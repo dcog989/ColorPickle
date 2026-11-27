@@ -19,7 +19,7 @@ pub fn copy_color(format: ColorFormat, color: Okhsl, precision: Precision) -> Re
 }
 
 /// A clipboard selection is owned by the process that set it, so closing the
-/// window would take the copied colour with it. Hand the text to a child that
+/// window would take the copied color with it. Hand the text to a child that
 /// keeps serving it and exits once another process claims the clipboard.
 pub fn set_text(text: impl Into<String>) -> Result<()> {
     let text = text.into();
@@ -41,7 +41,7 @@ pub fn serve() -> Result<()> {
     let mut text = String::new();
     std::io::stdin()
         .read_to_string(&mut text)
-        .context("failed to read the colour")?;
+        .context("failed to read the color")?;
     let mut clipboard = arboard::Clipboard::new().context("failed to open the system clipboard")?;
     clipboard
         .set()
@@ -67,7 +67,7 @@ fn spawn_server(text: &str) -> Result<()> {
         .take()
         .context("the clipboard helper has no input")?
         .write_all(text.as_bytes())
-        .context("failed to send the colour to the clipboard helper")?;
+        .context("failed to send the color to the clipboard helper")?;
     // The helper exits once the clipboard is replaced; reap it then.
     std::thread::spawn(move || {
         let _ = child.wait();

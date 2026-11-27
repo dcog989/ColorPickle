@@ -99,8 +99,8 @@ impl MainWindow {
         }
     }
 
-    /// Open the window on the colour picked by `overlay::run` before it started,
-    /// so a desktop action or hotkey leaves the picked colour in the window.
+    /// Open the window on the color picked by `overlay::run` before it started,
+    /// so a desktop action or hotkey leaves the picked color in the window.
     pub fn with_initial(mut self, color: Okhsl) -> Self {
         self.color = color;
         self.history.push(color);
@@ -392,7 +392,7 @@ impl MainWindow {
                                 }
                             })
                             .response
-                            .on_hover_text("Colour harmony.");
+                            .on_hover_text("Color harmony.");
                         let format = self.config.default_format;
                         let precision = self.config.precision;
                         for swatch in self.harmony.swatches(self.color) {

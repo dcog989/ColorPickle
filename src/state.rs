@@ -9,7 +9,7 @@ use crate::persistence;
 
 pub const STATE_FILE: &str = "state.toml";
 
-/// A persisted history colour, kept at full precision as Okhsl
+/// A persisted history color, kept at full precision as Okhsl
 /// `[hue, saturation, lightness]`. Older state files stored 8-bit sRGB, which
 /// is still accepted on load and converted.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -49,7 +49,7 @@ impl<'de> Deserialize<'de> for StoredColor {
 }
 
 /// Data the app changes as it is used, kept out of the config file so that
-/// picking a colour never rewrites the user's settings.
+/// picking a color never rewrites the user's settings.
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct State {

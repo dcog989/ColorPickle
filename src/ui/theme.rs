@@ -96,8 +96,8 @@ fn link_color(surface: Okhsl) -> Okhsl {
 }
 
 /// Clamp a UI fill so text on it keeps at least `floor` contrast, and keep it
-/// off pure black. UI fills only — the colour swatch always shows the picked
-/// colour, so it is never clamped.
+/// off pure black. UI fills only — the color swatch always shows the picked
+/// color, so it is never clamped.
 fn clamp_fill(color: Okhsl, foreground: Okhsl, floor: f32) -> Okhsl {
     let hue = color.hue();
     let saturation = color.saturation();
@@ -170,7 +170,7 @@ fn surface_color(color: Okhsl, foreground: Okhsl) -> Okhsl {
 }
 
 /// Installs the visuals for both egui themes. `apply_color` overrides every
-/// colour this UI draws, so the light and dark slots end up identical and the
+/// color this UI draws, so the light and dark slots end up identical and the
 /// system preference only decides which slot is read.
 pub fn install(ctx: &egui::Context, color: Okhsl) {
     let mut visuals = base_visuals();
@@ -242,7 +242,7 @@ fn apply_color(visuals: &mut egui::Visuals, color: Okhsl) {
     set_surfaces(visuals, surface, border, readable(FIELD_SHADE));
     // Selection moves away from the text like hover and active, so the
     // highlight stays a tint of the swatch instead of inverting to near black
-    // or near white. The text keeps the foreground colour.
+    // or near white. The text keeps the foreground color.
     visuals.selection.bg_fill = shade(SELECTION_SHADE);
     visuals.selection.stroke.color = foreground;
 }
@@ -334,7 +334,7 @@ mod tests {
     }
 
     #[test]
-    fn fills_clear_the_floor_for_dead_band_colours() {
+    fn fills_clear_the_floor_for_dead_band_colors() {
         for lightness in [0.55, 0.65, 0.70, 0.75] {
             let color = Okhsl::new(116.0, 0.78, lightness);
             let foreground = super::foreground(color);
@@ -472,7 +472,7 @@ mod tests {
             let mut visuals = egui::Visuals::dark();
             super::apply_color(&mut visuals, color);
             // A selection that inverts to the foreground collapses to the text
-            // colour: near black for light swatches, near white for dark ones.
+            // color: near black for light swatches, near white for dark ones.
             assert!(
                 channel_delta(visuals.selection.bg_fill, visuals.text_color())
                     >= MIN_HIGHLIGHT_DELTA,

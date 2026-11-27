@@ -27,7 +27,7 @@ pub const WINDOW_WIDTH: f32 = 760.0;
 pub const WINDOW_HEIGHT: f32 = 600.0;
 pub const ICON_PNG: &[u8] = include_bytes!("../../assets/colorpickle.png");
 
-/// Carries the colour from a picker-first process to the main window it opens.
+/// Carries the color from a picker-first process to the main window it opens.
 const INITIAL_COLOR_VARIABLE: &str = "COLORPICKLE_INITIAL_COLOR";
 const UI_FIRST: &str = "ui_first";
 
@@ -138,12 +138,12 @@ mod tests {
     use crate::color::okhsl::Okhsl;
 
     #[test]
-    fn the_picked_colour_survives_the_handoff() {
+    fn the_picked_color_survives_the_handoff() {
         let color = Okhsl::new(202.584_05, 0.938_364_8, 0.670_973);
         assert_eq!(
             parse_initial_color(&format_initial_color(color)),
             Some(color)
         );
-        assert_eq!(parse_initial_color("not a colour"), None);
+        assert_eq!(parse_initial_color("not a color"), None);
     }
 }
