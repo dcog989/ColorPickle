@@ -18,11 +18,10 @@ Assign shortcut to launch the GUI or screen picker:
 - The main window is painted with the current color, with contrast-adjusted controls
 - Gradient Hue/Saturation/Lightness sliders
 - APCA contrast scores of the current color on white and black
-- History of the last 8 picks — click one to reuse it, hover and click × to remove it, or clear the list
-- `+` button beside the input adds the current color to history
+- History of the last 9 picks — click one to reuse it
 - Color-harmony swatches (complementary, split complementary, analogous, triadic, tetradic, rectangle) — click a swatch to use it
-- Launch-mode, default-format, precision (Practical/Precise) and magnifier-zoom (2x/4x/8x) selectors, saved to the config file
-- Screen capture on KDE Plasma (`ScreenShot2`), other Wayland compositors (`ext-image-copy-capture`) and X11, falling back to the slower XDG desktop portal
+- Launch-mode, default-format, precision (Practical/Precise) and magnifier-zoom (2x/4x/8x) selectors
+- Screen capture: `ScreenShot2` on KDE; `ext-image-copy-capture` on other Wayland compositors; `GetImage` on X11; XDG portal as last resort on Wayland
 
 ## Install
 
@@ -36,15 +35,7 @@ Assign shortcut to launch the GUI or screen picker:
 | Linux                    | AppImage   | `chmod +x ColorPickle-*.AppImage && ./ColorPickle-*.AppImage`             |
 
 > [!NOTE]
-> The AppImage adds itself to the application menu and installs its icon. On KDE Plasma, the fast *ScreenShot2* capture requires the binary at a fixed path in `/usr`. The `.deb`, `.rpm` and tarball installs qualify; the AppImage runs from a temporary mount and falls back to a slower method such as the XDG desktop portal.
-
-## Install from source
-
-See [requirements](#requirements). Clone this repository then:
-
-```sh
-just install   # release build, then install to /usr
-```
+> The AppImage uses the slower XDG desktop portal method for screen capture.
 
 ---
 

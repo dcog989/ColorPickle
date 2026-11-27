@@ -1,7 +1,7 @@
 use crate::color::okhsl::Okhsl;
 use crate::state::StoredColor;
 
-const HISTORY_LIMIT: usize = 8;
+const HISTORY_LIMIT: usize = 9;
 
 #[derive(Default)]
 pub(super) struct History {
