@@ -2,6 +2,22 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## v0.14.0 - 2026-11-27
+#### Features
+- (**ui**) keep nine history swatches - (89f6cd7) - dcog989
+- register the AppImage in the desktop menu - (e6c8d8a) - dcog989
+#### Continuous Integration
+- harden the release pipeline - (aa1139a) - dcog989
+- install just in the package job - (f5ac107) - dcog989
+#### Refactoring
+- (**about**) refined layout - (18f185d) - dcog989
+#### Miscellaneous Chores
+- colour -> color, tweak tooltips - (666d893) - dcog989
+- updates - (a0e3622) - dcog989
+- sync with scaffold - (ea5e7bc) - dcog989
+
+- - -
+
 ## v0.13.1 - 2026-11-21
 #### Bug Fixes
 - (**ui**) keep magnifier on the cursor up to the screen edge - (e470c0f) - dcog989
